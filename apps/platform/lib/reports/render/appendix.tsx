@@ -1,4 +1,5 @@
 /* Service, paid, insights and the definitions appendix that makes the numbers checkable. */
+import React from "react"; // see index.tsx: the worker uses the classic JSX runtime
 import type { InboxRow, ReportAppendix, ReportDocument } from "../document";
 
 function LabelledRows({ rows }: { rows: InboxRow[] }) {

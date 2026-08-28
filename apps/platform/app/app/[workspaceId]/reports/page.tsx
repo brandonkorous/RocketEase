@@ -6,6 +6,7 @@ import { ReportsScreen } from "@/components/reports-screen";
 import { listReports } from "@/lib/analytics/reports";
 import { hasCapability, requireWorkspace } from "@/lib/session";
 import { listExternalRecipients } from "@/lib/actions/report-recipients";
+import { pdfConfigured } from "@/lib/reports/pdf";
 
 export const metadata: Metadata = { title: "Reports" };
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
@@ -21,5 +22,5 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   ]);
   const preset = one(sp.range);
   const newInitial = one(sp.new) ? { from: one(sp.from), to: one(sp.to), channelId: one(sp.channel) || undefined, rollingDays: preset === "custom" ? null : preset === "7d" ? 7 : preset === "90d" ? 90 : 28 } : null;
-  return <ReportsScreen data={{ workspaceId, definitions, runs, channels, external, canManage, newInitial }} />;
+  return <ReportsScreen data={{ workspaceId, definitions, runs, channels, external, canManage, pdfAvailable: pdfConfigured(), newInitial }} />;
 }

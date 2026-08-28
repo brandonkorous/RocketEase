@@ -1,9 +1,7 @@
-import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { recordShareView, resolveShare } from "@/lib/reports/access";
-import { rateLimit } from "@/lib/reports/rate-limit";
+import { recordShareView } from "@/lib/reports/access";
 import { getObjectBuffer } from "@/lib/storage";
-import { passcodeCookieName, passcodeProof } from "@/lib/reports/share";
+import { guardShare } from "../guard";
 
 export const dynamic = "force-dynamic";
 
@@ -14,19 +12,12 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (!rateLimit(`view:${ip}`, 60, 60_000).ok) return new NextResponse("Too many requests", { status: 429, headers: { "Retry-After": "60" } });
-
-  const share = await resolveShare(token);
-  if (share.status !== "ok") return new NextResponse("Not available", { status: 404 });
-  if (share.needsPasscode && share.passcodeHash) {
-    const jar = await cookies();
-    if (jar.get(passcodeCookieName(share.shareId))?.value !== passcodeProof(share.shareId, share.passcodeHash)) return new NextResponse("Not available", { status: 404 });
-  }
+  const guarded = await guardShare(token, "view", 60);
+  if ("response" in guarded) return guarded.response;
+  const { share } = guarded;
 
   const body = await getObjectBuffer(share.objectKey);
-  await recordShareView(share.shareId, { ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null, userAgent: h.get("user-agent") });
+  await recordShareView(share.shareId, { ip: guarded.ip, userAgent: guarded.userAgent });
   const isHtml = share.format === "html";
   return new NextResponse(new Uint8Array(body), {
     headers: {

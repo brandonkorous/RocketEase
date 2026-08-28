@@ -26,8 +26,6 @@ export type DeliveryInput = {
   extension: string;
   clientFacing: boolean;
   recipients: ResolvedRecipients;
-  /** Rendering note surfaced to recipients, e.g. when no PDF renderer is configured. */
-  note?: string;
 };
 
 /** Create a revocable share link for a run (used by delivery and by the Share popover). */
@@ -63,7 +61,7 @@ export async function deliverReport(input: DeliveryInput): Promise<{ delivered: 
   const logoDataUriValue = await logoDataUri(usesClient ? null : branding.logoKey);
   const share = await createShare({ run: input.run });
   const brand = { name: usesClient ? ws.name : branding.agencyName || ws.name, logoDataUri: logoDataUriValue, footerText: branding.footerText || null };
-  const data = { brand, reportName: input.run.name, period: input.period, url: share.url, expiresLabel: formatInZone(share.expiresAt, ws.timezone, { dateStyle: "medium" }), note: input.note };
+  const data = { brand, reportName: input.run.name, period: input.period, url: share.url, expiresLabel: formatInZone(share.expiresAt, ws.timezone, { dateStyle: "medium" }) };
   await db.transaction(async (tx) => {
     for (const to of all) {
       await emit(tx, "mail.send", { to, template: "client_report", data, organizationId: ws.organizationId, replyTo: branding.replyTo || undefined }, { organizationId: ws.organizationId, workspaceId: ws.id });

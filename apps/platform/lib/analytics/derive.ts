@@ -11,7 +11,8 @@ export function derived(key: DisplayMetric, t: Totals): number | null {
   if (key === "ctr") return t.impressions ? (t.link_clicks ?? 0) / t.impressions : null;
   if (key === "cpm" || key === "cpc" || key === "ctr_paid" || key === "cpa") return paidRatio(key, t);
   // ROAS is only meaningful over a paid totals bag: paid-medium revenue ÷ spend.
-  if (key === "roas") return t.spend ? (t.revenue ?? 0) / t.spend : null;
+  // A missing revenue fact is missing, not zero — never divide 0 by spend.
+  if (key === "roas") return t.spend && t.revenue != null ? t.revenue / t.spend : null;
   if (key in t) return (t as Record<string, number>)[key] ?? null;
   return null;
 }

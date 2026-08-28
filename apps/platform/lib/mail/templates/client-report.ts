@@ -8,12 +8,12 @@ import { APP_NAME, brandedLayout, button, esc } from "./layout";
 type Brand = { name: string; logoDataUri?: string | null; footerText?: string | null };
 
 export const CLIENT_REPORT_TEMPLATES = {
-  client_report: (d: { brand: Brand; reportName: string; period: string; url: string; expiresLabel: string; note?: string }) => ({
+  client_report: (d: { brand: Brand; reportName: string; period: string; url: string; expiresLabel: string }) => ({
     subject: `${d.reportName} — ${d.period}`,
     html: brandedLayout(
       d.brand,
       d.reportName,
-      `<p>Your report for <strong>${esc(d.period)}</strong> is ready.</p>${button(d.url, "View the report")}<p style="font-size:13px;color:#737373">This link works until ${esc(d.expiresLabel)}.${d.note ? ` ${esc(d.note)}` : ""}</p>`,
+      `<p>Your report for <strong>${esc(d.period)}</strong> is ready.</p>${button(d.url, "View the report")}<p style="font-size:13px;color:#737373">This link works until ${esc(d.expiresLabel)}.</p>`,
     ),
     text: `${d.reportName} — ${d.period}\n\nView the report: ${d.url}\nThis link works until ${d.expiresLabel}.`,
   }),

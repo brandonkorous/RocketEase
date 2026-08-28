@@ -1,4 +1,5 @@
 /* Performance sections of the branded report. Every figure arrives pre-formatted from build.ts. */
+import React from "react"; // see index.tsx: the worker uses the classic JSX runtime
 import type { ReportDocument } from "../document";
 import { Legend, MixChart, TrendChart } from "./charts";
 import { BrandRow } from "./shell";

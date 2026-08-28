@@ -4,6 +4,7 @@
  * deliberately no "all clients" row, and spend stays inside its own workspace
  * section in that account's currency.
  */
+import React from "react"; // see index.tsx: the worker uses the classic JSX runtime
 import type { RollupClient, RollupDocument } from "../document";
 import { BrandRow } from "./shell";
 

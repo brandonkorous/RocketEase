@@ -6,6 +6,7 @@
  * Monochrome by rule (design.md): black, white and structure. The only colour
  * comes from social network series in the charts.
  */
+import React from "react"; // see index.tsx: the worker uses the classic JSX runtime
 import type { ReportBrand } from "../document";
 
 const CSS = `

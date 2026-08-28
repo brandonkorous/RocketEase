@@ -32,11 +32,12 @@ export function revenueUnavailable(state: ConversionState): string | null {
   return null;
 }
 
-/** ROAS needs both revenue from a tracking source and spend from an ad account. */
-export function roasUnavailable(state: ConversionState, hasPaidSpend: boolean): string | null {
+/** ROAS needs spend AND revenue on a paid medium in this same period, not just a source that can report revenue. */
+export function roasUnavailable(state: ConversionState, paid: { spend?: number; revenue?: number }): string | null {
   const revenue = revenueUnavailable(state);
   if (revenue) return revenue;
-  if (!hasPaidSpend) return "No paid spend in this period, so there is nothing to divide revenue by. Connect an ad account from a campaign's Ads tab.";
+  if (paid.spend == null) return "No paid spend in this period, so there is nothing to divide revenue by. Connect an ad account from a campaign's Ads tab.";
+  if (paid.revenue == null) return "Your conversion source reported no revenue on a paid medium in this period, so there is nothing to divide by spend. ROAS is paid-medium revenue ÷ spend.";
   return null;
 }
 
@@ -52,11 +53,11 @@ export function sessionsUnavailable(state: ConversionState): string | null {
  * One answer for every tracking-supplied metric. `undefined` means "not a
  * tracking metric" so the caller falls through to its own paid/organic rules.
  */
-export function trackingUnavailable(key: string, state: ConversionState, paid: { spend?: number; conversions?: number }): string | null | undefined {
+export function trackingUnavailable(key: string, state: ConversionState, paid: { spend?: number; conversions?: number; revenue?: number }): string | null | undefined {
   if (key === "conversions") return conversionsUnavailable(state, paid.conversions != null);
   if (key === "revenue") return revenueUnavailable(state);
   if (key === "sessions") return sessionsUnavailable(state);
-  if (key === "roas") return roasUnavailable(state, paid.spend != null);
+  if (key === "roas") return roasUnavailable(state, paid);
   return undefined;
 }
 

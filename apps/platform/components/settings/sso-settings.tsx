@@ -15,6 +15,14 @@ const ACTION_LABEL: Record<string, string> = {
 
 /** Settings → Single sign-on. Organization scope: SSO and SCIM belong to the billing boundary. */
 export function SsoSettings({ workspaceId, data }: { workspaceId: string; data: SsoSectionData }) {
+  if (!data.canManage) {
+    return (
+      <p className="mt-3 max-w-140 text-sm leading-relaxed text-secondary">
+        Single sign-on and directory provisioning apply to the whole {data.organizationName} organization, so only its
+        owners and admins can see and change them. Ask an organization owner if you need access.
+      </p>
+    );
+  }
   return (
     <div className="mt-4 flex max-w-180 flex-col gap-8">
       <p className="text-sm leading-relaxed text-secondary">

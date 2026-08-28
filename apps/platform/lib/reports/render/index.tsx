@@ -3,6 +3,8 @@
  * the output is a document, not an app — no hydration markers, no scripts.
  * Runs in the worker, so nothing here may touch next/headers or server-only.
  */
+// React is imported explicitly: the worker transpiles these files with the classic JSX runtime.
+import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReportDocument, RollupDocument } from "../document";
 import { Appendix, InsightsSection, PaidSectionView, ServiceSection } from "./appendix";

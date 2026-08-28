@@ -11,7 +11,6 @@ import { notify } from "@/lib/notifications";
 import { workspacePath } from "@/lib/nav";
 import { buildAndStoreArtifact } from "@/lib/reports/artifact";
 import { deliverReport } from "@/lib/reports/deliver";
-import { PDF_UNAVAILABLE_NOTE, pdfConfigured } from "@/lib/reports/pdf";
 import { resolveRecipients } from "@/lib/reports/recipients";
 import type { HandlerContext } from "./index";
 
@@ -44,7 +43,6 @@ export async function reportRunJob(data: JobPayloads["report.run"], ctx: Handler
       extension: artifact.extension,
       clientFacing: Boolean(snapshot.clientFacing),
       recipients,
-      note: format === "html" && !artifact.pdfKey && !pdfConfigured() ? PDF_UNAVAILABLE_NOTE : undefined,
     });
     await db
       .update(reportRun)

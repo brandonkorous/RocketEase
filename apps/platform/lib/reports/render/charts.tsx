@@ -3,6 +3,7 @@
  * no stylesheet dependency. Network brand colours are the one allowed colour
  * (design.md) and identify the series.
  */
+import React from "react"; // see index.tsx: the worker uses the classic JSX runtime
 import { NETWORK_COLOR } from "@/components/analytics/charts";
 import type { SeriesPoint } from "@/lib/analytics/queries";
 

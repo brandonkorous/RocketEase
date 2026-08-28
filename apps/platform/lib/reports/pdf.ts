@@ -13,8 +13,6 @@ export type PdfResult = { buffer: Buffer } | null;
 /** True when the deployment is configured to render PDFs. */
 export const pdfConfigured = () => Boolean(process.env.REPORT_CHROMIUM_PATH);
 
-export const PDF_UNAVAILABLE_NOTE = "PDF export becomes available once a Chromium renderer is configured for this deployment (REPORT_CHROMIUM_PATH). The HTML document below is the artifact of record.";
-
 type Browser = { newPage: () => Promise<Page>; close: () => Promise<void> };
 type Page = { setContent: (html: string, o: unknown) => Promise<void>; pdf: (o: unknown) => Promise<Uint8Array> };
 

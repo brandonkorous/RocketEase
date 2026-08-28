@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { derived } from "@/lib/analytics/derive";
 import { conversionProvenance, trackingUnavailable } from "./availability";
 import type { ConversionState, ConversionSourceView } from "./conversions";
 
@@ -51,7 +52,16 @@ describe("trackingUnavailable", () => {
     expect(trackingUnavailable("roas", revenueless, { spend: 100 })).toContain("has not reported any revenue");
     const withRevenue = { ...revenueless, hasRevenue: true };
     expect(trackingUnavailable("roas", withRevenue, {})).toContain("No paid spend");
-    expect(trackingUnavailable("roas", withRevenue, { spend: 100 })).toBeNull();
+    expect(trackingUnavailable("roas", withRevenue, { spend: 100, revenue: 250 })).toBeNull();
+  });
+
+  it("blocks ROAS when the source can report revenue but none landed on a paid medium this period", () => {
+    // Regression: spend present + revenue fact absent used to render as 0.00x.
+    const withRevenue = { ...withSource(source()), hasRevenue: true };
+    const why = trackingUnavailable("roas", withRevenue, { spend: 7013.3, conversions: 1003 });
+    expect(why).toContain("no revenue on a paid medium in this period");
+    expect(derived("roas", { spend: 7013.3, conversions: 1003 })).toBeNull();
+    expect(derived("roas", { spend: 100, revenue: 250 })).toBe(2.5);
   });
 
   it("keeps sessions unavailable when the only source is a webhook", () => {

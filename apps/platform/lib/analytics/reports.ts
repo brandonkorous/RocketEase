@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { reportDefinition, reportRun, type ReportCadence, type ReportDefinition, type ReportFilters } from "@/db/schema/analytics";
+import { reportDefinition, reportRun, type ReportCadence, type ReportDefinition, type ReportFilters, type ReportFormat } from "@/db/schema/analytics";
 import { user } from "@/db/schema/auth";
 import { formatInZone } from "@/lib/time";
 import { shiftDay } from "./periods";
@@ -26,7 +26,7 @@ export function resolveFilters(def: Pick<ReportDefinition, "filters" | "rollingD
   return { ...def.filters, to, from: shiftDay(to, -(def.rollingDays - 1)) };
 }
 
-export type ReportListRow = { id: string; name: string; cadence: ReportCadence; recipients: number; window: string; lastRun: string | null; nextRun: string | null; createdBy: string | null };
+export type ReportListRow = { id: string; name: string; cadence: ReportCadence; recipients: number; window: string; lastRun: string | null; nextRun: string | null; createdBy: string | null; format: ReportFormat; clientFacing: boolean };
 export type RunRow = { id: string; name: string; status: string; format: string; generatedAt: string; by: string | null; sizeBytes: number | null; error: string | null; objectKey: string | null; definitionId: string | null };
 
 export async function listReports(workspaceId: string, tz: string): Promise<{ definitions: ReportListRow[]; runs: RunRow[] }> {
@@ -35,7 +35,7 @@ export async function listReports(workspaceId: string, tz: string): Promise<{ de
     db.select({ r: reportRun, by: user.name }).from(reportRun).leftJoin(user, eq(user.id, reportRun.requestedByUserId)).where(eq(reportRun.workspaceId, workspaceId)).orderBy(desc(reportRun.createdAt)).limit(30),
   ]);
   return {
-    definitions: defs.map(({ d, by }) => ({ id: d.id, name: d.name, cadence: d.cadence, recipients: d.recipients.length, window: d.rollingDays ? `Last ${d.rollingDays} days` : `${d.filters.from} → ${d.filters.to}`, lastRun: d.lastRunAt ? formatInZone(d.lastRunAt, tz) : null, nextRun: d.nextRunAt ? formatInZone(d.nextRunAt, tz) : null, createdBy: by })),
+    definitions: defs.map(({ d, by }) => ({ id: d.id, name: d.name, cadence: d.cadence, recipients: d.recipients.length, window: d.rollingDays ? `Last ${d.rollingDays} days` : `${d.filters.from} → ${d.filters.to}`, lastRun: d.lastRunAt ? formatInZone(d.lastRunAt, tz) : null, nextRun: d.nextRunAt ? formatInZone(d.nextRunAt, tz) : null, createdBy: by, format: d.format, clientFacing: d.clientFacing })),
     runs: runs.map(({ r, by }) => ({ id: r.id, name: r.name, status: r.status, format: r.format.toUpperCase(), generatedAt: formatInZone(r.finishedAt ?? r.createdAt, tz), by, sizeBytes: r.sizeBytes, error: r.error, objectKey: r.objectKey, definitionId: r.definitionId })),
   };
 }

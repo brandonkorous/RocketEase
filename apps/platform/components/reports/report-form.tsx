@@ -4,16 +4,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@wizeworks/silicaui-react";
 import { saveReport, type ReportInput } from "@/lib/actions/reports";
+import type { ExternalRecipientRow } from "@/lib/actions/report-recipients";
+import { ReportDelivery } from "./report-delivery";
 import { workspacePath } from "@/lib/nav";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 
 export type ReportFormInitial = Partial<ReportInput> & { id?: string };
 
-export function ReportForm({ workspaceId, initial, channels, onDone }: { workspaceId: string; initial: ReportFormInitial; channels: { id: string; name: string }[]; onDone?: () => void }) {
+export function ReportForm({ workspaceId, initial, channels, external = [], onDone }: { workspaceId: string; initial: ReportFormInitial; channels: { id: string; name: string }[]; external?: ExternalRecipientRow[]; onDone?: () => void }) {
   const router = useRouter();
   const { run, pending } = useActionFeedback();
   const [v, setV] = useState<ReportInput>({
     id: initial.id, name: initial.name ?? "", from: initial.from ?? "", to: initial.to ?? "", rollingDays: initial.rollingDays ?? 28, channelId: initial.channelId ?? "", compare: initial.compare ?? "previous", scope: initial.scope ?? "all", cadence: initial.cadence ?? "none", recipients: initial.recipients ?? [],
+    format: initial.format ?? "csv", clientFacing: initial.clientFacing ?? false, externalRecipients: initial.externalRecipients ?? [],
   });
   const [recipients, setRecipients] = useState(v.recipients.join(", "));
   const set = <K extends keyof ReportInput>(k: K, val: ReportInput[K]) => setV((s) => ({ ...s, [k]: val }));
@@ -35,11 +38,8 @@ export function ReportForm({ workspaceId, initial, channels, onDone }: { workspa
         <label className="flex flex-col gap-1 text-sm"><span className="text-xs font-medium text-secondary">Comparison</span><select className="select select-sm" value={v.compare} onChange={(e) => set("compare", e.target.value as ReportInput["compare"])}><option value="previous">Previous period</option><option value="year">Previous year</option><option value="none">None</option></select></label>
         <label className="flex flex-col gap-1 text-sm"><span className="text-xs font-medium text-secondary">Scope</span><select className="select select-sm" value={v.scope} onChange={(e) => set("scope", e.target.value as ReportInput["scope"])}><option value="all">Organic + paid</option><option value="organic">Organic</option><option value="paid">Paid</option></select></label>
       </div>
-      <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
-        <label className="flex flex-col gap-1 text-sm"><span className="text-xs font-medium text-secondary">Schedule</span><select className="select select-sm" value={v.cadence} onChange={(e) => set("cadence", e.target.value as ReportInput["cadence"])}><option value="none">Manual only</option><option value="daily">Daily, 8:00</option><option value="weekly">Weekly, Monday 8:00</option><option value="monthly">Monthly, 1st 8:00</option></select></label>
-        <label className="flex flex-col gap-1 text-sm"><span className="text-xs font-medium text-secondary">Recipients (workspace members only, comma-separated)</span><input className="input input-sm" value={recipients} onChange={(e) => setRecipients(e.target.value)} placeholder="name@company.com" /></label>
-      </div>
-      <p className="text-xs text-secondary/70">Exports are CSV and include the period, filters, metric definitions (version), and source freshness. Recipients are re-checked against workspace membership at every run.</p>
+      <ReportDelivery v={v} set={set} recipients={recipients} setRecipients={setRecipients} external={external} />
+      <p className="text-xs text-secondary/70">Every artifact records the period, filters, metric definitions (version), and source freshness. Member recipients are re-checked against workspace membership at every run; external addresses must have confirmed the opt-in.</p>
       <div className="flex gap-2"><Button type="submit" color="primary" size="sm" loading={pending}>{v.id ? "Save changes" : "Save report"}</Button>{onDone && <Button type="button" variant="ghost" color="neutral" size="sm" onClick={onDone}>Cancel</Button>}</div>
     </form>
   );

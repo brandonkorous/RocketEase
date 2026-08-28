@@ -10,23 +10,17 @@ import { ProviderError } from "../types";
 import { form, httpJson } from "../http";
 import { probe } from "../health";
 import { validateAgainstCapabilities } from "../validate";
-import { capsFor, isShortEligible, mapYouTubeError, OAUTH_AUTH, OAUTH_REVOKE, OAUTH_TOKEN, SCOPES, yt, type GoogleError } from "./client";
+import { capsFor, googleAuthorizeUrl, googleTokenCall, isShortEligible, OAUTH_REVOKE, SCOPES, yt } from "./client";
 import { findPublication, publicationStatus, publish, TITLE_MAX, titleFor } from "./publish";
 import { fetchInbox, findReply, reply } from "./inbox";
 import { fetchInsights } from "./insights";
 
 const DEFAULT_SCOPES = [...SCOPES.read, ...SCOPES.upload, ...SCOPES.comments, ...SCOPES.analytics];
 
-type TokenRes = { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string } & GoogleError;
 type ChannelRow = { id?: string; snippet?: { title?: string; customUrl?: string; thumbnails?: { default?: { url?: string }; medium?: { url?: string } } } };
 
 const expiry = (s: number | undefined, fallback?: string) => (s ? new Date(Date.now() + s * 1000).toISOString() : fallback);
-
-async function tokenCall(body: Record<string, string>): Promise<TokenRes> {
-  const res = await httpJson<TokenRes>(OAUTH_TOKEN, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form(body) });
-  if (res.status >= 400 || !res.body.access_token) throw mapYouTubeError(res.status === 200 ? 401 : res.status, res.body, { headers: res.headers });
-  return res.body;
-}
+const tokenCall = googleTokenCall;
 
 async function myChannels(cred: Credential): Promise<ChannelDescriptor[]> {
   const res = await yt<{ items?: ChannelRow[] }>("/channels?part=snippet&mine=true&maxResults=50", cred.accessToken);
@@ -66,16 +60,7 @@ export function createYouTubeProvider(cfg: ProviderConfig): ProviderAdapter {
 
     /** access_type=offline + prompt=consent is what makes Google return a refresh token. */
     authorizationUrl({ state, redirectUri, scopes: extra }: AuthorizeParams) {
-      const u = new URL(OAUTH_AUTH);
-      u.searchParams.set("client_id", cfg.clientId);
-      u.searchParams.set("response_type", "code");
-      u.searchParams.set("redirect_uri", redirectUri);
-      u.searchParams.set("state", state);
-      u.searchParams.set("scope", [...new Set([...DEFAULT_SCOPES, ...(extra ?? [])])].join(" "));
-      u.searchParams.set("access_type", "offline");
-      u.searchParams.set("prompt", "consent");
-      u.searchParams.set("include_granted_scopes", "true");
-      return u.toString();
+      return googleAuthorizeUrl({ clientId: cfg.clientId, redirectUri, state, scopes: [...DEFAULT_SCOPES, ...(extra ?? [])] });
     },
 
     async exchangeCode(code, redirectUri): Promise<Credential> {

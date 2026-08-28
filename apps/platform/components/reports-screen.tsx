@@ -8,9 +8,12 @@ import type { ReportListRow, RunRow } from "@/lib/analytics/reports";
 import { workspacePath } from "@/lib/nav";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 import { ConfirmDialog } from "./confirm-dialog";
+import { ExternalRecipientsPanel } from "./reports/external-recipients-panel";
 import { ReportForm, type ReportFormInitial } from "./reports/report-form";
+import { SharePopover } from "./reports/share-popover";
+import type { ExternalRecipientRow } from "@/lib/actions/report-recipients";
 
-export type ReportsData = { workspaceId: string; definitions: ReportListRow[]; runs: RunRow[]; channels: { id: string; name: string }[]; canManage: boolean; newInitial: ReportFormInitial | null };
+export type ReportsData = { workspaceId: string; definitions: ReportListRow[]; runs: RunRow[]; channels: { id: string; name: string }[]; external: ExternalRecipientRow[]; canManage: boolean; newInitial: ReportFormInitial | null };
 
 const CADENCE: Record<string, string> = { none: "Manual", daily: "Daily", weekly: "Weekly", monthly: "Monthly" };
 const STATUS: Record<string, "success" | "warning" | "error" | "info"> = { done: "success", running: "info", queued: "warning", failed: "error" };
@@ -20,7 +23,7 @@ function DefinitionRow({ d, workspaceId, canManage }: { d: ReportListRow; worksp
   return (
     <tr>
       <td className="py-2"><Link href={workspacePath(workspaceId, `reports/${d.id}`)} className="font-medium hover:underline">{d.name}</Link><div className="text-xs text-secondary/70">{d.window}</div></td>
-      <td className="py-2 text-sm">{CADENCE[d.cadence]}{d.recipients ? ` · ${d.recipients} recipient${d.recipients > 1 ? "s" : ""}` : ""}</td>
+      <td className="py-2 text-sm">{CADENCE[d.cadence]}{d.recipients ? ` · ${d.recipients} recipient${d.recipients > 1 ? "s" : ""}` : ""}<div className="text-xs text-secondary/70">{d.clientFacing ? "Branded client document" : d.format === "html" ? "Branded document" : "CSV export"}</div></td>
       <td className="py-2 text-xs text-secondary">{d.lastRun ?? "Never"}</td>
       <td className="py-2 text-xs text-secondary">{d.nextRun ?? "—"}</td>
       <td className="py-2 text-right">{canManage && (<span className="flex justify-end gap-1"><Button size="xs" variant="outline" color="neutral" loading={pending} onClick={() => run(() => runReportNow(workspaceId, d.id))}>Run now</Button><ConfirmDialog trigger={<Button size="xs" variant="ghost" color="error" disabled={pending}>Delete</Button>} title={`Delete "${d.name}"?`} description="Scheduled deliveries stop. Generated files stay in the history below." confirmLabel="Delete" onConfirm={() => run(() => deleteReport(workspaceId, d.id))} /></span>)}</td>
@@ -39,7 +42,7 @@ export function ReportsScreen({ data }: { data: ReportsData }) {
       {creating && (
         <section className="rounded-box border border-base-300 p-4" aria-label="New report">
           <h2 className="text-sm font-semibold">New report</h2>
-          <div className="mt-3"><ReportForm workspaceId={data.workspaceId} initial={data.newInitial ?? {}} channels={data.channels} onDone={() => setCreating(false)} /></div>
+          <div className="mt-3"><ReportForm workspaceId={data.workspaceId} initial={data.newInitial ?? {}} channels={data.channels} external={data.external} onDone={() => setCreating(false)} /></div>
         </section>
       )}
       <section className="rounded-box border border-base-300 p-4" aria-label="Saved reports">
@@ -64,13 +67,14 @@ export function ReportsScreen({ data }: { data: ReportsData }) {
                 <td className="py-2 text-xs text-secondary">{r.by ?? "Schedule"}</td>
                 <td className="py-2 text-xs">{r.format}{r.sizeBytes ? ` · ${(r.sizeBytes / 1024).toFixed(1)} KB` : ""}</td>
                 <td className="py-2"><Badge size="xs" variant="soft" color={STATUS[r.status] ?? "info"}>{r.status}</Badge>{r.error && <span className="ml-2 text-xs text-error">{r.error}</span>}</td>
-                <td className="py-2 text-right">{r.status === "done" && r.objectKey && <a href={workspacePath(data.workspaceId, `reports/download?run=${r.id}`)} className="text-xs font-medium hover:underline">Download</a>}</td>
+                <td className="py-2 text-right">{r.status === "done" && r.objectKey && (<span className="flex items-center justify-end gap-2"><a href={workspacePath(data.workspaceId, `reports/download?run=${r.id}`)} className="text-xs font-medium hover:underline">Download</a>{data.canManage && <SharePopover workspaceId={data.workspaceId} runId={r.id} runName={r.name} />}</span>)}</td>
               </tr>
             ))}
             {data.runs.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-xs text-secondary/70">No reports generated yet.</td></tr>}
           </tbody>
         </table>
       </section>
+      <ExternalRecipientsPanel workspaceId={data.workspaceId} rows={data.external} canManage={data.canManage} />
     </div>
   );
 }

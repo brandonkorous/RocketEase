@@ -6,9 +6,11 @@ import { channel } from "@/db/schema/connections";
 import { contentItem, postVariant, remotePublication } from "@/db/schema/content";
 import { adCampaign, campaignContent } from "@/db/schema/campaigns";
 import type { ReportFilters } from "@/db/schema/analytics";
+import { conversionTotals } from "@/lib/tracking/conversions";
 
 export type Period = { from: string; to: string };
-export type Totals = Partial<Record<CanonicalMetric, number>>;
+/** `revenue` and `sessions` come from conversion tracking sources (M7), not from a provider's insights. */
+export type Totals = Partial<Record<CanonicalMetric | "revenue" | "sessions", number>>;
 
 const SUMMED: CanonicalMetric[] = ["impressions", "reach", "video_views", "reactions", "comments", "shares", "saves", "engagement", "link_clicks", "follower_gain", "watch_time_minutes", "spend", "conversions"];
 
@@ -38,6 +40,12 @@ export async function totals(workspaceId: string, f: ReportFilters, p: Period): 
   const last = await db.execute(sql`select sum(value)::float as v from (select distinct on (channel_id) value from metric_fact where ${scopeWhere(workspaceId, f, p, "channel")} and metric = 'followers' order by channel_id, day desc) t`);
   const v = (last as unknown as { v: number | null }[])[0]?.v;
   if (v != null) out.followers = Number(v);
+  // Site-reported conversions/revenue/sessions. Non-paid mediums only in the
+  // organic and combined scopes, so they never double-count the ad platform's.
+  const site = await conversionTotals(workspaceId, f, p);
+  if (site.conversions != null) out.conversions = (out.conversions ?? 0) + site.conversions;
+  if (site.revenue != null) out.revenue = site.revenue;
+  if (site.sessions != null) out.sessions = site.sessions;
   return out;
 }
 

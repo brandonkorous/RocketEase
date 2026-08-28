@@ -13,8 +13,9 @@ import * as telemetry from "./schema/telemetry";
 import * as quality from "./schema/quality";
 import * as recommendations from "./schema/recommendations";
 import * as automations from "./schema/automations";
+import * as tracking from "./schema/tracking";
 
-export const schema = { ...auth, ...app, ...connections, ...assets, ...content, ...approvals, ...engagement, ...analytics, ...telemetry, ...quality, ...campaigns, ...recommendations, ...automations };
+export const schema = { ...auth, ...app, ...connections, ...assets, ...content, ...approvals, ...engagement, ...analytics, ...telemetry, ...quality, ...campaigns, ...recommendations, ...automations, ...tracking };
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set");

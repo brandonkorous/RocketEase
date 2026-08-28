@@ -66,7 +66,9 @@ export async function verifyStepUp(input: z.input<typeof schema>): Promise<Actio
       await audit({ ...base, result: "denied", summary: { note: `${purpose}: throttled` } });
       return fail("Too many failed attempts. Wait a few minutes and try again.");
     }
-    const method = await stepUpMethodFor(user.id);
+    const { method } = await stepUpMethodFor(user.id);
+    // SSO users re-authenticate at their identity provider, not here.
+    if (method === "sso") return fail("Confirm with your identity provider to continue.");
     const ok = method === "totp" ? Boolean(code) && (await totpOk(code!.replace(/\s/g, ""))) : Boolean(password) && (await passwordOk(user.id, password!));
     if (!ok) {
       await audit({ ...base, result: "denied", summary: { note: `${purpose}: ${method} rejected` } });

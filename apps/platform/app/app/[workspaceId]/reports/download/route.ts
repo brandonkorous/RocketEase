@@ -12,6 +12,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ workspac
   const runId = new URL(req.url).searchParams.get("run") ?? "";
   const run = await db.query.reportRun.findFirst({ where: (r, { and, eq }) => and(eq(r.id, runId), eq(r.workspaceId, workspaceId)) });
   if (!run?.objectKey) return new NextResponse("Not found", { status: 404 });
-  const url = await presignGet(run.objectKey, 300, `${run.name}.csv`);
+  // Prefer the PDF when one was rendered; otherwise the source document (HTML or CSV).
+  const pdfKey = (run.snapshot as { pdfKey?: string | null }).pdfKey ?? null;
+  const key = pdfKey ?? run.objectKey;
+  const ext = pdfKey ? "pdf" : run.format;
+  const url = await presignGet(key, 300, `${run.name.replace(/[^\w .-]+/g, " ").trim() || "report"}.${ext}`);
   return NextResponse.redirect(url);
 }

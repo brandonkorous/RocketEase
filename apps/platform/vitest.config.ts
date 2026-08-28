@@ -10,4 +10,6 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname) },
   },
+  // tsconfig keeps jsx: "preserve" for Next; tests need it compiled.
+  oxc: { jsx: { runtime: "automatic" } },
 });

@@ -4,7 +4,7 @@
  * Re-ingested values that differ bump `revision` so reports can flag changes.
  */
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import type { CanonicalMetric } from "@make-it-social/providers";
 import { organization, user } from "./auth";
 import { workspace } from "./app";
@@ -45,6 +45,8 @@ export const metricFact = pgTable(
 
 export type ReportFilters = { from: string; to: string; compare: "previous" | "year" | "none"; channelId?: string; campaignId?: string; scope: "all" | "organic" | "paid" };
 export type ReportCadence = "none" | "daily" | "weekly" | "monthly";
+/** csv = the analyst export; html = the branded client document (PDF alongside it when a renderer is configured). */
+export type ReportFormat = "csv" | "html";
 
 export const reportDefinition = pgTable(
   "report_definition",
@@ -58,7 +60,11 @@ export const reportDefinition = pgTable(
     columns: jsonb("columns").$type<string[]>().notNull().default([]),
     cadence: text("cadence").$type<ReportCadence>().notNull().default("none"),
     recipients: jsonb("recipients").$type<string[]>().notNull().default([]),
-    format: text("format").$type<"csv">().notNull().default("csv"),
+    format: text("format").$type<ReportFormat>().notNull().default("csv"),
+    /** Client-facing: branded document, external recipients allowed, share link offered. */
+    clientFacing: boolean("client_facing").notNull().default(false),
+    /** External addresses; only rows verified in `external_recipient` are delivered to. */
+    externalRecipients: jsonb("external_recipients").$type<string[]>().notNull().default([]),
     nextRunAt: timestamp("next_run_at", { withTimezone: true }),
     lastRunAt: timestamp("last_run_at", { withTimezone: true }),
     createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
@@ -91,6 +97,61 @@ export const reportRun = pgTable(
   (t) => [index("report_run_ws_idx").on(t.workspaceId, t.createdAt)],
 );
 
+/**
+ * A signed, expiring, revocable link to one generated report run (analytics.md
+ * "Reports": clients see the artifact, never the workspace). The URL carries an
+ * opaque token; only its hash is stored, so a database read cannot mint a link.
+ * No organization or workspace id ever appears in the URL.
+ */
+export const reportShare = pgTable(
+  "report_share",
+  {
+    id: id(),
+    ...scoped(),
+    runId: text("run_id").notNull().references(() => reportRun.id, { onDelete: "cascade" }),
+    /** sha256 of the opaque token. The token itself is shown once, at creation. */
+    tokenHash: text("token_hash").notNull(),
+    /** Optional second factor for the link; scrypt-style hash, never the passcode. */
+    passcodeHash: text("passcode_hash"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revokedByUserId: text("revoked_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    viewCount: integer("view_count").notNull().default(0),
+    lastViewedAt: timestamp("last_viewed_at", { withTimezone: true }),
+    createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: now("created_at"),
+  },
+  (t) => [uniqueIndex("report_share_token_idx").on(t.tokenHash), index("report_share_run_idx").on(t.runId)],
+);
+
+/**
+ * Double opt-in for addresses outside the workspace (permissions.md: a client
+ * report may only leave the tenant to someone who asked for it). Unverified
+ * rows are skipped at run time and shown as pending in the report form.
+ */
+export const externalRecipient = pgTable(
+  "external_recipient",
+  {
+    id: id(),
+    ...scoped(),
+    email: text("email").notNull(),
+    status: text("status").$type<"pending" | "verified" | "revoked">().notNull().default("pending"),
+    /** sha256 of the single-use verification token sent in the opt-in email. */
+    verificationTokenHash: text("verification_token_hash"),
+    verificationSentAt: timestamp("verification_sent_at", { withTimezone: true }),
+    verificationExpiresAt: timestamp("verification_expires_at", { withTimezone: true }),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    /** Truncated proof of the opt-in click, for the audit trail. */
+    verifiedFrom: text("verified_from"),
+    unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
+    requestedByUserId: text("requested_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: now("created_at"),
+  },
+  (t) => [uniqueIndex("external_recipient_ws_email_idx").on(t.workspaceId, t.email), index("external_recipient_token_idx").on(t.verificationTokenHash)],
+);
+
 export type MetricFact = typeof metricFact.$inferSelect;
+export type ReportShare = typeof reportShare.$inferSelect;
+export type ExternalRecipient = typeof externalRecipient.$inferSelect;
 export type ReportDefinition = typeof reportDefinition.$inferSelect;
 export type ReportRun = typeof reportRun.$inferSelect;

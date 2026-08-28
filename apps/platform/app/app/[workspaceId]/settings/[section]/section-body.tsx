@@ -4,6 +4,7 @@ import { SecurityPanel } from "@/components/security-panel";
 import { AutomationsSettings } from "@/components/settings/automations";
 import { InboxSettings } from "@/components/settings/inbox-settings";
 import { NotificationSettings } from "@/components/settings/notification-settings";
+import { SsoSettings } from "@/components/settings/sso-settings";
 import { TrackingSettings } from "@/components/settings/tracking-settings";
 import { GOALS } from "@/lib/actions/settings/catalog";
 import { hasCapability, type WorkspaceContext } from "@/lib/session";
@@ -37,7 +38,9 @@ export function SectionBody({ section, label, ctx, data }: Props) {
     case "automations":
       return <AutomationsSettings workspaceId={workspace.id} data={data.automations} canEdit={canEdit} />;
     case "tracking":
-      return <TrackingSettings workspaceId={workspace.id} initial={data.tracking} canEdit={canEdit} />;
+      return <TrackingSettings workspaceId={workspace.id} initial={data.tracking} canEdit={canEdit} sources={data.sources} enabled={data.sourceKinds} />;
+    case "sso":
+      return <SsoSettings workspaceId={workspace.id} data={data.sso} />;
     case "notifications":
       return <NotificationSettings workspaceId={workspace.id} prefs={data.prefs} email={session.user.email} />;
     default:

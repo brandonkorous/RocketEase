@@ -17,8 +17,8 @@ export function readGoals(settings: Record<string, unknown>): GoalKey[] {
   return raw.filter((g): g is GoalKey => typeof g === "string" && (GOAL_KEYS as readonly string[]).includes(g));
 }
 
-export type TrackingSettings = { utmSource: string; utmMedium: string; utmCampaign: string; pixelId: string };
-export const DEFAULT_TRACKING: TrackingSettings = { utmSource: "", utmMedium: "social", utmCampaign: "", pixelId: "" };
+export type TrackingSettings = { utmSource: string; utmMedium: string; utmCampaign: string };
+export const DEFAULT_TRACKING: TrackingSettings = { utmSource: "", utmMedium: "social", utmCampaign: "" };
 
 export function readTracking(settings: Record<string, unknown>): TrackingSettings {
   const t = (settings.tracking ?? {}) as Partial<TrackingSettings>;

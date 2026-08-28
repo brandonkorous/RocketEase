@@ -49,7 +49,8 @@ export const listUserWorkspaces = cache(async (userId: string): Promise<Workspac
     .from(workspaceMembership)
     .innerJoin(workspace, eq(workspace.id, workspaceMembership.workspaceId))
     .innerJoin(organization, eq(organization.id, workspace.organizationId))
-    .where(and(eq(workspaceMembership.userId, userId), isNull(workspace.archivedAt)))
+    // A SCIM-deprovisioned membership is inactive, not deleted: no access, audit trail intact.
+    .where(and(eq(workspaceMembership.userId, userId), isNull(workspace.archivedAt), isNull(workspaceMembership.deactivatedAt)))
     .orderBy(desc(workspaceMembership.pinned), desc(workspaceMembership.lastOpenedAt), workspace.name);
   return rows;
 });

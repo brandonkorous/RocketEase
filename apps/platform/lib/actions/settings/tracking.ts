@@ -14,11 +14,9 @@ const schema = z.object({
   utmSource: utm.default(""),
   utmMedium: utm.default("social"),
   utmCampaign: utm.default(""),
-  /** Stored only; no pixel is verified or fired until an ad provider is connected. */
-  pixelId: z.string().trim().max(64).regex(/^[\w-]*$/, "Pixel ids are alphanumeric").default(""),
 });
 
-/** Workspace-level UTM defaults + pixel placeholder, stored in workspace.settings.tracking. */
+/** Workspace-level UTM defaults, stored in workspace.settings.tracking. Conversion sources live in `tracking_source`. */
 export async function setTrackingSettings(input: z.input<typeof schema>): Promise<ActionState> {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the tracking fields.");

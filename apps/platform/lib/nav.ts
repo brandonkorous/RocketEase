@@ -47,6 +47,7 @@ export const SETTINGS_SECTIONS = [
   { slug: "accounts", label: "Connected accounts" },
   { slug: "billing", label: "Billing" },
   { slug: "security", label: "Security" },
+  { slug: "sso", label: "Single sign-on" },
   { slug: "audit", label: "Audit log" },
 ] as const;
 

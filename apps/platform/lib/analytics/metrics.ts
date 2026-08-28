@@ -8,9 +8,11 @@ import type { CanonicalMetric } from "@make-it-social/providers";
 
 export const DEFINITIONS_VERSION = "2026.08.1";
 
-export type DisplayMetric = CanonicalMetric | "roas" | "engagement_rate" | "ctr" | "cpm" | "cpc" | "ctr_paid" | "cpa";
+export type DisplayMetric = CanonicalMetric | "roas" | "revenue" | "sessions" | "engagement_rate" | "ctr" | "cpm" | "cpc" | "ctr_paid" | "cpa";
 /** Paid-only keys; values exist only when an ad account is connected (M6). */
 export const PAID_METRICS: DisplayMetric[] = ["spend", "conversions", "cpm", "cpc", "ctr_paid", "cpa", "roas"];
+/** Keys a conversion tracking source supplies (M7). `trackingUnavailable` answers these before the paid fallback. */
+export const TRACKING_METRICS: DisplayMetric[] = ["conversions", "revenue", "sessions", "roas"];
 
 export type MetricContract = {
   key: DisplayMetric;
@@ -20,7 +22,7 @@ export type MetricContract = {
   unit: "count" | "percent" | "currency" | "ratio";
   aggregation: "sum" | "last" | "ratio";
   grains: ("day" | "post" | "channel")[];
-  providers: Partial<Record<"mock" | "meta" | "linkedin" | "tiktok" | "youtube" | "pinterest" | "x", string>>;
+  providers: Partial<Record<"mock" | "meta" | "linkedin" | "tiktok" | "youtube" | "pinterest" | "x" | "ga4" | "shopify" | "webhook", string>>;
   freshnessHours: number;
   /** Why this may be unavailable right now (paid metrics before M6, tracking not connected…). */
   unavailable?: string;
@@ -29,6 +31,8 @@ export type MetricContract = {
 
 const P = { mock: "mock.*", meta: "insights API", linkedin: "organizationalEntityShareStatistics", tiktok: "business insights" };
 const ADS = { mock: "mock ads", meta: "Marketing API /act_{id}/insights" };
+/** M7 conversion sources (lib/tracking); attribution is theirs, we import what they report. */
+const TRACKING_SOURCES = { ga4: "Data API runReport", shopify: "Admin GraphQL orders", webhook: "signed conversion webhook" };
 const PAID_NOTE = "Paid only: imported daily from connected ad accounts in the account currency; no currency conversion is applied.";
 
 export const METRICS: Record<DisplayMetric, MetricContract> = {
@@ -46,13 +50,15 @@ export const METRICS: Record<DisplayMetric, MetricContract> = {
   follower_gain: { key: "follower_gain", name: "Net follower growth", definition: "New followers minus unfollows.", formula: "Σ daily net change", unit: "count", aggregation: "sum", grains: ["day", "channel"], providers: P, freshnessHours: 24 },
   engagement_rate: { key: "engagement_rate", name: "Engagement rate", definition: "Engagement divided by reach.", formula: "engagement ÷ reach", unit: "percent", aggregation: "ratio", grains: ["day", "post", "channel"], providers: P, freshnessHours: 24, caveat: "Denominator is reach, not followers." },
   ctr: { key: "ctr", name: "Click-through rate", definition: "Link clicks divided by impressions.", formula: "link_clicks ÷ impressions", unit: "percent", aggregation: "ratio", grains: ["day", "post", "channel"], providers: P, freshnessHours: 24 },
-  conversions: { key: "conversions", name: "Conversions", definition: "Conversions the ad platform attributed to paid ads (its own model and window, shown alongside).", formula: "Σ provider-attributed conversion actions", unit: "count", aggregation: "sum", grains: ["day", "post"], providers: ADS, freshnessHours: 24, caveat: "Organic conversions need a pixel/UTM tracking source, which is not connected yet; only paid conversions are counted." },
+  conversions: { key: "conversions", name: "Conversions", definition: "Conversions attributed to your social traffic: the ad platform's own count for paid clicks, plus what a connected tracking source reports for everything else.", formula: "Σ ad-reported paid conversions + Σ source-reported conversions on non-paid mediums", unit: "count", aggregation: "sum", grains: ["day", "post"], providers: { ...ADS, ...TRACKING_SOURCES }, freshnessHours: 24, caveat: "The two halves never overlap: a click whose utm_medium is a paid medium is counted once by the ad platform, never again by the tracking source. Each source applies its own attribution model and window, shown next to the number." },
   spend: { key: "spend", name: "Spend", definition: "Paid media spend reported by connected ad accounts.", formula: "Σ ad campaign daily spend", unit: "currency", aggregation: "sum", grains: ["day", "post"], providers: ADS, freshnessHours: 24, caveat: PAID_NOTE },
   cpm: { key: "cpm", name: "CPM", definition: "Cost per 1,000 paid impressions.", formula: "spend ÷ paid impressions × 1000", unit: "currency", aggregation: "ratio", grains: ["day"], providers: ADS, freshnessHours: 24, caveat: PAID_NOTE },
   cpc: { key: "cpc", name: "CPC", definition: "Cost per paid link click.", formula: "spend ÷ paid link clicks", unit: "currency", aggregation: "ratio", grains: ["day"], providers: ADS, freshnessHours: 24, caveat: PAID_NOTE },
   ctr_paid: { key: "ctr_paid", name: "CTR (paid)", definition: "Paid link clicks divided by paid impressions.", formula: "paid link_clicks ÷ paid impressions", unit: "percent", aggregation: "ratio", grains: ["day"], providers: ADS, freshnessHours: 24, caveat: PAID_NOTE },
   cpa: { key: "cpa", name: "Cost per result", definition: "Spend divided by provider-attributed conversions.", formula: "spend ÷ conversions", unit: "currency", aggregation: "ratio", grains: ["day"], providers: ADS, freshnessHours: 24, caveat: PAID_NOTE },
-  roas: { key: "roas", name: "ROAS", definition: "Return on ad spend: attributed revenue divided by spend.", formula: "revenue ÷ spend", unit: "ratio", aggregation: "ratio", grains: ["day"], providers: {}, freshnessHours: 24, unavailable: "Ad imports carry conversion counts but not revenue. ROAS appears once a revenue source (pixel value or commerce) is connected." },
+  roas: { key: "roas", name: "ROAS", definition: "Return on ad spend: revenue a tracking source attributed to paid social clicks, divided by the spend that bought them.", formula: "paid-medium revenue ÷ spend", unit: "ratio", aggregation: "ratio", grains: ["day"], providers: TRACKING_SOURCES, freshnessHours: 24, caveat: "Revenue is the tracking source's own last-click attribution in the currency it reports; spend is the ad account's. No currency conversion is applied, so a mixed-currency workspace should read ROAS per account." },
+  revenue: { key: "revenue", name: "Revenue", definition: "Order or purchase value a connected tracking source attributed to your social traffic.", formula: "Σ source-reported revenue by UTM", unit: "currency", aggregation: "sum", grains: ["day"], providers: TRACKING_SOURCES, freshnessHours: 24, caveat: "Reported in the source's own currency; never converted. Missing is not zero — a source that reports no purchase value shows revenue as unavailable, not 0." },
+  sessions: { key: "sessions", name: "Sessions", definition: "Visits to your site that Google Analytics attributed to a social source.", formula: "Σ GA4 sessions by sessionSource/sessionMedium", unit: "count", aggregation: "sum", grains: ["day"], providers: { ga4: "runReport sessions" }, freshnessHours: 24, caveat: "Counted by GA4's session definition, not by our link clicks; the two will not match because clicks and landed sessions are different events." },
 };
 
 /** Ratios over a totals bag; null when the denominator is missing or zero (never infinity). */

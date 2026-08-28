@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { METRICS, formatMetric } from "@/lib/analytics/metrics";
 import { engagementOf } from "@/lib/analytics/derive";
+import { trackingUnavailable } from "@/lib/tracking/availability";
 import { filtersToQuery } from "@/lib/analytics/periods";
 import type { AnalyticsData } from "@/lib/analytics/screen";
 import { workspacePath } from "@/lib/nav";
@@ -25,6 +26,7 @@ const ROWS = ["reach", "impressions", "engagement", "link_clicks"] as const;
 
 export function OrganicVsPaid({ data }: { data: AnalyticsData }) {
   const hasPaid = data.paid.spend != null;
+  const noSource = trackingUnavailable("conversions", data.conversions, {});
   const paidNote = hasPaid ? undefined : "No paid facts in this period. Connect an ad account from a campaign's Ads tab.";
   const value = (k: (typeof ROWS)[number], t: AnalyticsData["organic"], has: boolean) => (k === "engagement" ? engagementOf(t) : t[k]) ?? (has ? 0 : null);
   const cell = (v: number | null, m: keyof typeof METRICS) => (v === null ? <span className="text-secondary/70" title={paidNote}>—</span> : formatMetric(METRICS[m], v));
@@ -34,7 +36,7 @@ export function OrganicVsPaid({ data }: { data: AnalyticsData }) {
         <thead className="text-xs text-secondary"><tr><th className="pb-2 text-left font-medium">Metric</th><th className="pb-2 text-right font-medium">Organic</th><th className="pb-2 text-right font-medium">Paid</th></tr></thead>
         <tbody className="divide-y divide-base-300">
           {ROWS.map((k) => (<tr key={k}><td className="py-2">{METRICS[k].name}</td><td className="py-2 text-right font-semibold">{cell(value(k, data.organic, data.hasData), k)}</td><td className="py-2 text-right font-semibold">{cell(value(k, data.paid, hasPaid), k)}</td></tr>))}
-          <tr><td className="py-2">Conversions</td><td className="py-2 text-right text-secondary/70" title={METRICS.conversions.caveat}>n/a</td><td className="py-2 text-right font-semibold">{cell(data.paid.conversions ?? (hasPaid ? 0 : null), "conversions")}</td></tr>
+          <tr><td className="py-2">Conversions</td><td className="py-2 text-right font-semibold">{noSource ? <span className="text-secondary/70" title={noSource}>—</span> : cell(data.organic.conversions ?? 0, "conversions")}</td><td className="py-2 text-right font-semibold">{cell(data.paid.conversions ?? (hasPaid ? 0 : null), "conversions")}</td></tr>
           <tr><td className="py-2">Spend</td><td className="py-2 text-right text-secondary/70">n/a</td><td className="py-2 text-right font-semibold">{cell(data.paid.spend ?? null, "spend")}</td></tr>
         </tbody>
       </table>
@@ -46,22 +48,45 @@ export function OrganicVsPaid({ data }: { data: AnalyticsData }) {
 /** Attribution is deterministic (campaign tagging + provider-reported paid results); the model/window/freshness always show (analytics.md). */
 export function AttributionPanel({ data }: { data: AnalyticsData }) {
   const a = data.paidAttribution;
+  const c = data.conversionProvenance;
   return (
     <section className="rounded-box border border-base-300 p-4" aria-label="Attribution summary">
       <h2 className="text-sm font-semibold">Attribution summary</h2>
-      {a ? (
+      {a && (
         <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
           <dt className="text-secondary">Model</dt><dd>Deterministic campaign tagging · {a.model}</dd>
           <dt className="text-secondary">Window</dt><dd>{a.window}</dd>
           <dt className="text-secondary">Source</dt><dd>{a.sources.join(", ")}</dd>
           <dt className="text-secondary">Currency</dt><dd>{a.currency} (no conversion applied)</dd>
           <dt className="text-secondary">Freshness</dt><dd>{a.freshLabel ?? "never synced"}</dd>
-          <dt className="text-secondary">Conversions</dt><dd className="font-semibold">{formatMetric(METRICS.conversions, data.paid.conversions ?? 0)}</dd>
+          <dt className="text-secondary">Paid conversions</dt><dd className="font-semibold">{formatMetric(METRICS.conversions, data.paid.conversions ?? 0)}</dd>
         </dl>
-      ) : (
-        <p className="mt-3 text-sm text-secondary">Conversions per campaign appear once an ad account is connected (Campaigns → Ads). Organic conversions additionally need a pixel or UTM tracking source, which is not connected yet. Attribution always shows its model, window, and freshness.</p>
+      )}
+      {c && <SourceAttribution data={data} />}
+      {!a && !c && (
+        <p className="mt-3 text-sm text-secondary">Conversions per campaign appear once an ad account is connected (Campaigns → Ads) or a conversion tracking source is connected in Settings → Tracking. Attribution always shows its model, window, and freshness.</p>
       )}
     </section>
+  );
+}
+
+/** Site-reported half of attribution: what the tracking sources say and when they last said it. */
+function SourceAttribution({ data }: { data: AnalyticsData }) {
+  const c = data.conversionProvenance!;
+  const revenue = data.paid.revenue ?? data.organic.revenue ?? null;
+  return (
+    <div className={data.paidAttribution ? "mt-4 border-t border-base-300 pt-3" : "mt-3"}>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-secondary">Site-reported conversions</h3>
+      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+        <dt className="text-secondary">Model</dt><dd>{c.model}</dd>
+        <dt className="text-secondary">Window</dt><dd>{c.window}</dd>
+        <dt className="text-secondary">Source</dt><dd>{c.sources.join(", ")}</dd>
+        <dt className="text-secondary">Currency</dt><dd>{c.currency} (no conversion applied)</dd>
+        <dt className="text-secondary">Freshness</dt><dd>{data.conversionsRefreshedLabel ?? "never synced"}</dd>
+        <dt className="text-secondary">Revenue</dt><dd className="font-semibold">{revenue === null ? <span className="text-secondary/70">unavailable</span> : formatMetric(METRICS.revenue, revenue)}</dd>
+      </dl>
+      <p className="mt-2 text-xs text-secondary/70">Paid clicks are counted once by the ad platform and never again here, so the two halves can be added.</p>
+    </div>
   );
 }
 
@@ -76,11 +101,13 @@ export function TrendPanel({ data }: { data: AnalyticsData }) {
 }
 
 export function FunnelPanel({ data }: { data: AnalyticsData }) {
-  const steps = [
-    { k: "reach" as const, v: data.organic.reach ?? null },
-    { k: "engagement" as const, v: data.organic.engagement ?? null },
-    { k: "link_clicks" as const, v: data.organic.link_clicks ?? null },
-    { k: "conversions" as const, v: null },
+  const why = (k: "sessions" | "conversions") => trackingUnavailable(k, data.conversions, data.paid);
+  const steps: { k: keyof typeof METRICS; v: number | null; why?: string | null }[] = [
+    { k: "reach", v: data.organic.reach ?? null },
+    { k: "engagement", v: data.organic.engagement ?? null },
+    { k: "link_clicks", v: data.organic.link_clicks ?? null },
+    { k: "sessions", v: why("sessions") ? null : (data.organic.sessions ?? null), why: why("sessions") },
+    { k: "conversions", v: why("conversions") ? null : (data.organic.conversions ?? null), why: why("conversions") },
   ];
   const top = steps[0].v ?? 0;
   return (
@@ -95,14 +122,22 @@ export function FunnelPanel({ data }: { data: AnalyticsData }) {
               <span className="h-8 rounded-field bg-base-300" style={{ width: `${width}%` }} aria-hidden="true" />
               <span className="flex-1 text-secondary">{METRICS[s.k].name}</span>
               {rate && <span className="text-xs text-secondary/70">{rate}</span>}
-              <span className="font-semibold">{s.v === null ? <span className="text-secondary/50" title={METRICS[s.k].unavailable}>—</span> : formatMetric(METRICS[s.k], s.v)}</span>
+              <span className="font-semibold">{s.v === null ? <span className="text-secondary/50" title={s.why ?? METRICS[s.k].unavailable}>—</span> : formatMetric(METRICS[s.k], s.v)}</span>
             </li>
           );
         })}
       </ol>
-      <p className="mt-2 text-xs text-secondary/70">Conversions need a connected tracking source.</p>
+      <p className="mt-2 text-xs text-secondary/70">{funnelNote(data)}</p>
     </Panel>
   );
+}
+
+/** Says which source the last two steps came from, or exactly what is missing. */
+function funnelNote(data: AnalyticsData) {
+  const why = trackingUnavailable("conversions", data.conversions, data.paid);
+  if (why) return why;
+  const names = data.conversions.sources.filter((s) => s.status === "healthy").map((s) => s.name).join(", ");
+  return `Sessions and conversions from ${names || "your ad accounts"}${data.conversionsRefreshedLabel ? `, last synced ${data.conversionsRefreshedLabel}` : ""}. Reach through link clicks are organic figures from the networks.`;
 }
 
 export function AudiencePanel({ data }: { data: AnalyticsData }) {

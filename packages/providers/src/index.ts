@@ -5,6 +5,8 @@ export * from "./ads-types";
 export { validateAgainstCapabilities } from "./validate";
 export { httpJson, categoryFromStatus } from "./http";
 export { missingScopes, probe, retryAfterSeconds } from "./health";
+/** Shared Google OAuth pieces — the YouTube adapter and the GA4 tracking source use the same Google client. */
+export { googleAuthorizeUrl, googleTokenCall, mapYouTubeError as mapGoogleError, type GoogleError, type GoogleTokenResponse } from "./youtube/client";
 export { mockProvider, mockControl, mockInbox, mockInsights, mockAds, type MockBehaviour } from "./mock";
 export { createMetaProvider } from "./meta";
 export { createLinkedInProvider } from "./linkedin";

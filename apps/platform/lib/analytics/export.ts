@@ -1,11 +1,28 @@
 import type { ReportFilters } from "@/db/schema/analytics";
 import { DEFINITIONS_VERSION, METRICS, type DisplayMetric } from "./metrics";
 import { comparisonPeriod } from "./periods";
-import { freshness, revisedFactsInPeriod, seriesByNetwork, topPosts, totals } from "./queries";
+import { freshness, revisedFactsInPeriod, seriesByNetwork, topPosts, totals, type Totals } from "./queries";
+import { derived } from "./derive";
+import { conversionState, type ConversionState } from "@/lib/tracking/conversions";
+import { trackingUnavailable } from "@/lib/tracking/availability";
 
 const esc = (v: unknown) => { const s = v === null || v === undefined ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 const row = (cells: unknown[]) => cells.map(esc).join(",");
 const TOTAL_KEYS: DisplayMetric[] = ["reach", "impressions", "engagement", "link_clicks", "followers", "follower_gain"];
+
+
+/** Conversion/revenue/spend/ROAS rows plus their provenance. Missing is never written as zero. */
+function conversionLines(cur: Totals, paid: Totals, conversions: ConversionState): string[] {
+  const out = ["conversions", "revenue", "spend", "roas"].map((key) => {
+    const k = key as DisplayMetric;
+    const m = METRICS[k];
+    const why = trackingUnavailable(k, conversions, paid) ?? (k === "spend" && paid.spend == null ? "No paid data in this period." : null);
+    const v = why ? "unavailable" : (derived(k, k === "roas" ? paid : cur) ?? "unavailable");
+    return row(["totals", m.name, m.definition, m.formula, m.unit, v, "", why ?? ""]);
+  });
+  if (conversions.total) out.push(`# conversion_sources,${esc(conversions.sources.map((s) => `${s.name} (${s.kindLabel}, ${s.status})`).join("; "))},model,UTM last-click (source-reported),last_sync,${conversions.lastSyncAt?.toISOString() ?? "never"}`);
+  return out;
+}
 
 /**
  * CSV export (ANA-003): header block records generation time, filters,
@@ -14,13 +31,15 @@ const TOTAL_KEYS: DisplayMetric[] = ["reach", "impressions", "engagement", "link
 export async function buildCsv(input: { workspaceId: string; workspaceName: string; timezone: string; filters: ReportFilters; generatedBy: string }): Promise<string> {
   const { workspaceId, filters } = input;
   const cmp = comparisonPeriod(filters);
-  const [cur, prev, fresh, trend, top, revised] = await Promise.all([
+  const [cur, prev, fresh, trend, top, revised, paid, conversions] = await Promise.all([
     totals(workspaceId, filters, filters),
     cmp ? totals(workspaceId, filters, cmp) : Promise.resolve({}),
     freshness(workspaceId),
     seriesByNetwork(workspaceId, filters, filters, "engagement"),
     topPosts(workspaceId, filters, filters, "engagement", 25),
     revisedFactsInPeriod(workspaceId, filters),
+    totals(workspaceId, { ...filters, scope: "paid" }, filters) as Promise<Totals>,
+    conversionState(workspaceId),
   ]);
   const lines: string[] = [];
   lines.push(`# Make It Social analytics export`);
@@ -41,7 +60,7 @@ export async function buildCsv(input: { workspaceId: string; workspaceName: stri
     const p = (prev as Record<string, number>)[k] ?? null;
     lines.push(row(["totals", m.name, m.definition, m.formula, m.unit, c, p, c !== null && p !== null ? c - p : null]));
   }
-  for (const k of ["conversions", "spend", "roas"] as const) lines.push(row(["totals", METRICS[k].name, METRICS[k].definition, METRICS[k].formula, METRICS[k].unit, "unavailable", "unavailable", METRICS[k].unavailable]));
+  lines.push(...conversionLines(cur, paid, conversions));
   lines.push("");
   lines.push(row(["section", "day", "network", "engagement"]));
   for (const p of trend) lines.push(row(["trend", p.day, p.network, p.value]));

@@ -10,7 +10,7 @@ export type JobPayloads = {
   /** Relay pending outbox_event rows into their target queues. Singleton. */
   "outbox.relay": Record<string, never>;
   /** Send one transactional email. */
-  "mail.send": { to: string; template: string; data: Record<string, unknown>; organizationId?: string };
+  "mail.send": { to: string; template: string; data: Record<string, unknown>; organizationId?: string; replyTo?: string };
   "publish.execute": { publishJobId: string };
   "channel.sync": { channelId: string; reason: "initial" | "scheduled" | "reconnect" };
   "webhook.process": { receiptId: string };
@@ -38,6 +38,8 @@ export type JobPayloads = {
   "automation.evaluate": { trigger: AutomationTrigger; refId: string };
   /** Resume an automation run whose approval gate was cleared. */
   "automation.apply": { runId: string };
+  /** Pull one conversion-tracking source (GA4/Shopify) or recompute a webhook source's facts. */
+  "tracking.sync": { sourceId: string; since?: string };
 };
 
 export type JobName = keyof JobPayloads;
@@ -66,6 +68,7 @@ export const QUEUES: Record<JobName, Omit<Queue, "name">> = {
   "recommendations.compute": { policy: "singleton", retryLimit: 1, retryDelay: 300, expireInSeconds: 1800 },
   "automation.evaluate": { ...STANDARD, retryLimit: 3, expireInSeconds: 300 },
   "automation.apply": { ...STANDARD, retryLimit: 3, expireInSeconds: 300 },
+  "tracking.sync": { policy: "singleton", retryLimit: 3, retryDelay: 60, retryBackoff: true, expireInSeconds: 1800 },
 };
 
 export const JOB_NAMES = Object.keys(QUEUES) as JobName[];

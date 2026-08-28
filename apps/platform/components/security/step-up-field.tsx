@@ -1,13 +1,27 @@
 "use client";
 
 import { Input, Label, PasswordInput } from "@wizeworks/silicaui-react";
-import type { StepUpChallenge } from "@/lib/step-up";
+import type { StepUpChallenge, StepUpPurpose } from "@/lib/step-up";
+import { StepUpSso } from "./step-up-sso";
+
+type Props = {
+  challenge: StepUpChallenge;
+  value: string;
+  onChange: (v: string) => void;
+  what: string;
+  workspaceId: string;
+  purpose: StepUpPurpose;
+};
 
 /**
  * NFR-001 re-authentication prompt shown inline before a high-risk confirmation.
- * The value is sent straight to `verifyStepUp` and never stored anywhere else.
+ * The value is sent straight to `verifyStepUp` and never stored anywhere else;
+ * SSO users are sent back to their identity provider instead.
  */
-export function StepUpField({ challenge, value, onChange, what }: { challenge: StepUpChallenge; value: string; onChange: (v: string) => void; what: string }) {
+export function StepUpField({ challenge, value, onChange, what, workspaceId, purpose }: Props) {
+  if (challenge.method === "sso") {
+    return <StepUpSso workspaceId={workspaceId} purpose={purpose} what={what} minutes={challenge.windowMinutes} />;
+  }
   const totp = challenge.method === "totp";
   return (
     <div className="mt-4 rounded-field border border-base-300 bg-base-200 p-3">

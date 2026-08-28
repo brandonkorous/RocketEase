@@ -15,6 +15,7 @@ import { handlers } from "./handlers";
 import { enqueueInboxSyncs } from "@/lib/engagement/schedule";
 import { enqueueInsightsIngests } from "@/lib/analytics/schedule";
 import { enqueueAdsSyncs } from "@/lib/campaigns/schedule";
+import { enqueueTrackingSyncs } from "@/lib/tracking/schedule";
 import { enqueueDueReports } from "./handlers/report-run";
 import { scheduleNightly, scheduleAutomationSweep } from "./ticks";
 
@@ -46,6 +47,10 @@ async function main() {
   const pollAds = () => void enqueueAdsSyncs().catch((err) => log.error("ads sync enqueue failed", { err }));
   setTimeout(pollAds, 40_000).unref();
   setInterval(pollAds, 30 * 60_000).unref();
+  // Conversion sources: GA4/Shopify restate recent days; re-pull a 3-day tail every hour.
+  const pollTracking = () => void enqueueTrackingSyncs().catch((err) => log.error("tracking sync enqueue failed", { err }));
+  setTimeout(pollTracking, 50_000).unref();
+  setInterval(pollTracking, 60 * 60_000).unref();
 
   // Nightly maintenance (5.7 data quality, M7 reliability): cron-scheduled singletons.
   await scheduleNightly(boss);

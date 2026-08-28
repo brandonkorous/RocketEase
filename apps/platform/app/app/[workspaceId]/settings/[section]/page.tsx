@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppPage, PageHeader } from "@/components/page-frame";
+import { QueryToast } from "@/components/query-toast";
 import { requireWorkspace } from "@/lib/session";
 import { SETTINGS_SECTIONS, workspacePath } from "@/lib/nav";
 import { loadSection } from "./load";
@@ -9,8 +10,10 @@ import { SectionBody } from "./section-body";
 
 export const metadata: Metadata = { title: "Settings" };
 
-export default async function SettingsPage({ params }: { params: Promise<{ workspaceId: string; section: string }> }) {
-  const { workspaceId, section } = await params;
+const CONNECTED = "Conversion source connected. The first import is running; numbers appear once it finishes.";
+
+export default async function SettingsPage({ params, searchParams }: { params: Promise<{ workspaceId: string; section: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const [{ workspaceId, section }, sp] = await Promise.all([params, searchParams]);
   const current = SETTINGS_SECTIONS.find((s) => s.slug === section);
   if (!current) notFound();
   const ctx = await requireWorkspace(workspaceId);
@@ -19,6 +22,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
   return (
     <AppPage>
       <PageHeader title="Settings" description={ctx.workspace.name} />
+      <QueryToast ok={sp.ok ? CONNECTED : null} error={typeof sp.error === "string" ? sp.error : null} />
       <div className="mt-8 grid gap-8 md:grid-cols-[220px_1fr]">
         <nav aria-label="Settings sections" className="flex flex-row gap-1 overflow-x-auto md:flex-col">
           {SETTINGS_SECTIONS.map((s) => (

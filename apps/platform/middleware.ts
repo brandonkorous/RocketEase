@@ -6,7 +6,9 @@ import { getSessionCookie } from "better-auth/cookies";
  * every server operation re-validates the session and tenant scope
  * (see lib/session.ts). This just keeps anonymous users off app routes.
  */
-const PUBLIC = ["/login", "/signup", "/api/auth", "/api/health", "/api/webhooks", "/api/connect/mock/authorize", "/invite"];
+// "/r" is the public client-report surface: signed, expiring share tokens carry their own proof (lib/reports/access.ts).
+// "/api/scim" carries its own per-organization bearer token (lib/scim/auth.ts), never a session cookie.
+const PUBLIC = ["/login", "/signup", "/api/auth", "/api/health", "/api/webhooks", "/api/connect/mock/authorize", "/invite", "/r/", "/api/scim"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

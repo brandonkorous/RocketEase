@@ -83,8 +83,8 @@ export function PromoteDialog({ post, data, onClose }: { post: EligiblePost; dat
           <AlertDialogTitle>Confirm promotion{d.initialStatus === "active" ? " and start spending" : ""}</AlertDialogTitle>
           <AlertDialogDescription>Check the summary. Confirming creates the campaign, ad set and ad in the ad account under your name.</AlertDialogDescription>
           <Summary post={post} d={d} data={data} />
-          {needsStepUp && <StepUpField challenge={challenge!} value={secret} onChange={setSecret} what="Creating ads" />}
-          <div className="mt-4 flex justify-end gap-2"><AlertDialogCancel><Button variant="ghost" color="neutral" size="sm">Back</Button></AlertDialogCancel><Button color="primary" size="sm" loading={pending} disabled={needsStepUp && !secret.trim()} onClick={confirm}>{d.initialStatus === "active" ? "Confirm and go live" : "Confirm (paused)"}</Button></div>
+          {needsStepUp && <StepUpField challenge={challenge!} value={secret} onChange={setSecret} what="Creating ads" workspaceId={data.workspaceId} purpose="paid_spend" />}
+          <div className="mt-4 flex justify-end gap-2"><AlertDialogCancel><Button variant="ghost" color="neutral" size="sm">Back</Button></AlertDialogCancel><Button color="primary" size="sm" loading={pending} disabled={needsStepUp && (challenge!.method === "sso" || !secret.trim())} onClick={confirm}>{d.initialStatus === "active" ? "Confirm and go live" : "Confirm (paused)"}</Button></div>
         </AlertDialogContent>
       </AlertDialog>
     </section>

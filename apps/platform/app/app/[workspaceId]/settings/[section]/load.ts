@@ -10,7 +10,12 @@ import { approvalPolicy } from "@/db/schema/approvals";
 import { channel } from "@/db/schema/connections";
 import { inboxSettings, savedReply } from "@/db/schema/engagement";
 import { automationsData, EMPTY_AUTOMATIONS, type AutomationsData } from "@/lib/automations/queries";
+import { ssoSectionData, EMPTY_SSO, type SsoSectionData } from "@/lib/sso/queries";
 import { readGoals, readTracking, type GoalKey, type TrackingSettings } from "@/lib/actions/settings/catalog";
+import { conversionState } from "@/lib/tracking/conversions";
+import { trackingKindEnabled } from "@/lib/tracking/sources";
+import { trackingWebhookUrl } from "@/lib/tracking/oauth-state";
+import type { TrackingSourcesProps } from "@/components/settings/tracking-sources";
 import { auth } from "@/lib/auth";
 import type { WorkspaceContext } from "@/lib/session";
 import { formatInZone } from "@/lib/time";
@@ -21,12 +26,31 @@ export type SectionData = {
   sessions: SessionRow[];
   inbox: { minutes: number; replies: SavedReplyRow[] };
   tracking: TrackingSettings;
+  sources: TrackingSourcesProps["sources"];
+  sourceKinds: TrackingSourcesProps["enabled"];
   goals: GoalKey[];
   prefs: Record<string, boolean>;
   automations: AutomationsData;
+  sso: SsoSectionData;
 };
 
-const EMPTY: SectionData = { policies: [], channels: [], sessions: [], inbox: { minutes: 60, replies: [] }, tracking: readTracking({}), goals: [], prefs: {}, automations: EMPTY_AUTOMATIONS };
+const EMPTY: SectionData = { policies: [], channels: [], sessions: [], inbox: { minutes: 60, replies: [] }, tracking: readTracking({}), sources: [], sourceKinds: { ga4: false, shopify: false }, goals: [], prefs: {}, automations: EMPTY_AUTOMATIONS, sso: EMPTY_SSO };
+
+/** Conversion sources as the settings list renders them (freshness in the workspace timezone). */
+async function trackingSourceRows(workspaceId: string, tz: string): Promise<SectionData["sources"]> {
+  const state = await conversionState(workspaceId);
+  return state.sources.map((s) => ({
+    id: s.id,
+    kind: s.kind,
+    kindLabel: s.kindLabel,
+    name: s.name,
+    status: s.status,
+    window: s.window,
+    lastSyncLabel: s.lastSyncAt ? formatInZone(s.lastSyncAt, tz) : null,
+    message: s.message,
+    endpoint: s.kind === "webhook" ? trackingWebhookUrl(s.id) : null,
+  }));
+}
 
 /** Loads only what the requested section renders. */
 export async function loadSection(section: string, ctx: WorkspaceContext): Promise<SectionData> {
@@ -53,8 +77,15 @@ export async function loadSection(section: string, ctx: WorkspaceContext): Promi
     data.tracking = readTracking(ws?.settings ?? {});
     data.goals = readGoals(ws?.settings ?? {});
   }
+  if (section === "tracking") {
+    data.sources = await trackingSourceRows(workspaceId, ctx.workspace.timezone);
+    data.sourceKinds = { ga4: trackingKindEnabled("ga4"), shopify: trackingKindEnabled("shopify") };
+  }
   if (section === "automations") {
     data.automations = await automationsData(workspaceId, ctx.workspace.timezone);
+  }
+  if (section === "sso") {
+    data.sso = await ssoSectionData(ctx);
   }
   if (section === "notifications") {
     const [m] = await db.select({ prefs: workspaceMembership.notificationPreferences }).from(workspaceMembership).where(and(eq(workspaceMembership.workspaceId, workspaceId), eq(workspaceMembership.userId, ctx.session.user.id)));

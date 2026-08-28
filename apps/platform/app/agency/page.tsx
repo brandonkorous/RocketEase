@@ -7,9 +7,11 @@ import { Mark } from "@make-it-social/ui/icons";
 import { listUserWorkspaces, requireUser } from "@/lib/session";
 import { workspacePath } from "@/lib/nav";
 import { conversationSummary } from "@/lib/engagement/summary";
+import { orgSecurity } from "@/lib/sso/queries";
 import { db } from "@/db";
 import { channel } from "@/db/schema/connections";
 import { and, count, eq, ne } from "drizzle-orm";
+import { BrandingSection } from "@/components/agency/branding-section";
 
 export const metadata: Metadata = { title: "Agency overview" };
 
@@ -23,8 +25,9 @@ export default async function AgencyPage() {
     const [convs, [{ n: channels }]] = await Promise.all([conversationSummary(w.id, session.user.id, w.timezone, 0), db.select({ n: count() }).from(channel).where(and(eq(channel.workspaceId, w.id), ne(channel.status, "disconnected")))]);
     return [w.id, { convs, channels: Number(channels) }] as const;
   })));
+  const security = await orgSecurity(workspaces.map((w) => w.organizationId));
   const byOrg = new Map<string, typeof workspaces>();
-  for (const w of workspaces) byOrg.set(w.organizationName, [...(byOrg.get(w.organizationName) ?? []), w]);
+  for (const w of workspaces) byOrg.set(w.organizationId, [...(byOrg.get(w.organizationId) ?? []), w]);
 
   return (
     <div className="min-h-dvh">
@@ -45,11 +48,15 @@ export default async function AgencyPage() {
           Every client workspace you can access, with what needs attention in each.
         </p>
 
-        {[...byOrg.entries()].map(([org, list]) => (
-          <section key={org} className="mt-10" aria-labelledby={`org-${org}`}>
-            <h2 id={`org-${org}`} className="text-sm font-semibold text-secondary/70">
-              {org}
+        {[...byOrg.entries()].map(([orgId, list]) => (
+          <section key={orgId} className="mt-10" aria-labelledby={`org-${orgId}`}>
+            <h2 id={`org-${orgId}`} className="text-sm font-semibold text-secondary/70">
+              {list[0].organizationName}
             </h2>
+            <p className="mt-1 text-xs text-secondary/70">
+              Organization security: {security.get(orgId)?.connections ? (security.get(orgId)!.ssoEnforced ? "SSO required" : "SSO available") : "No SSO"} ·{" "}
+              {security.get(orgId)?.scimActive ? "SCIM provisioning active" : "SCIM off"}
+            </p>
             <Table className="mt-3 w-full">
               <thead>
                 <tr>
@@ -80,6 +87,7 @@ export default async function AgencyPage() {
                 ))}
               </tbody>
             </Table>
+            <BrandingSection organizationId={orgId} userId={session.user.id} clients={list.map((w) => ({ id: w.id, name: w.name }))} />
           </section>
         ))}
       </main>

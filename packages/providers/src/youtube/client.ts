@@ -8,7 +8,7 @@
  */
 import type { Capabilities, Credential } from "../types";
 import { ProviderError } from "../types";
-import { categoryFromStatus, httpJson } from "../http";
+import { categoryFromStatus, form, httpJson } from "../http";
 import { retryAfterSeconds } from "../health";
 
 export const DATA = "https://www.googleapis.com/youtube/v3";
@@ -78,6 +78,29 @@ export function capsFor(cred: Credential): Capabilities {
 }
 
 export type GoogleError = { error?: { code?: number; message?: string; status?: string; errors?: { reason?: string; message?: string; domain?: string }[] } };
+
+export type GoogleTokenResponse = { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string } & GoogleError;
+
+/** Google's shared OAuth token endpoint. Also used by the GA4 tracking source (lib/tracking/ga4.ts). */
+export async function googleTokenCall(body: Record<string, string>): Promise<GoogleTokenResponse> {
+  const res = await httpJson<GoogleTokenResponse>(OAUTH_TOKEN, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form(body) });
+  if (res.status >= 400 || !res.body.access_token) throw mapYouTubeError(res.status === 200 ? 401 : res.status, res.body, { headers: res.headers });
+  return res.body;
+}
+
+/** Google consent URL. `offline` + `consent` is what makes Google return a refresh token. */
+export function googleAuthorizeUrl(input: { clientId: string; redirectUri: string; state: string; scopes: string[] }) {
+  const u = new URL(OAUTH_AUTH);
+  u.searchParams.set("client_id", input.clientId);
+  u.searchParams.set("response_type", "code");
+  u.searchParams.set("redirect_uri", input.redirectUri);
+  u.searchParams.set("state", input.state);
+  u.searchParams.set("scope", [...new Set(input.scopes)].join(" "));
+  u.searchParams.set("access_type", "offline");
+  u.searchParams.set("prompt", "consent");
+  u.searchParams.set("include_granted_scopes", "true");
+  return u.toString();
+}
 
 const PERMISSION_REASONS = new Set([
   "authError",

@@ -48,6 +48,8 @@ export async function clickUntilUrl(page: Page, locator: Locator, url: RegExp, a
     await expect(locator).toBeEnabled({ timeout: 60_000 });
     await locator.click({ timeout: 60_000 }).catch(() => undefined);
     if (await page.waitForURL(url, { timeout: 30_000 }).then(() => true).catch(() => false)) return;
+    // A submit stuck in its pending state means the dev server dropped the action; reload and try again.
+    if (await locator.getAttribute("aria-busy").then((v) => v === "true").catch(() => false)) await page.reload({ waitUntil: "networkidle" }).catch(() => undefined);
   }
   await page.waitForURL(url, { timeout: 60_000 });
 }
@@ -85,6 +87,19 @@ export async function submitUntilUrl(page: Page, prepare: () => Promise<void>, b
   await page.waitForURL(url, { timeout: 60_000 });
 }
 
+/** A click before hydration toggles the DOM box without updating form state; re-toggle until Continue reacts. */
+async function pickGoalUntilEnabled(page: Page) {
+  const cb = page.getByRole("checkbox").first();
+  const btn = page.getByRole("button", { name: /^continue$/i }).first();
+  for (let i = 0; i < 12; i++) {
+    if (await btn.isEnabled().catch(() => false)) return;
+    await cb.click().catch(() => undefined);
+    await page.waitForTimeout(500);
+    if (await btn.isEnabled().catch(() => false)) return;
+    await page.waitForTimeout(1_000);
+  }
+}
+
 /** Signup → onboarding (org + workspace, goals) → lands in the workspace shell. Returns the workspace id. */
 export async function signupAndOnboard(page: Page, u: { name: string; email: string; password: string; organizationName: string; workspaceName: string }): Promise<string> {
   await page.goto("/signup");
@@ -97,7 +112,7 @@ export async function signupAndOnboard(page: Page, u: { name: string; email: str
     await page.locator("#organizationName").fill(u.organizationName);
     await page.locator("#workspaceName").fill(u.workspaceName);
   }, /create workspace/i, /\/onboarding\/goals/);
-  await submitUntilUrl(page, () => page.getByRole("checkbox").first().check(), /^continue$/i, /\/app\/[^/]+\/home/);
+  await submitUntilUrl(page, () => pickGoalUntilEnabled(page), /^continue$/i, /\/app\/[^/]+\/home/);
   const m = page.url().match(/\/app\/([^/]+)\/home/);
   expect(m).not.toBeNull();
   return m![1];

@@ -9,11 +9,14 @@ import "./env";
 import { getBoss, stopBoss } from "@/lib/jobs/boss";
 import { relayOutbox, pruneOutbox } from "@/lib/jobs/outbox";
 import { log } from "@/lib/log";
+import { withSpan } from "@/lib/otel";
 import type { JobPayloads } from "@/lib/jobs/queues";
 import { handlers } from "./handlers";
 import { enqueueInboxSyncs } from "@/lib/engagement/schedule";
 import { enqueueInsightsIngests } from "@/lib/analytics/schedule";
+import { enqueueAdsSyncs } from "@/lib/campaigns/schedule";
 import { enqueueDueReports } from "./handlers/report-run";
+import { scheduleNightly } from "./ticks";
 
 async function main() {
   const boss = await getBoss();
@@ -39,6 +42,13 @@ async function main() {
   const pollReports = () => void enqueueDueReports().catch((err) => log.error("report schedule tick failed", { err }));
   setTimeout(pollReports, 30_000).unref();
   setInterval(pollReports, 5 * 60_000).unref();
+  // Paid imports: ad accounts restate recent days; re-pull a short tail every 30 minutes.
+  const pollAds = () => void enqueueAdsSyncs().catch((err) => log.error("ads sync enqueue failed", { err }));
+  setTimeout(pollAds, 40_000).unref();
+  setInterval(pollAds, 30 * 60_000).unref();
+
+  // Nightly maintenance (5.7 data quality, M7 reliability): cron-scheduled singletons.
+  await scheduleNightly(boss);
 
   type HandlerName = keyof typeof handlers;
   for (const [name, handler] of Object.entries(handlers) as [HandlerName, (typeof handlers)[HandlerName]][]) {
@@ -47,7 +57,9 @@ async function main() {
         const l = log.child({ jobId: job.id, job: name });
         const started = Date.now();
         try {
-          await handler(job.data as never, { log: l, signal: job.signal });
+          const d = job.data as { workspaceId?: string; organizationId?: string };
+          const attrs = { "job.name": name, "job.id": job.id, "tenant.workspace_id": d?.workspaceId ?? "", "tenant.organization_id": d?.organizationId ?? "" };
+          await withSpan(`job ${name}`, attrs, () => handler(job.data as never, { log: l, signal: job.signal }));
           l.info("job done", { ms: Date.now() - started });
         } catch (err) {
           l.error("job failed", { ms: Date.now() - started, err });

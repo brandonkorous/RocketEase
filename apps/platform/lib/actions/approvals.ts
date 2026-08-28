@@ -9,6 +9,7 @@ import { approvalDecision, approvalRequest, comment } from "@/db/schema/approval
 import { contentItem, contentVersion, postVariant, type VersionSnapshot } from "@/db/schema/content";
 import { canDecide, matchPolicy } from "@/lib/approvals";
 import { audit } from "@/lib/audit";
+import { track } from "@/lib/telemetry";
 import { AuthorizationError } from "@/lib/authz";
 import { summarizeItem, validateVariant } from "@/lib/content";
 import { notify } from "@/lib/notifications";
@@ -78,6 +79,7 @@ export async function requestApproval(input: z.infer<typeof requestSchema>): Pro
     });
 
     await audit({ action: "approval.request", actorUserId: ctx.session.user.id, organizationId: item.organizationId, workspaceId, targetType: "approval_request", targetId: requestId, summary: { after: { itemId: item.id, assigneeUserId, policy: policy?.name } } });
+    await track("approval_requested", { userId: ctx.session.user.id, organizationId: item.organizationId, workspaceId, surface: "action:requestApproval", props: { hasPolicy: Boolean(policy) } });
     await notify({ workspaceId, organizationId: item.organizationId, userId: assigneeUserId ?? null, kind: "approval.requested", title: `Review requested: ${item.title}`, body: note ?? `${ctx.session.user.name} asked for approval.`, href: workspacePath(workspaceId, `approvals?request=${requestId}`), email: true });
     revalidatePath(workspacePath(workspaceId, "approvals"));
     return { ok: "Sent for review.", requestId };
@@ -114,6 +116,7 @@ export async function decideRequest(input: z.infer<typeof decideSchema>): Promis
       if (text) await tx.insert(comment).values({ organizationId: item.organizationId, workspaceId, contentItemId: item.id, versionId: req.versionId, authorUserId: ctx.session.user.id, body: text });
     });
     await audit({ action: `approval.${kind}`, actorUserId: ctx.session.user.id, organizationId: item.organizationId, workspaceId, targetType: "approval_request", targetId: req.id, summary: { note: text } });
+    await track("approval_decided", { userId: ctx.session.user.id, organizationId: item.organizationId, workspaceId, surface: "action:decideRequest", props: { decision: kind } });
     await notify({ workspaceId, organizationId: item.organizationId, userId: req.requestedByUserId, kind: "approval.decided", title: `${item.title}: ${kind.replace("_", " ")}`, body: text ?? `${ctx.session.user.name} approved this post.`, href: workspacePath(workspaceId, `posts/${item.id}`), email: true });
 
     let extra = "";

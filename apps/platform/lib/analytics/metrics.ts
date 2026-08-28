@@ -8,7 +8,9 @@ import type { CanonicalMetric } from "@make-it-social/providers";
 
 export const DEFINITIONS_VERSION = "2026.08.1";
 
-export type DisplayMetric = CanonicalMetric | "conversions" | "spend" | "roas" | "engagement_rate" | "ctr";
+export type DisplayMetric = CanonicalMetric | "roas" | "engagement_rate" | "ctr" | "cpm" | "cpc" | "ctr_paid" | "cpa";
+/** Paid-only keys; values exist only when an ad account is connected (M6). */
+export const PAID_METRICS: DisplayMetric[] = ["spend", "conversions", "cpm", "cpc", "ctr_paid", "cpa", "roas"];
 
 export type MetricContract = {
   key: DisplayMetric;
@@ -26,6 +28,8 @@ export type MetricContract = {
 };
 
 const P = { mock: "mock.*", meta: "insights API", linkedin: "organizationalEntityShareStatistics", tiktok: "business insights" };
+const ADS = { mock: "mock ads", meta: "Marketing API /act_{id}/insights" };
+const PAID_NOTE = "Paid only: imported daily from connected ad accounts in the account currency; no currency conversion is applied.";
 
 export const METRICS: Record<DisplayMetric, MetricContract> = {
   impressions: { key: "impressions", name: "Impressions", definition: "Times your content was displayed. Repeat views count again.", formula: "Σ provider impressions", unit: "count", aggregation: "sum", grains: ["day", "post", "channel"], providers: P, freshnessHours: 24 },
@@ -41,10 +45,24 @@ export const METRICS: Record<DisplayMetric, MetricContract> = {
   follower_gain: { key: "follower_gain", name: "Net follower growth", definition: "New followers minus unfollows.", formula: "Σ daily net change", unit: "count", aggregation: "sum", grains: ["day", "channel"], providers: P, freshnessHours: 24 },
   engagement_rate: { key: "engagement_rate", name: "Engagement rate", definition: "Engagement divided by reach.", formula: "engagement ÷ reach", unit: "percent", aggregation: "ratio", grains: ["day", "post", "channel"], providers: P, freshnessHours: 24, caveat: "Denominator is reach, not followers." },
   ctr: { key: "ctr", name: "Click-through rate", definition: "Link clicks divided by impressions.", formula: "link_clicks ÷ impressions", unit: "percent", aggregation: "ratio", grains: ["day", "post", "channel"], providers: P, freshnessHours: 24 },
-  conversions: { key: "conversions", name: "Conversions", definition: "Tracked conversions attributed to social traffic.", formula: "Σ conversions from connected tracking (pixel/UTM)", unit: "count", aggregation: "sum", grains: ["day"], providers: {}, freshnessHours: 24, unavailable: "No conversion tracking is connected yet. Connect a pixel or UTM source in Settings → Tracking." },
-  spend: { key: "spend", name: "Spend", definition: "Paid media spend in the workspace currency.", formula: "Σ ad account spend", unit: "currency", aggregation: "sum", grains: ["day"], providers: { meta: "Marketing API" }, freshnessHours: 24, unavailable: "Ad accounts are not imported yet (arrives with Campaigns & Ads)." },
-  roas: { key: "roas", name: "ROAS", definition: "Return on ad spend: attributed revenue divided by spend.", formula: "revenue ÷ spend", unit: "ratio", aggregation: "ratio", grains: ["day"], providers: {}, freshnessHours: 24, unavailable: "Needs both ad spend and conversion revenue." },
+  conversions: { key: "conversions", name: "Conversions", definition: "Conversions the ad platform attributed to paid ads (its own model and window, shown alongside).", formula: "Σ provider-attributed conversion actions", unit: "count", aggregation: "sum", grains: ["day", "post"], providers: ADS, freshnessHours: 24, caveat: "Organic conversions need a pixel/UTM tracking source, which is not connected yet; only paid conversions are counted." },
+  spend: { key: "spend", name: "Spend", definition: "Paid media spend reported by connected ad accounts.", formula: "Σ ad campaign daily spend", unit: "currency", aggregation: "sum", grains: ["day", "post"], providers: ADS, freshnessHours: 24, caveat: PAID_NOTE },
+  cpm: { key: "cpm", name: "CPM", definition: "Cost per 1,000 paid impressions.", formula: "spend ÷ paid impressions × 1000", unit: "currency", aggregation: "ratio", grains: ["day"], providers: ADS, freshnessHours: 24, caveat: PAID_NOTE },
+  cpc: { key: "cpc", name: "CPC", definition: "Cost per paid link click.", formula: "spend ÷ paid link clicks", unit: "currency", aggregation: "ratio", grains: ["day"], providers: ADS, freshnessHours: 24, caveat: PAID_NOTE },
+  ctr_paid: { key: "ctr_paid", name: "CTR (paid)", definition: "Paid link clicks divided by paid impressions.", formula: "paid link_clicks ÷ paid impressions", unit: "percent", aggregation: "ratio", grains: ["day"], providers: ADS, freshnessHours: 24, caveat: PAID_NOTE },
+  cpa: { key: "cpa", name: "Cost per result", definition: "Spend divided by provider-attributed conversions.", formula: "spend ÷ conversions", unit: "currency", aggregation: "ratio", grains: ["day"], providers: ADS, freshnessHours: 24, caveat: PAID_NOTE },
+  roas: { key: "roas", name: "ROAS", definition: "Return on ad spend: attributed revenue divided by spend.", formula: "revenue ÷ spend", unit: "ratio", aggregation: "ratio", grains: ["day"], providers: {}, freshnessHours: 24, unavailable: "Ad imports carry conversion counts but not revenue. ROAS appears once a revenue source (pixel value or commerce) is connected." },
 };
+
+/** Ratios over a totals bag; null when the denominator is missing or zero (never infinity). */
+export function paidRatio(key: DisplayMetric, t: Partial<Record<string, number>>): number | null {
+  const ratio = (a: number | undefined, b: number | undefined, k = 1) => (a == null || !b ? null : (a / b) * k);
+  if (key === "cpm") return ratio(t.spend, t.impressions, 1000);
+  if (key === "cpc") return ratio(t.spend, t.link_clicks);
+  if (key === "ctr_paid") return ratio(t.link_clicks, t.impressions);
+  if (key === "cpa") return ratio(t.spend, t.conversions);
+  return null;
+}
 
 export const SCORECARD: DisplayMetric[] = ["reach", "engagement", "impressions", "link_clicks", "conversions", "spend", "roas"];
 
@@ -52,7 +70,7 @@ export function formatMetric(m: MetricContract, v: number | null) {
   if (v === null) return "—";
   if (m.unit === "percent") return `${(v * 100).toFixed(1)}%`;
   if (m.unit === "ratio") return `${v.toFixed(2)}x`;
-  if (m.unit === "currency") return `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  if (m.unit === "currency") return `$${v.toLocaleString(undefined, { maximumFractionDigits: v < 100 ? 2 : 0 })}`;
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
   if (v >= 10_000) return `${(v / 1000).toFixed(1)}K`;
   return v.toLocaleString();

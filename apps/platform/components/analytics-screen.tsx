@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { AnalyticsData } from "@/lib/analytics/screen";
 import { workspacePath } from "@/lib/nav";
 import { AnalyticsFilterBar } from "./analytics/filters";
-import { AudiencePanel, ChannelMixPanel, FunnelPanel, OrganicVsPaid, TopPostsPanel, TrendPanel } from "./analytics/panels";
+import { AttributionPanel, AudiencePanel, ChannelMixPanel, FunnelPanel, OrganicVsPaid, TopPostsPanel, TrendPanel } from "./analytics/panels";
 import { Scorecards } from "./analytics/scorecard";
 
 /** Analytics overview per images/analytics.png: filters, scorecard, then panel grid. */
@@ -32,10 +32,7 @@ export function AnalyticsScreen({ data }: { data: AnalyticsData }) {
         <TopPostsPanel data={data} />
       </div>
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        <section className="rounded-box border border-base-300 p-4" aria-label="Attribution summary">
-          <h2 className="text-sm font-semibold">Attribution summary</h2>
-          <p className="mt-3 text-sm text-secondary">Conversions and revenue per channel appear once a tracking source (pixel or UTM) and ad accounts are connected. Attribution always shows its model, window, and freshness.</p>
-        </section>
+        <AttributionPanel data={data} />
         <section className="rounded-box border border-base-300 p-4 xl:col-span-2" aria-label="Reports">
           <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">Reports</h2><Link href={workspacePath(data.workspaceId, "reports")} className="text-xs font-medium hover:underline">View all reports →</Link></div>
           <p className="mt-3 text-sm text-secondary">Save this view as a report, export it as CSV with definitions and freshness stamped, or schedule it for delivery.</p>

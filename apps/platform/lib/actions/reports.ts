@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { reportDefinition, reportRun, type ReportCadence } from "@/db/schema/analytics";
 import { nextRunAt, resolveFilters } from "@/lib/analytics/reports";
 import { audit } from "@/lib/audit";
+import { track } from "@/lib/telemetry";
 import { emit } from "@/lib/jobs/outbox";
 import { requireCapability } from "@/lib/session";
 import { fail, guard, type ActionState } from "./content/shared";
@@ -45,6 +46,7 @@ export async function saveReport(workspaceId: string, input: ReportInput): Promi
       id = row.id;
     }
     await audit({ action: "report.save", actorUserId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId, targetType: "report_definition", targetId: id, summary: { after: values } });
+    await track("report_saved", { userId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId, surface: "action:saveReport", props: { cadence: v.cadence } });
     return { ok: "Report saved.", id };
   });
 }

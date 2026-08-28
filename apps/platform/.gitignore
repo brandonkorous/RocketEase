@@ -4,3 +4,6 @@ out
 *.tsbuildinfo
 next-env.d.ts
 .env*
+e2e/.state/
+e2e/.results/
+playwright-report/

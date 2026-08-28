@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { conversation, conversationEvent, PRIORITIES, type Priority } from "@/db/schema/engagement";
 import { audit } from "@/lib/audit";
+import { track } from "@/lib/telemetry";
 import { notify } from "@/lib/notifications";
 import { workspacePath } from "@/lib/nav";
 import { requireCapability, requireWorkspace } from "@/lib/session";
@@ -43,6 +44,7 @@ export async function setConversationStatus(workspaceId: string, conversationId:
       await tx.insert(conversationEvent).values({ workspaceId, conversationId: conv.id, kind: status === "open" ? "reopened" : status, actorUserId: ctx.session.user.id, data: until ? { until: until.toISOString() } : {} });
     });
     await audit({ action: `conversation.${status}`, actorUserId: ctx.session.user.id, organizationId: conv.organizationId, workspaceId, targetType: "conversation", targetId: conv.id });
+    if (status === "resolved") await track("conversation_resolved", { userId: ctx.session.user.id, organizationId: conv.organizationId, workspaceId, surface: "action:setConversationStatus" });
     return { ok: status === "resolved" ? "Resolved." : status === "snoozed" ? "Snoozed." : "Reopened." };
   });
 }

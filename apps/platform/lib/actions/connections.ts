@@ -8,6 +8,7 @@ import { ProviderError, type ChannelDescriptor } from "@make-it-social/providers
 import { db } from "@/db";
 import { channel, providerConnection } from "@/db/schema/connections";
 import { audit } from "@/lib/audit";
+import { track } from "@/lib/telemetry";
 import { AuthorizationError } from "@/lib/authz";
 import { emit } from "@/lib/jobs/outbox";
 import { getAdapter, loadCredential, sealChannelToken } from "@/lib/providers";
@@ -83,6 +84,7 @@ export async function selectChannels(_prev: ActionState, formData: FormData): Pr
       targetId: conn.id,
       summary: { after: { channels: chosen.map((c) => ({ kind: c.kind, remoteId: c.remoteId, name: c.name })) } },
     });
+    await track("channel_connected", { userId: ctx.session.user.id, organizationId: conn.organizationId, workspaceId, surface: "action:selectChannels", props: { provider: conn.provider, channels: chosen.length } });
     return { ok: "ok", created } as ActionState & { created: string[] };
   });
   if ("error" in res && res.error) return res;

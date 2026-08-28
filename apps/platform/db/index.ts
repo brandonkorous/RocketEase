@@ -8,8 +8,11 @@ import * as content from "./schema/content";
 import * as approvals from "./schema/approvals";
 import * as engagement from "./schema/engagement";
 import * as analytics from "./schema/analytics";
+import * as campaigns from "./schema/campaigns";
+import * as telemetry from "./schema/telemetry";
+import * as quality from "./schema/quality";
 
-export const schema = { ...auth, ...app, ...connections, ...assets, ...content, ...approvals, ...engagement, ...analytics };
+export const schema = { ...auth, ...app, ...connections, ...assets, ...content, ...approvals, ...engagement, ...analytics, ...telemetry, ...quality, ...campaigns };
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set");

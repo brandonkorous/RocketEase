@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { buildCsv } from "@/lib/analytics/export";
 import { parseAnalyticsFilters } from "@/lib/analytics/periods";
 import { audit } from "@/lib/audit";
+import { track } from "@/lib/telemetry";
 import { AuthorizationError } from "@/lib/authz";
 import { requireCapability } from "@/lib/session";
 
@@ -21,6 +22,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ workspac
   const filters = parseAnalyticsFilters(sp, ctx.workspace.timezone);
   const csv = await buildCsv({ workspaceId, workspaceName: ctx.workspace.name, timezone: ctx.workspace.timezone, filters, generatedBy: ctx.session.user.email });
   await audit({ action: "report.export", actorUserId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId, targetType: "analytics", summary: { after: filters } });
+  await track("report_exported", { userId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId, surface: "route:analytics/export", props: { format: "csv", scope: filters.scope } });
   const name = `analytics_${ctx.workspace.slug ?? "workspace"}_${filters.from}_${filters.to}.csv`;
   return new NextResponse(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${name}"` } });
 }

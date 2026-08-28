@@ -127,15 +127,15 @@ Notes
 
 ---
 
-## Milestone 6 — Campaigns & Paid (Phase 4)
+## Milestone 6 — Campaigns & Paid (Phase 4) — ✅ core done (mock + Meta Marketing API adapters; verified against mock; no step-up re-auth before spend yet)
 
 | # | Feature | Reqs | Depends on |
 |---|---|---|---|
-| 6.1 | `campaign` model; attach content items; objective/dates/owner/tracking | CAM-001 | 2.1 |
-| 6.2 | Campaigns list + detail tabs (Overview, Content, Ads, Audience, Conversations, Performance, Activity) | CAM-001 | 5.4, 4.2 |
-| 6.3 | Ad account connection + **read-only import** of paid campaigns/spend/conversions (Meta first) with deep links to native manager | CAM-001 | 1.4 |
-| 6.4 | Paid/organic split in analytics; deterministic campaign attribution | ANA-001 | 5.3, 6.3 |
-| 6.5 | Promote-a-post: eligibility, preview, budget caps, policy + reauth + audit before any spend mutation | CAM-002 (P1) | 6.3, 3.1, 0.12 |
+| 6.1 | ✅ `campaign` model; attach content items; objective/dates/owner/tracking | CAM-001 | 2.1 |
+| 6.2 | ✅ Campaigns list + detail tabs (Overview, Content, Ads, Audience, Conversations, Performance, Activity) | CAM-001 | 5.4, 4.2 |
+| 6.3 | ✅ Ad account connection + **read-only import** of paid campaigns/spend/conversions (Meta first) with deep links to native manager | CAM-001 | 1.4 |
+| 6.4 | ✅ Paid/organic split in analytics; deterministic campaign attribution | ANA-001 | 5.3, 6.3 |
+| 6.5 | ✅ Promote-a-post: eligibility, preview, budget caps, policy + reauth + audit before any spend mutation | CAM-002 (P1) | 6.3, 3.1, 0.12 |
 
 **Gate (roadmap Phase 4):** spend-changing flows pass finance/security review and provider certification.
 

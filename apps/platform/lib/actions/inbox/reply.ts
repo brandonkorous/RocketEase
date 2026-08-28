@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { conversation, conversationEvent, internalNote, message } from "@/db/schema/engagement";
 import { audit } from "@/lib/audit";
+import { track } from "@/lib/telemetry";
 import { emit } from "@/lib/jobs/outbox";
 import { requireCapability } from "@/lib/session";
 import { fail, guard, type ActionState } from "../content/shared";
@@ -38,6 +39,7 @@ export async function sendReply(workspaceId: string, conversationId: string, tex
       return row.id;
     });
     await audit({ action: "conversation.reply", actorUserId: ctx.session.user.id, organizationId: conv.organizationId, workspaceId, targetType: "conversation", targetId: conv.id, summary: { after: { messageId } } });
+    await track("conversation_replied", { userId: ctx.session.user.id, organizationId: conv.organizationId, workspaceId, surface: "action:sendReply", props: { resolve: Boolean(opts.resolve) } });
     return { ok: opts.resolve ? "Reply sent and resolved." : "Reply queued.", messageId };
   });
 }

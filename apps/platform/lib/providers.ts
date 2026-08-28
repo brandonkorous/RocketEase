@@ -34,7 +34,7 @@ export const isProviderKey = (k: string): k is ProviderKey => providers().has(k 
 
 /** Credentials are bound to the connection id (AAD) so an envelope can't be moved between rows. */
 export const sealCredential = (connectionId: string, cred: Credential) => encryptJson(cred, `conn:${connectionId}`);
-const openCredential = (conn: ProviderConnection) => decryptJson<Credential>(conn.secret, `conn:${conn.id}`);
+export const openCredential = (conn: ProviderConnection) => decryptJson<Credential>(conn.secret, `conn:${conn.id}`);
 
 /**
  * Load a usable credential, refreshing when within 24h of expiry. Persists the

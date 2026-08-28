@@ -1,20 +1,32 @@
-import { and, eq, gte, inArray, lte, sql, type SQL } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, or, sql, type SQL } from "drizzle-orm";
 import type { CanonicalMetric } from "@make-it-social/providers";
 import { db } from "@/db";
 import { metricFact } from "@/db/schema/analytics";
 import { channel } from "@/db/schema/connections";
 import { contentItem, postVariant, remotePublication } from "@/db/schema/content";
+import { adCampaign, campaignContent } from "@/db/schema/campaigns";
 import type { ReportFilters } from "@/db/schema/analytics";
 
 export type Period = { from: string; to: string };
 export type Totals = Partial<Record<CanonicalMetric, number>>;
 
-const SUMMED: CanonicalMetric[] = ["impressions", "reach", "video_views", "reactions", "comments", "shares", "saves", "engagement", "link_clicks", "follower_gain"];
+const SUMMED: CanonicalMetric[] = ["impressions", "reach", "video_views", "reactions", "comments", "shares", "saves", "engagement", "link_clicks", "follower_gain", "spend", "conversions"];
+
+/** Deterministic campaign attribution (analytics.md): the campaign's published posts and its linked ad campaigns. */
+const campaignPostIds = (campaignId: string) => db.select({ id: remotePublication.remoteId }).from(remotePublication).innerJoin(postVariant, eq(postVariant.id, remotePublication.variantId)).innerJoin(campaignContent, eq(campaignContent.contentItemId, postVariant.contentItemId)).where(eq(campaignContent.campaignId, campaignId));
+const campaignAdIds = (campaignId: string) => db.select({ id: adCampaign.remoteId }).from(adCampaign).where(eq(adCampaign.campaignId, campaignId));
 
 function scopeWhere(workspaceId: string, f: ReportFilters, p: Period, entity: "channel" | "post"): SQL {
-  const parts = [eq(metricFact.workspaceId, workspaceId), eq(metricFact.entity, entity), gte(metricFact.day, p.from), lte(metricFact.day, p.to)];
+  const parts = [eq(metricFact.workspaceId, workspaceId), gte(metricFact.day, p.from), lte(metricFact.day, p.to)];
   if (f.channelId) parts.push(eq(metricFact.channelId, f.channelId));
   if (f.scope !== "all") parts.push(eq(metricFact.scope, f.scope));
+  if (!f.campaignId) parts.push(eq(metricFact.entity, entity));
+  else {
+    // A campaign owns its posts' facts (organic + boosted) and its ad campaigns' paid facts; channel-level organic series are not attributable.
+    const posts = and(eq(metricFact.entity, "post"), inArray(metricFact.remoteId, campaignPostIds(f.campaignId)))!;
+    const ads = and(eq(metricFact.entity, "channel"), eq(metricFact.scope, "paid"), inArray(metricFact.remoteId, campaignAdIds(f.campaignId)))!;
+    parts.push(entity === "post" ? posts : or(posts, ads)!);
+  }
   return and(...parts)!;
 }
 
@@ -84,6 +96,13 @@ export async function topPosts(workspaceId: string, f: ReportFilters, p: Period,
     .orderBy(sql`${sql.raw(by === "reach" ? "3" : by === "link_clicks" ? "5" : "4")} desc`)
     .limit(limit);
   return rows.map((r) => ({ ...r, reach: Number(r.reach), engagement: Number(r.engagement), clicks: Number(r.clicks) }));
+}
+
+/** Facts inside a period whose value was revised in the last 24h (provider corrections/backfills). */
+export async function revisedFactsInPeriod(workspaceId: string, p: Period): Promise<{ count: number; from: string | null; to: string | null }> {
+  const r = await db.execute(sql`select count(*)::int as count, min(day) as "from", max(day) as "to" from metric_fact where workspace_id = ${workspaceId} and revision > 1 and fresh_at > now() - interval '24 hours' and day >= ${p.from} and day <= ${p.to}`);
+  const row = (r as unknown as { count: number; from: string | null; to: string | null }[])[0];
+  return { count: Number(row?.count ?? 0), from: row?.from ?? null, to: row?.to ?? null };
 }
 
 export type Freshness = { latestAt: Date | null; staleChannels: { name: string; network: string; lastSuccessAt: Date | null; lastError: string | null }[] };

@@ -13,7 +13,9 @@
     "auth:generate": "npx auth@latest generate --config scripts/auth-schema.config.ts --output db/schema/auth.ts -y",
     "worker": "tsx watch worker/index.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1120.0",
@@ -21,6 +23,14 @@
     "@better-auth/drizzle-adapter": "^1.7.2",
     "@make-it-social/providers": "workspace:*",
     "@make-it-social/ui": "workspace:*",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.221.0",
+    "@opentelemetry/instrumentation-http": "^0.221.0",
+    "@opentelemetry/instrumentation-pg": "^0.73.0",
+    "@opentelemetry/resources": "^2.10.0",
+    "@opentelemetry/sdk-node": "^0.221.0",
+    "@opentelemetry/sdk-trace-node": "^2.10.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0",
     "@wizeworks/silicaui": "^0.55.0",
     "@wizeworks/silicaui-react": "^0.55.0",
     "better-auth": "^1.7.2",
@@ -36,6 +46,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^22",
     "@types/nodemailer": "^8.0.1",

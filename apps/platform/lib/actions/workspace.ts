@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import { track } from "@/lib/telemetry";
 import { requireUser } from "@/lib/session";
 import { db } from "@/db";
 import { workspace, workspaceMembership } from "@/db/schema/app";
@@ -68,5 +69,6 @@ export async function createWorkspace(_prev: CreateWorkspaceState, formData: For
     targetId: ws.id,
     summary: { after: { name, timezone } },
   });
+  await track("workspace_created", { userId: session.user.id, organizationId, workspaceId: ws.id, surface: "action:createWorkspace" });
   redirect(`/app/${ws.id}/home`);
 }

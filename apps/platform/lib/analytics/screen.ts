@@ -3,8 +3,8 @@ import { db } from "@/db";
 import { channel } from "@/db/schema/connections";
 import { requireWorkspace, hasCapability } from "@/lib/session";
 import { formatInZone } from "@/lib/time";
-import { engagementOf } from "./derive";
-import { METRICS, PAID_METRICS, SCORECARD, paidRatio, type DisplayMetric, type MetricContract } from "./metrics";
+import { derived } from "./derive";
+import { METRICS, PAID_METRICS, SCORECARD, type DisplayMetric, type MetricContract } from "./metrics";
 import { campaign } from "@/db/schema/campaigns";
 import { paidAttribution, type PaidAttribution } from "@/lib/campaigns/attribution";
 import { comparisonPeriod, delta, parseAnalyticsFilters, periodLabel, type AnalyticsFilters } from "./periods";
@@ -43,14 +43,6 @@ export type AnalyticsData = {
 
 /** Engagement falls back to the sum of its parts when a provider reports no total (post-level facts). */
 
-export function derived(key: DisplayMetric, t: Totals): number | null {
-  if (key === "engagement") return engagementOf(t) ?? null;
-  if (key === "engagement_rate") return t.reach ? (engagementOf(t) ?? 0) / t.reach : null;
-  if (key === "ctr") return t.impressions ? (t.link_clicks ?? 0) / t.impressions : null;
-  if (key === "cpm" || key === "cpc" || key === "ctr_paid" || key === "cpa") return paidRatio(key, t);
-  if (key in t) return (t as Record<string, number>)[key] ?? null;
-  return null;
-}
 
 const NO_PAID = "No paid data in this period. Connect an ad account from a campaign's Ads tab to import spend and conversions.";
 

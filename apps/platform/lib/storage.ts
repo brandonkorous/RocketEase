@@ -3,7 +3,7 @@
  * gateway) in production. Every object key is prefixed by org/workspace so a
  * key can never be guessed across tenants, and all access is via signed URLs.
  */
-import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, HeadBucketCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomBytes } from "node:crypto";
 
@@ -71,4 +71,9 @@ export async function putObject(key: string, body: Buffer, contentType: string) 
 
 export async function deleteObject(key: string) {
   await client().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key })).catch(() => undefined);
+}
+
+/** Health probe: throws when the bucket is unreachable or credentials are rejected. */
+export async function storageReachable() {
+  await client().send(new HeadBucketCommand({ Bucket: bucket() }));
 }

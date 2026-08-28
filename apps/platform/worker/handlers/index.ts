@@ -9,6 +9,11 @@ import { inboxReply } from "./inbox-reply";
 import { webhookProcess } from "./webhook-process";
 import { insightsIngest } from "./insights-ingest";
 import { reportRunJob } from "./report-run";
+import { qualityCheck } from "./quality-check";
+import { publicationReconcile } from "./publication-reconcile";
+import { connectionRefresh } from "./connection-refresh";
+import { adsSync } from "./ads-sync";
+import { promotionExecute } from "./promotion-execute";
 
 export type HandlerContext = { log: Logger; signal: AbortSignal };
 export type Handler<N extends JobName> = (data: JobPayloads[N], ctx: HandlerContext) => Promise<void>;
@@ -27,4 +32,9 @@ export const handlers: { [N in Exclude<JobName, "outbox.relay">]: Handler<N> } =
   "asset.process": assetProcess,
   "inbox.sync": inboxSync,
   "inbox.reply": inboxReply,
+  "quality.check": qualityCheck,
+  "publication.reconcile": publicationReconcile,
+  "connection.refresh": connectionRefresh,
+  "ads.sync": adsSync,
+  "promotion.execute": promotionExecute,
 };

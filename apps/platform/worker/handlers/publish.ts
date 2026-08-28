@@ -3,6 +3,7 @@ import { ProviderError, type PublishResult } from "@make-it-social/providers";
 import { db } from "@/db";
 import { contentItem, postVariant, publishJob, remotePublication, type VariantError } from "@/db/schema/content";
 import { audit } from "@/lib/audit";
+import { track } from "@/lib/telemetry";
 import { mediaForAssets, resolveVariant, summarizeItem, validateVariant } from "@/lib/content";
 import { emit } from "@/lib/jobs/outbox";
 import type { JobPayloads } from "@/lib/jobs/queues";
@@ -99,6 +100,7 @@ export async function publishExecute(data: JobPayloads["publish.execute"], ctx: 
     });
     await summarizeItem(item.id);
     await audit({ action: "publish.succeeded", organizationId: item.organizationId, workspaceId: item.workspaceId, targetType: "post_variant", targetId: v.id, summary: { after: { remoteId: result.remoteId, channel: ch.name } } });
+    await track("post_published", { organizationId: item.organizationId, workspaceId: item.workspaceId, surface: "job:publish.execute", props: { network: ch.network, format: v.format, attempt: job.attempt } });
     l.info("published", { remoteId: result.remoteId });
     return;
   }
@@ -131,6 +133,7 @@ async function finish(jobId: string, v: { id: string; channelId: string }, item:
   await summarizeItem(item.id);
   const ch = await db.query.channel.findFirst({ where: (c, { eq }) => eq(c.id, v.channelId) });
   await audit({ action: "publish.failed", organizationId: item.organizationId, workspaceId: item.workspaceId, targetType: "post_variant", targetId: v.id, result: "error", summary: { note: `${failure.category}: ${failure.message}` } });
+  await track("post_failed", { organizationId: item.organizationId, workspaceId: item.workspaceId, surface: "job:publish.execute", outcome: "error", props: { network: ch?.network ?? null, category: failure.category, ambiguous: Boolean(failure.ambiguous) } });
   await notify({
     workspaceId: item.workspaceId,
     organizationId: item.organizationId,

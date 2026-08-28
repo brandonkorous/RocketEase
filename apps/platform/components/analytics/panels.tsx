@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { METRICS, formatMetric } from "@/lib/analytics/metrics";
+import { engagementOf } from "@/lib/analytics/derive";
 import { filtersToQuery } from "@/lib/analytics/periods";
 import type { AnalyticsData } from "@/lib/analytics/screen";
 import { workspacePath } from "@/lib/nav";
@@ -23,18 +24,44 @@ export function Panel({ title, info, action, children }: { title: string; info?:
 const ROWS = ["reach", "impressions", "engagement", "link_clicks"] as const;
 
 export function OrganicVsPaid({ data }: { data: AnalyticsData }) {
-  const paidNote = METRICS.spend.unavailable;
+  const hasPaid = data.paid.spend != null;
+  const paidNote = hasPaid ? undefined : "No paid facts in this period. Connect an ad account from a campaign's Ads tab.";
+  const value = (k: (typeof ROWS)[number], t: AnalyticsData["organic"], has: boolean) => (k === "engagement" ? engagementOf(t) : t[k]) ?? (has ? 0 : null);
+  const cell = (v: number | null, m: keyof typeof METRICS) => (v === null ? <span className="text-secondary/70" title={paidNote}>—</span> : formatMetric(METRICS[m], v));
   return (
     <Panel title="Organic vs Paid performance" info="engagement">
       <table className="w-full text-sm">
         <thead className="text-xs text-secondary"><tr><th className="pb-2 text-left font-medium">Metric</th><th className="pb-2 text-right font-medium">Organic</th><th className="pb-2 text-right font-medium">Paid</th></tr></thead>
         <tbody className="divide-y divide-base-300">
-          {ROWS.map((k) => (<tr key={k}><td className="py-2">{METRICS[k].name}</td><td className="py-2 text-right font-semibold">{formatMetric(METRICS[k], data.organic[k] ?? (data.hasData ? 0 : null))}</td><td className="py-2 text-right text-secondary/70" title={paidNote}>—</td></tr>))}
-          <tr><td className="py-2">Spend</td><td className="py-2 text-right text-secondary/70">n/a</td><td className="py-2 text-right text-secondary/70" title={paidNote}>—</td></tr>
+          {ROWS.map((k) => (<tr key={k}><td className="py-2">{METRICS[k].name}</td><td className="py-2 text-right font-semibold">{cell(value(k, data.organic, data.hasData), k)}</td><td className="py-2 text-right font-semibold">{cell(value(k, data.paid, hasPaid), k)}</td></tr>))}
+          <tr><td className="py-2">Conversions</td><td className="py-2 text-right text-secondary/70" title={METRICS.conversions.caveat}>n/a</td><td className="py-2 text-right font-semibold">{cell(data.paid.conversions ?? (hasPaid ? 0 : null), "conversions")}</td></tr>
+          <tr><td className="py-2">Spend</td><td className="py-2 text-right text-secondary/70">n/a</td><td className="py-2 text-right font-semibold">{cell(data.paid.spend ?? null, "spend")}</td></tr>
         </tbody>
       </table>
-      <p className="mt-2 text-xs text-secondary/70">Paid columns fill in once ad accounts are imported.</p>
+      <p className="mt-2 text-xs text-secondary/70">{hasPaid ? `Paid figures are in ${data.paidAttribution?.currency ?? "the ad account currency"}; no currency conversion is applied.` : "Paid columns fill in once an ad account is connected and imported."}</p>
     </Panel>
+  );
+}
+
+/** Attribution is deterministic (campaign tagging + provider-reported paid results); the model/window/freshness always show (analytics.md). */
+export function AttributionPanel({ data }: { data: AnalyticsData }) {
+  const a = data.paidAttribution;
+  return (
+    <section className="rounded-box border border-base-300 p-4" aria-label="Attribution summary">
+      <h2 className="text-sm font-semibold">Attribution summary</h2>
+      {a ? (
+        <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+          <dt className="text-secondary">Model</dt><dd>Deterministic campaign tagging · {a.model}</dd>
+          <dt className="text-secondary">Window</dt><dd>{a.window}</dd>
+          <dt className="text-secondary">Source</dt><dd>{a.sources.join(", ")}</dd>
+          <dt className="text-secondary">Currency</dt><dd>{a.currency} (no conversion applied)</dd>
+          <dt className="text-secondary">Freshness</dt><dd>{a.freshLabel ?? "never synced"}</dd>
+          <dt className="text-secondary">Conversions</dt><dd className="font-semibold">{formatMetric(METRICS.conversions, data.paid.conversions ?? 0)}</dd>
+        </dl>
+      ) : (
+        <p className="mt-3 text-sm text-secondary">Conversions per campaign appear once an ad account is connected (Campaigns → Ads). Organic conversions additionally need a pixel or UTM tracking source, which is not connected yet. Attribution always shows its model, window, and freshness.</p>
+      )}
+    </section>
   );
 }
 

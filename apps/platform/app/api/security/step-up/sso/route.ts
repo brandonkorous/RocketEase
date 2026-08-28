@@ -49,7 +49,7 @@ export async function GET(req: Request) {
     workspaceId: ticket.workspaceId,
     targetType: "session",
     targetId: session.session.id,
-    summary: { after: { purpose: ticket.purpose, method: "sso", expiresAt: expiresAt.toISOString() } },
+    summary: { after: { purpose: ticket.purpose, method: "sso", forced: ticket.forced, expiresAt: expiresAt.toISOString() } },
   });
   return NextResponse.redirect(new URL(ticket.returnTo, appUrl()));
 }

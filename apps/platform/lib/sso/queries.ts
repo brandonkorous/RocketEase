@@ -44,6 +44,10 @@ function detailOf(row: { action: string; targetId: string | null; actorName: str
 export async function ssoSectionData(ctx: WorkspaceContext): Promise<SsoSectionData> {
   const orgId = ctx.workspace.organizationId;
   const role = await orgRoleOf(orgId, ctx.session.user.id);
+  const organizationName = ctx.workspace.organizationName;
+  // Enterprise auth belongs to the billing boundary: a workspace member who
+  // isn't an org owner/admin sees that the section exists and nothing else.
+  if (!isOrgAdmin(role)) return { ...EMPTY_SSO, organizationName };
   const tz = ctx.workspace.timezone;
   const [connections, token, [{ n }], events] = await Promise.all([
     listOrgProviders(orgId),
@@ -59,8 +63,8 @@ export async function ssoSectionData(ctx: WorkspaceContext): Promise<SsoSectionD
   ]);
   const stamp = (d: Date) => formatInZone(d, tz, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   return {
-    canManage: isOrgAdmin(role),
-    organizationName: ctx.workspace.organizationName,
+    canManage: true,
+    organizationName,
     connections,
     scim: {
       baseUrl: scimBaseUrl(appUrl()),

@@ -39,6 +39,26 @@ describe("applying a PATCH", () => {
     expect(out.name).toEqual({ givenName: "Ada", familyName: "Lovelace" });
   });
 
+  it("drops the stale formatted name so a rename actually lands", () => {
+    const out = patch({ name: { formatted: "Ada Lovelace", givenName: "Ada", familyName: "Lovelace" } }, [
+      { op: "replace", path: "name.givenName", value: "Augusta" },
+    ]);
+    expect(out.name).toEqual({ givenName: "Augusta", familyName: "Lovelace" });
+  });
+
+  it("keeps a formatted name the same patch set", () => {
+    const out = patch({ name: { formatted: "Ada Lovelace" } }, [
+      { op: "replace", path: "name.givenName", value: "Augusta" },
+      { op: "replace", path: "name.formatted", value: "Augusta Lovelace" },
+    ]);
+    expect(out.name).toEqual({ formatted: "Augusta Lovelace", givenName: "Augusta" });
+  });
+
+  it("leaves formatted alone when the patch never touched the name", () => {
+    const out = patch({ name: { formatted: "Ada Lovelace" }, active: true }, [{ op: "replace", path: "active", value: false }]);
+    expect(out.name).toEqual({ formatted: "Ada Lovelace" });
+  });
+
   it("creates intermediate objects for a new nested path", () => {
     expect(patch({}, [{ op: "add", path: "name.givenName", value: "Ada" }]).name).toEqual({ givenName: "Ada" });
   });

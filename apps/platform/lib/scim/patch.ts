@@ -73,6 +73,18 @@ function removeFiltered(out: ScimResource, attr: string, match: string) {
 }
 
 /**
+ * `name.formatted` is derived from the parts, so a patch that rewrites
+ * givenName or familyName leaves it stale — and readers prefer it. Drop it
+ * unless the same patch set it, so a rename actually takes effect.
+ */
+function dropStaleFormatted(out: ScimResource, ops: ScimPatchOp[]) {
+  const touched = ops.filter((o) => o.path?.startsWith("name."));
+  if (!touched.length || touched.some((o) => o.path === "name.formatted")) return;
+  const name = out.name;
+  if (name && typeof name === "object" && !Array.isArray(name)) delete (name as ScimResource).formatted;
+}
+
+/**
  * Applies a PATCH (RFC 7644 §3.5.2) to a resource copy and returns the result.
  * Supports pathless add/replace, dotted paths, multi-valued add/remove, and the
  * `attr[value eq "x"]` remove form. Anything else is rejected, not ignored.
@@ -96,5 +108,6 @@ export function applyScimPatch(resource: ScimResource, ops: ScimPatchOp[]): Scim
     else if (op === "add") applyAdd(out, path, value);
     else setPath(out, path, value);
   }
+  dropStaleFormatted(out, ops);
   return out;
 }

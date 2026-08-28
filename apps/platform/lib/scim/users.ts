@@ -6,6 +6,7 @@ import { user } from "@/db/schema/auth";
 import { SCIM_SCHEMA, scimBaseUrl } from "./constants";
 import { stringTerm, boolTerm, type ScimFilterTerm } from "./filter";
 import { ScimError } from "./errors";
+import { splitName } from "./resource";
 
 export type UserRow = {
   userId: string;
@@ -19,22 +20,6 @@ export type UserRow = {
 };
 
 const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5001";
-
-/** "Ada Lovelace King" → given "Ada", family "Lovelace King". */
-export function splitName(full: string): { givenName: string; familyName: string } {
-  const parts = full.trim().split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return { givenName: parts[0] ?? "", familyName: "" };
-  return { givenName: parts[0], familyName: parts.slice(1).join(" ") };
-}
-
-/** SCIM sends the parts; we store one display name. */
-export function joinName(payload: Record<string, unknown>): string {
-  const n = (payload.name ?? {}) as Record<string, unknown>;
-  const formatted = typeof n.formatted === "string" ? n.formatted.trim() : "";
-  const parts = [n.givenName, n.familyName].filter((p): p is string => typeof p === "string" && Boolean(p.trim()));
-  const display = typeof payload.displayName === "string" ? payload.displayName.trim() : "";
-  return formatted || parts.join(" ").trim() || display || String(payload.userName ?? "").trim();
-}
 
 export function toScimUser(row: UserRow): Record<string, unknown> {
   const { givenName, familyName } = splitName(row.name);

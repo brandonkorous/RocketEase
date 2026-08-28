@@ -188,9 +188,9 @@ export const outboxEvent = pgTable(
 
 /**
  * Step-up re-authentication (NFR-001). A high-risk action (paid spend) needs a
- * password or TOTP re-entry within a short window. Rows are keyed by the Better
- * Auth session id so the proof dies with the session; expired rows are pruned
- * on write. Never holds the secret itself.
+ * password or TOTP re-entry, or an SSO round trip, within a short window. Rows
+ * are keyed by the Better Auth session id so the proof dies with the session;
+ * expired rows are pruned on write. Never holds the secret itself.
  */
 export const stepUpVerification = pgTable(
   "step_up_verification",
@@ -198,7 +198,7 @@ export const stepUpVerification = pgTable(
     id: id(),
     sessionId: text("session_id").notNull(),
     userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-    /** What was re-verified: "password" or "totp". */
+    /** How it was re-verified: "password", "totp" or "sso". */
     method: text("method").notNull(),
     /** Scope of the proof, e.g. "paid_spend". */
     purpose: text("purpose").notNull(),

@@ -7,24 +7,8 @@ import { member, session, user } from "@/db/schema/auth";
 import { audit } from "@/lib/audit";
 import { ScimError } from "./errors";
 import type { ScimContext } from "./auth";
-import { findUser, findUserByName, joinName, type UserRow } from "./users";
-
-/** Primary work email, falling back to the userName (which IdPs set to it). */
-function emailOf(payload: Record<string, unknown>, userName: string): string {
-  const emails = Array.isArray(payload.emails) ? (payload.emails as Record<string, unknown>[]) : [];
-  const primary = emails.find((e) => e?.primary === true) ?? emails[0];
-  const value = typeof primary?.value === "string" ? primary.value.trim() : "";
-  return (value || userName).toLowerCase();
-}
-
-function requireUserName(payload: Record<string, unknown>): string {
-  const raw = typeof payload.userName === "string" ? payload.userName.trim().toLowerCase() : "";
-  if (!raw) throw new ScimError(400, "userName is required", "invalidValue");
-  return raw;
-}
-
-const externalIdOf = (payload: Record<string, unknown>) =>
-  typeof payload.externalId === "string" && payload.externalId.trim() ? payload.externalId.trim() : null;
+import { emailOf, externalIdOf, joinName, requireUserName, scimActive } from "./resource";
+import { findUser, findUserByName, type UserRow } from "./users";
 
 async function scimAudit(ctx: ScimContext, action: string, userId: string, summary: Record<string, unknown>) {
   await audit({
@@ -69,7 +53,7 @@ export async function createScimUser(ctx: ScimContext, payload: Record<string, u
     userId,
     userName,
     externalId: externalIdOf(payload),
-    active: payload.active !== false,
+    active: scimActive(payload),
     lastSyncedAt: new Date(),
   });
   await scimAudit(ctx, "scim.user.provisioned", userId, { userName, created: true });
@@ -92,14 +76,18 @@ async function setActive(ctx: ScimContext, userId: string, active: boolean) {
   if (!active) await db.delete(session).where(eq(session.userId, userId));
 }
 
-/** Writes a merged SCIM User resource back onto our tables (PUT and PATCH share this). */
+/**
+ * Writes a merged SCIM User resource back onto our tables (PUT and PATCH share
+ * this). An omitted `active` keeps the current state: silently reactivating a
+ * leaver because the IdP left the field out is the worse failure.
+ */
 export async function applyScimUser(ctx: ScimContext, current: UserRow, resource: Record<string, unknown>): Promise<UserRow> {
   const userName = requireUserName(resource);
   if (userName !== current.userName) {
     const clash = await findUserByName(ctx.organizationId, userName);
     if (clash && clash.userId !== current.userId) throw new ScimError(409, "userName is taken", "uniqueness");
   }
-  const active = resource.active !== false;
+  const active = scimActive(resource, current.active);
   const name = joinName(resource) || current.name;
   if (name !== current.name) await db.update(user).set({ name }).where(eq(user.id, current.userId));
   await db

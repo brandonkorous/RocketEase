@@ -22,8 +22,9 @@ const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5001";
 
 /**
  * OIDC can demand a genuine re-authentication (`prompt=login`, `max_age=0`).
- * SAML cannot: the plugin signs the AuthnRequest itself and refuses caller
- * parameters, so a SAML IdP may satisfy the round trip from its own session.
+ * SAML cannot: @better-auth/sso signs the AuthnRequest itself, exposes no
+ * ForceAuthn option and rejects caller parameters, so a SAML IdP may satisfy
+ * the round trip from its own session. The ticket records which it was.
  */
 function reauthParams(isSaml: boolean) {
   return isSaml ? undefined : { prompt: "login", max_age: "0" };
@@ -47,8 +48,9 @@ export async function beginSsoStepUp(input: z.input<typeof schema>): Promise<Act
 
     const nonce = randomBytes(24).toString("base64url");
     const target = safeReturnTo(returnTo);
+    const isSaml = Boolean(row.samlConfig);
     const jar = await cookies();
-    jar.set(STEP_UP_COOKIE, encodeTicket({ nonce, purpose, workspaceId, returnTo: target }), {
+    jar.set(STEP_UP_COOKIE, encodeTicket({ nonce, purpose, workspaceId, returnTo: target, forced: !isSaml }), {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
@@ -64,7 +66,7 @@ export async function beginSsoStepUp(input: z.input<typeof schema>): Promise<Act
           providerId,
           callbackURL,
           errorCallbackURL: `${appUrl()}${target}`,
-          additionalParams: reauthParams(Boolean(row.samlConfig)),
+          additionalParams: reauthParams(isSaml),
         },
       });
       if (!res?.url) return fail("Couldn't reach your identity provider. Try again.");

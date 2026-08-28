@@ -19,6 +19,9 @@ export function providers(): Map<ProviderKey, ProviderAdapter> {
       meta: process.env.META_APP_ID ? { clientId: process.env.META_APP_ID, clientSecret: process.env.META_APP_SECRET ?? "", extra: { webhookVerifyToken: process.env.META_WEBHOOK_VERIFY_TOKEN ?? "" } } : undefined,
       linkedin: process.env.LINKEDIN_CLIENT_ID ? { clientId: process.env.LINKEDIN_CLIENT_ID, clientSecret: process.env.LINKEDIN_CLIENT_SECRET ?? "" } : undefined,
       tiktok: process.env.TIKTOK_CLIENT_KEY ? { clientId: process.env.TIKTOK_CLIENT_KEY, clientSecret: process.env.TIKTOK_CLIENT_SECRET ?? "" } : undefined,
+      youtube: process.env.YOUTUBE_CLIENT_ID ? { clientId: process.env.YOUTUBE_CLIENT_ID, clientSecret: process.env.YOUTUBE_CLIENT_SECRET ?? "" } : undefined,
+      pinterest: process.env.PINTEREST_APP_ID ? { clientId: process.env.PINTEREST_APP_ID, clientSecret: process.env.PINTEREST_APP_SECRET ?? "" } : undefined,
+      x: process.env.X_CLIENT_ID ? { clientId: process.env.X_CLIENT_ID, clientSecret: process.env.X_CLIENT_SECRET ?? "" } : undefined,
     });
   }
   return g.__misProviders;

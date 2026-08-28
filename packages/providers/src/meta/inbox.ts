@@ -3,7 +3,7 @@
  * and comments on recent posts. Everything maps onto InboxItem; threading:
  * DMs → the customer PSID/IGSID (also what webhooks carry), comments → root comment id.
  */
-import type { InboxItem, InboxPage, ReplyRequest, ReplyResult } from "../inbox-types";
+import type { InboxItem, InboxPage, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
 import type { ChannelDescriptor, Credential, ProviderConfig } from "../types";
 import { ProviderError } from "../types";
 import { graph, now } from "./graph";
@@ -78,10 +78,31 @@ export async function reply(cfg: ProviderConfig, cred: Credential, ch: ChannelDe
   return { remoteId: r.id, sentAt: now() };
 }
 
-/** Meta echoes DM metadata back; comments have no client reference, so scan the thread for our text marker. */
-export async function findReply(cfg: ProviderConfig, cred: Credential, ch: ChannelDescriptor, idempotencyKey: string): Promise<ReplyResult | null> {
+/** Our own reply on the thread we replied to: same author, same text, created at or after the attempt. */
+async function findCommentReply(cfg: ProviderConfig, t: string, ch: ChannelDescriptor, lookup: ReplyLookup): Promise<ReplyResult | null> {
+  const target = lookup.inReplyToRemoteId ?? lookup.threadRemoteId;
+  const ig = ch.kind === "instagram_business";
+  const edge = ig ? `/${target}/replies` : `/${target}/comments`;
+  const fields = ig ? "id,text,timestamp,username,from" : "id,message,created_time,from";
+  const res = await graph<{ data?: Comment[] }>(edge, cfg, t, { params: { fields, limit: "50" } }).catch(() => ({ data: [] as Comment[] }));
+  const handle = ch.handle?.replace(/^@/, "");
+  const mine = (c: Comment) => c.from?.id === ch.remoteId || (Boolean(handle) && c.username === handle);
+  const hit = (res.data ?? []).find((c) => {
+    const at = c.created_time ?? c.timestamp;
+    return mine(c) && (c.message ?? c.text ?? "") === lookup.text && Boolean(at) && at! >= lookup.sentAfter;
+  });
+  return hit ? { remoteId: hit.id, sentAt: hit.created_time ?? hit.timestamp ?? now() } : null;
+}
+
+/**
+ * Meta echoes DM metadata back, so DMs reconcile on the idempotency key.
+ * Comments carry no client reference: match structurally on the thread instead
+ * of writing a marker into text the audience would see.
+ */
+export async function findReply(cfg: ProviderConfig, cred: Credential, ch: ChannelDescriptor, lookup: ReplyLookup): Promise<ReplyResult | null> {
   const t = token(cred, ch);
+  if (lookup.kind !== "message") return findCommentReply(cfg, t, ch, lookup);
   const res = await graph<{ data?: Conv[] }>(`/${ch.remoteId}/conversations`, cfg, t, { params: { fields: "id,messages.limit(10){id,created_time,from}", limit: "10" } }).catch(() => ({ data: [] as Conv[] }));
-  for (const c of res.data ?? []) for (const m of c.messages?.data ?? []) if (m.from?.id === ch.remoteId && m.id.includes(idempotencyKey.slice(0, 8))) return { remoteId: m.id, sentAt: m.created_time };
+  for (const c of res.data ?? []) for (const m of c.messages?.data ?? []) if (m.from?.id === ch.remoteId && m.id.includes(lookup.idempotencyKey.slice(0, 8))) return { remoteId: m.id, sentAt: m.created_time };
   return null;
 }

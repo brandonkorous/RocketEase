@@ -3,7 +3,7 @@
  * comment.list.manage scopes). Threading: root comment id. TikTok exposes no
  * DMs or mentions to third-party apps, so those kinds never appear here.
  */
-import type { InboxItem, InboxPage, ReplyRequest, ReplyResult } from "../inbox-types";
+import type { InboxItem, InboxPage, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
 import type { ChannelDescriptor, Credential } from "../types";
 import { ProviderError } from "../types";
 import { biz, now, tt } from "./client";
@@ -79,14 +79,20 @@ export async function reply(cred: Credential, ch: ChannelDescriptor, req: ReplyR
   return { remoteId: r.comment_id, sentAt: now() };
 }
 
-/** Scan our own recent replies for the key marker (TikTok has no client reference on comments). */
-export async function findReply(cred: Credential, ch: ChannelDescriptor, idempotencyKey: string): Promise<ReplyResult | null> {
-  const marker = idempotencyKey.slice(0, 8);
-  const cutoff = new Date(Date.now() - 6 * 3_600_000).toISOString();
-  for (const v of await recentVideos(cred.accessToken).catch(() => [] as Video[])) {
-    const items = await commentsFor(cred.accessToken, ch.remoteId, v, ch, cutoff).catch(() => [] as InboxItem[]);
-    const hit = items.find((i) => i.direction === "outbound" && i.text.includes(marker));
-    if (hit) return { remoteId: hit.remoteId, sentAt: hit.occurredAt };
-  }
-  return null;
+/**
+ * TikTok exposes no client reference on comments. Reconcile structurally: our
+ * own reply under the same root comment, same text, created at or after the
+ * attempt — nothing is written into the visible text.
+ */
+export async function findReply(cred: Credential, ch: ChannelDescriptor, lookup: ReplyLookup): Promise<ReplyResult | null> {
+  const root = lookup.inReplyToRemoteId ?? lookup.threadRemoteId;
+  const videoId = lookup.postRemoteId ?? (await videoOfComment(cred.accessToken, ch.remoteId, root).catch(() => undefined));
+  if (!videoId) return null;
+  const after = Math.floor(Date.parse(lookup.sentAfter) / 1000);
+  const page = await biz<{ comments?: BizComment[] }>("/business/comment/reply/list/", cred.accessToken, {
+    query: { business_id: ch.remoteId, video_id: videoId, comment_id: root, max_count: "30" },
+  }).catch(() => ({ comments: [] as BizComment[] }));
+  const mine = (c: BizComment) => c.owner === true || c.user_id === ch.remoteId;
+  const hit = (page.comments ?? []).find((c) => mine(c) && (c.text ?? "") === lookup.text && (c.create_time ?? 0) >= after);
+  return hit ? { remoteId: hit.comment_id, sentAt: at(hit.create_time) } : null;
 }

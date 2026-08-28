@@ -3,7 +3,7 @@
  * hook so the UI/worker loop (poll → ingest → reply → reconcile) can be
  * exercised locally.
  */
-import type { InboxItem, InboxItemKind, InboxPage, ReplyRequest, ReplyResult } from "../inbox-types";
+import type { InboxItem, InboxItemKind, InboxPage, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
 import { ProviderError } from "../types";
 
 type Store = { items: Map<string, InboxItem[]>; replies: Map<string, ReplyResult>; seeded: Set<string>; ambiguousReply?: boolean; seq: number };
@@ -46,6 +46,8 @@ function seed(channelRemoteId: string) {
 export const mockInbox = {
   reset() { g.__misMockInbox = undefined; },
   setAmbiguousReply(v: boolean) { store().ambiguousReply = v; },
+  /** Test hook: drop the client-reference index so reconciliation must match structurally. */
+  forgetReplyKeys() { store().replies.clear(); },
   /** Simulate a customer writing in (new thread when threadRemoteId is omitted). */
   inject(channelRemoteId: string, input: { text: string; kind?: InboxItemKind; threadRemoteId?: string; who?: number }): InboxItem {
     seed(channelRemoteId);
@@ -79,6 +81,16 @@ export async function reply(channelRemoteId: string, req: ReplyRequest): Promise
   return result;
 }
 
-export async function findReply(idempotencyKey: string): Promise<ReplyResult | null> {
-  return store().replies.get(idempotencyKey) ?? null;
+/**
+ * Client reference first; otherwise the structural match every real network
+ * without one has to use: our own outbound reply, same thread, same text,
+ * created at or after the attempt started.
+ */
+export async function findReply(channelRemoteId: string, lookup: ReplyLookup): Promise<ReplyResult | null> {
+  const byKey = store().replies.get(lookup.idempotencyKey);
+  if (byKey) return byKey;
+  const hit = (store().items.get(channelRemoteId) ?? []).find(
+    (i) => i.direction === "outbound" && i.threadRemoteId === lookup.threadRemoteId && i.text === lookup.text && i.occurredAt >= lookup.sentAfter,
+  );
+  return hit ? { remoteId: hit.remoteId, sentAt: hit.occurredAt } : null;
 }

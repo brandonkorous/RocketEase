@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AuthorizationError } from "@/lib/authz";
 import { audit } from "@/lib/audit";
-import { callbackUrl, createOAuthState } from "@/lib/connections";
+import { callbackUrl, codeChallengeFor, createOAuthState } from "@/lib/connections";
 import { getAdapter, isProviderKey } from "@/lib/providers";
 import { requireCapability } from "@/lib/session";
 import { workspacePath } from "@/lib/nav";
@@ -29,7 +29,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
       redirectTo: workspacePath(workspaceId, "accounts"),
     });
     await audit({ action: "connection.start", actorUserId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId, targetType: "provider", targetId: provider });
-    return NextResponse.redirect(getAdapter(provider).authorizationUrl({ state, redirectUri: callbackUrl(provider) }));
+    // PKCE params are always supplied; adapters that do not need them ignore them.
+    return NextResponse.redirect(getAdapter(provider).authorizationUrl({ state, redirectUri: callbackUrl(provider), codeChallenge: codeChallengeFor(state), codeChallengeMethod: "S256" }));
   } catch (e) {
     if (e instanceof AuthorizationError) return NextResponse.redirect(new URL(`${workspacePath(workspaceId, "accounts")}?error=forbidden`, req.url));
     throw e;

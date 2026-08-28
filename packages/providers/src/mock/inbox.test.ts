@@ -40,13 +40,28 @@ describe("mock inbox", () => {
     const [thread] = mockInbox.threads(ch.remoteId);
     mockInbox.setAmbiguousReply(true);
     const req = { kind: "comment" as const, threadRemoteId: thread, text: "sorry for the wait", idempotencyKey: "amb" };
+    const sentAfter = new Date(Date.now() - 1_000).toISOString();
     await expect(mockProvider.reply!(cred, ch, req)).rejects.toMatchObject({ ambiguous: true, category: "temporary" });
-    const found = await mockProvider.findReply!(cred, ch, "amb");
+    const found = await mockProvider.findReply!(cred, ch, { ...req, sentAfter });
     expect(found?.remoteId).toBeTruthy();
     mockInbox.setAmbiguousReply(false);
     const again = await mockProvider.reply!(cred, ch, req);
     expect(again.remoteId).toBe(found!.remoteId);
-    expect(await mockProvider.findReply!(cred, ch, "never-sent")).toBeNull();
+    expect(await mockProvider.findReply!(cred, ch, { ...req, sentAfter, idempotencyKey: "never-sent", text: "never said this" })).toBeNull();
+  });
+
+  it("reconciles a comment reply without any client reference (author, thread, text, time)", async () => {
+    const { cred, ch } = await channel();
+    const [thread] = mockInbox.threads(ch.remoteId);
+    const req = { kind: "comment" as const, threadRemoteId: thread, text: "we ship on Tuesdays", idempotencyKey: "no-ref" };
+    const sentAfter = new Date(Date.now() - 1_000).toISOString();
+    const sent = await mockProvider.reply!(cred, ch, req);
+    mockInbox.forgetReplyKeys(); // a network that echoes nothing back on comments
+    expect(await mockProvider.findReply!(cred, ch, { ...req, sentAfter })).toMatchObject({ remoteId: sent.remoteId });
+    // Different thread, different text, or older than the attempt: not our reply.
+    expect(await mockProvider.findReply!(cred, ch, { ...req, sentAfter, threadRemoteId: "other-thread" })).toBeNull();
+    expect(await mockProvider.findReply!(cred, ch, { ...req, sentAfter, text: "something else" })).toBeNull();
+    expect(await mockProvider.findReply!(cred, ch, { ...req, sentAfter: new Date(Date.now() + 60_000).toISOString() })).toBeNull();
   });
 
   it("maps policy rejections", async () => {

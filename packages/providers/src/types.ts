@@ -6,11 +6,11 @@
  * them — it must never assume parity between networks.
  */
 
-import type { InboxItem, InboxPage, ReplyRequest, ReplyResult } from "./inbox-types";
+import type { InboxItem, InboxPage, ReplyLookup, ReplyRequest, ReplyResult } from "./inbox-types";
 import type { InsightsPage, InsightsRequest } from "./insights-types";
 import type { AdAccountDescriptor, PaidInsightsPage, PaidInsightsRequest, PaidObjects, PromotionRequest, PromotionResult } from "./ads-types";
 
-export type ProviderKey = "mock" | "meta" | "linkedin" | "tiktok";
+export type ProviderKey = "mock" | "meta" | "linkedin" | "tiktok" | "youtube" | "pinterest" | "x";
 
 /** The social network a channel belongs to (drives platform identity/color in the UI). */
 export type Network = "instagram" | "facebook" | "linkedin" | "tiktok" | "x" | "youtube" | "pinterest" | "mock";
@@ -21,6 +21,11 @@ export type ChannelKind =
   | "linkedin_organization"
   | "linkedin_member"
   | "tiktok_account"
+  | "youtube_channel"
+  /** Pinterest analytics are account-wide; pins are published to a board. */
+  | "pinterest_account"
+  | "pinterest_board"
+  | "x_account"
   | "mock_profile";
 
 /** Decrypted credential. Only ever lives in memory on the server. */
@@ -152,6 +157,12 @@ export type AuthorizeParams = {
   redirectUri: string;
   /** Extra scopes beyond the adapter defaults (e.g. ads). */
   scopes?: string[];
+  /**
+   * PKCE (RFC 7636) challenge for providers that require it — X mandates it.
+   * The caller derives it from the verifier it will pass to `exchangeCode`.
+   */
+  codeChallenge?: string;
+  codeChallengeMethod?: "S256" | "plain";
 };
 
 export interface ProviderAdapter {
@@ -163,7 +174,8 @@ export interface ProviderAdapter {
   readonly defaultScopes: string[];
 
   authorizationUrl(params: AuthorizeParams): string;
-  exchangeCode(code: string, redirectUri: string): Promise<Credential>;
+  /** `codeVerifier` is required by providers that mandate PKCE (X); ignored by the rest. */
+  exchangeCode(code: string, redirectUri: string, codeVerifier?: string): Promise<Credential>;
   refresh(cred: Credential): Promise<Credential>;
   revoke(cred: Credential): Promise<void>;
 
@@ -181,8 +193,8 @@ export interface ProviderAdapter {
   /** Inbox: pull new items since a cursor/time. Optional — channels without it are webhook-only. */
   fetchInbox?(cred: Credential, channel: ChannelDescriptor, opts: { since?: string; cursor?: string }): Promise<InboxPage>;
   reply?(cred: Credential, channel: ChannelDescriptor, request: ReplyRequest): Promise<ReplyResult>;
-  /** Reconcile an ambiguous reply by idempotency key before any retry. */
-  findReply?(cred: Credential, channel: ChannelDescriptor, idempotencyKey: string): Promise<ReplyResult | null>;
+  /** Reconcile an ambiguous reply before any retry (by client reference where the network has one, structurally otherwise). */
+  findReply?(cred: Credential, channel: ChannelDescriptor, lookup: ReplyLookup): Promise<ReplyResult | null>;
   /** Organic insights as daily facts (channel + post level). Optional. */
   fetchInsights?(cred: Credential, channel: ChannelDescriptor, req: InsightsRequest): Promise<InsightsPage>;
   /** Turn a parsed webhook event into inbox items (null = not an inbox event). */

@@ -98,7 +98,7 @@ export function createMetaProvider(cfg: ProviderConfig): ProviderAdapter {
 
     fetchInbox: (cred, channel, opts) => fetchInbox(cfg, cred, channel, opts),
     reply: (cred, channel, req) => reply(cfg, cred, channel, req),
-    findReply: (cred, channel, key) => findReply(cfg, cred, channel, key),
+    findReply: (cred, channel, lookup) => findReply(cfg, cred, channel, lookup),
     fetchInsights: (cred, channel, req) => fetchInsights(cfg, cred, channel, req),
     listAdAccounts: (cred) => listAdAccounts(cfg, cred),
     fetchPaidObjects: (cred, account) => fetchPaidObjects(cfg, cred, account),

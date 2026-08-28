@@ -20,7 +20,7 @@ export type MetricContract = {
   unit: "count" | "percent" | "currency" | "ratio";
   aggregation: "sum" | "last" | "ratio";
   grains: ("day" | "post" | "channel")[];
-  providers: Partial<Record<"mock" | "meta" | "linkedin" | "tiktok", string>>;
+  providers: Partial<Record<"mock" | "meta" | "linkedin" | "tiktok" | "youtube" | "pinterest" | "x", string>>;
   freshnessHours: number;
   /** Why this may be unavailable right now (paid metrics before M6, tracking not connected…). */
   unavailable?: string;
@@ -42,6 +42,7 @@ export const METRICS: Record<DisplayMetric, MetricContract> = {
   engagement: { key: "engagement", name: "Engagement", definition: "All interactions: reactions + comments + shares + saves (+ clicks where the network counts them).", formula: "Σ provider engagement (or the sum of its parts when a network has no total)", unit: "count", aggregation: "sum", grains: ["day", "post", "channel"], providers: P, freshnessHours: 24 },
   link_clicks: { key: "link_clicks", name: "Link clicks", definition: "Clicks on links in your content.", formula: "Σ link clicks", unit: "count", aggregation: "sum", grains: ["day", "post", "channel"], providers: P, freshnessHours: 24 },
   followers: { key: "followers", name: "Followers", definition: "Total followers at the end of the period, per network.", formula: "last daily value per channel, summed across channels", unit: "count", aggregation: "last", grains: ["day", "channel"], providers: P, freshnessHours: 24, caveat: "One person following two networks counts twice." },
+  watch_time_minutes: { key: "watch_time_minutes", name: "Watch time", definition: "Minutes of video watched (YouTube estimatedMinutesWatched).", formula: "Σ estimated minutes watched", unit: "count", aggregation: "sum", grains: ["day", "post", "channel"], providers: { youtube: "reports.query estimatedMinutesWatched" }, freshnessHours: 48, caveat: "Only YouTube reports watch time; other networks report views with their own thresholds." },
   follower_gain: { key: "follower_gain", name: "Net follower growth", definition: "New followers minus unfollows.", formula: "Σ daily net change", unit: "count", aggregation: "sum", grains: ["day", "channel"], providers: P, freshnessHours: 24 },
   engagement_rate: { key: "engagement_rate", name: "Engagement rate", definition: "Engagement divided by reach.", formula: "engagement ÷ reach", unit: "percent", aggregation: "ratio", grains: ["day", "post", "channel"], providers: P, freshnessHours: 24, caveat: "Denominator is reach, not followers." },
   ctr: { key: "ctr", name: "Click-through rate", definition: "Link clicks divided by impressions.", formula: "link_clicks ÷ impressions", unit: "percent", aggregation: "ratio", grains: ["day", "post", "channel"], providers: P, freshnessHours: 24 },

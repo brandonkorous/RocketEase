@@ -9,12 +9,18 @@ export { mockProvider, mockControl, mockInbox, mockInsights, mockAds, type MockB
 export { createMetaProvider } from "./meta";
 export { createLinkedInProvider } from "./linkedin";
 export { createTikTokProvider } from "./tiktok";
+export { createYouTubeProvider } from "./youtube";
+export { createPinterestProvider } from "./pinterest";
+export { createXProvider } from "./x";
 
 import type { ProviderAdapter, ProviderConfig, ProviderKey } from "./types";
 import { mockProvider } from "./mock";
 import { createMetaProvider } from "./meta";
 import { createLinkedInProvider } from "./linkedin";
 import { createTikTokProvider } from "./tiktok";
+import { createYouTubeProvider } from "./youtube";
+import { createPinterestProvider } from "./pinterest";
+import { createXProvider } from "./x";
 
 export type ProviderRegistryConfig = Partial<Record<Exclude<ProviderKey, "mock">, ProviderConfig>> & { enableMock?: boolean };
 
@@ -28,5 +34,8 @@ export function createProviderRegistry(cfg: ProviderRegistryConfig): Map<Provide
   if (cfg.meta?.clientId) m.set("meta", createMetaProvider(cfg.meta));
   if (cfg.linkedin?.clientId) m.set("linkedin", createLinkedInProvider(cfg.linkedin));
   if (cfg.tiktok?.clientId) m.set("tiktok", createTikTokProvider(cfg.tiktok));
+  if (cfg.youtube?.clientId) m.set("youtube", createYouTubeProvider(cfg.youtube));
+  if (cfg.pinterest?.clientId) m.set("pinterest", createPinterestProvider(cfg.pinterest));
+  if (cfg.x?.clientId) m.set("x", createXProvider(cfg.x));
   return m;
 }

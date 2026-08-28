@@ -3,7 +3,7 @@
  * posts via the Social Actions API and Page mentions via organization
  * notifications. Threading: root comment URN. No DMs exist for third parties.
  */
-import type { InboxItem, InboxPage, ReplyRequest, ReplyResult } from "../inbox-types";
+import type { InboxItem, InboxPage, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
 import type { ChannelDescriptor, Credential } from "../types";
 import { ProviderError } from "../types";
 import { li, now, postUrl } from "./client";
@@ -89,15 +89,22 @@ export async function reply(cred: Credential, ch: ChannelDescriptor, req: ReplyR
   return { remoteId: id, sentAt: now() };
 }
 
-/** No client reference on comments: find our recent comment carrying the key marker. */
-export async function findReply(cred: Credential, ch: ChannelDescriptor, idempotencyKey: string): Promise<ReplyResult | null> {
-  const marker = idempotencyKey.slice(0, 8);
-  const cutoff = Date.now() - 6 * 3_600_000;
-  for (const p of await recentPosts(cred.accessToken, ch.remoteId, 5).catch(() => [] as PostRow[])) {
-    for (const c of await commentsOn(cred.accessToken, p.id).catch(() => [] as LiComment[])) {
-      const at = c.created?.time ?? 0;
-      if (c.actor === ch.remoteId && at > cutoff && (c.message?.text ?? "").includes(marker)) return { remoteId: commentUrn(c, p.id), sentAt: ms(at) };
-    }
+/**
+ * LinkedIn has no client reference on comments. Reconcile structurally: our own
+ * comment under the same root, with the same text, created at or after the
+ * attempt — no marker in the visible text.
+ */
+export async function findReply(cred: Credential, ch: ChannelDescriptor, lookup: ReplyLookup): Promise<ReplyResult | null> {
+  const root = lookup.inReplyToRemoteId ?? lookup.threadRemoteId;
+  const post = lookup.postRemoteId ?? /urn:li:comment:\((.+?),/.exec(root)?.[1];
+  if (!post) return null;
+  const after = Date.parse(lookup.sentAfter);
+  for (const c of await commentsOn(cred.accessToken, post).catch(() => [] as LiComment[])) {
+    const at = c.created?.time ?? 0;
+    if (c.actor !== ch.remoteId || at < after) continue;
+    if ((c.parentComment ?? commentUrn(c, post)) !== root) continue;
+    if ((c.message?.text ?? "") !== lookup.text) continue;
+    return { remoteId: commentUrn(c, post), sentAt: ms(at) };
   }
   return null;
 }

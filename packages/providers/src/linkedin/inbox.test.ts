@@ -54,14 +54,20 @@ describe("LinkedIn inbox", () => {
     await expect(li.reply!(cred, ch, { kind: "message", threadRemoteId: "x", text: "dm", idempotencyKey: "k" })).rejects.toMatchObject({ category: "permission" });
   });
 
-  it("reconciles an ambiguous reply by scanning our recent comments for the key marker", async () => {
-    const recent = Date.now() - 60_000;
+  it("reconciles an ambiguous reply structurally — same author, thread, text and after the attempt", async () => {
+    const sentAfter = new Date(Date.now() - 120_000).toISOString();
+    const lookup = { kind: "comment" as const, threadRemoteId: ROOT, text: "Appreciated", idempotencyKey: "k", sentAfter };
     stub({
-      "/rest/posts?q=author": () => ({ body: { elements: [{ id: POST }] } }),
-      "/comments": () => ({ body: { elements: [{ $URN: `urn:li:comment:(${POST},9200)`, actor: org, message: { text: "ref abcdef12 sent" }, created: { time: recent } }] } }),
+      "/comments": () => ({ body: { elements: [
+        { $URN: `urn:li:comment:(${POST},9200)`, actor: org, parentComment: ROOT, message: { text: "Appreciated" }, created: { time: Date.now() - 60_000 } },
+      ] } }),
     });
-    expect(await li.findReply!(cred, ch, "abcdef12-rest")).toMatchObject({ remoteId: `urn:li:comment:(${POST},9200)` });
-    expect(await li.findReply!(cred, ch, "zzzzzzzz")).toBeNull();
+    expect(await li.findReply!(cred, ch, lookup)).toMatchObject({ remoteId: `urn:li:comment:(${POST},9200)` });
+    // Same text but sent before this attempt, by someone else, or on another thread: not ours.
+    expect(await li.findReply!(cred, ch, { ...lookup, sentAfter: new Date().toISOString() })).toBeNull();
+    expect(await li.findReply!(cred, ch, { ...lookup, text: "Something else" })).toBeNull();
+    stub({ "/comments": () => ({ body: { elements: [{ $URN: `urn:li:comment:(${POST},9300)`, actor: "urn:li:person:abc", parentComment: ROOT, message: { text: "Appreciated" }, created: { time: Date.now() - 60_000 } }] } }) });
+    expect(await li.findReply!(cred, ch, lookup)).toBeNull();
   });
 
   it("surfaces a 429 with Retry-After as a retryable rate_limit", async () => {

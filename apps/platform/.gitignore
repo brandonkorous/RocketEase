@@ -7,3 +7,5 @@ next-env.d.ts
 e2e/.state/
 e2e/.results/
 playwright-report/
+
+!.env.example

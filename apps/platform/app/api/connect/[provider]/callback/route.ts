@@ -4,7 +4,7 @@ import { ProviderError } from "@make-it-social/providers";
 import { db } from "@/db";
 import { providerConnection } from "@/db/schema/connections";
 import { audit } from "@/lib/audit";
-import { callbackUrl, consumeOAuthState } from "@/lib/connections";
+import { callbackUrl, codeVerifierFor, consumeOAuthState } from "@/lib/connections";
 import { log } from "@/lib/log";
 import { getAdapter, isProviderKey, sealCredential } from "@/lib/providers";
 import { requireUser } from "@/lib/session";
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
 
   try {
     const adapter = getAdapter(provider);
-    const cred = await adapter.exchangeCode(code, callbackUrl(provider));
+    const cred = await adapter.exchangeCode(code, callbackUrl(provider), codeVerifierFor(state));
 
     let connectionId: string;
     if (st.reconnectConnectionId) {

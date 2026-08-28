@@ -15,6 +15,7 @@ export type CanonicalMetric =
   | "link_clicks"
   | "followers"
   | "follower_gain"
+  | "watch_time_minutes"
   /** Paid-only (scope = paid); imported from ad accounts. */
   | "spend"
   | "conversions";

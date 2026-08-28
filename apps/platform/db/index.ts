@@ -11,8 +11,10 @@ import * as analytics from "./schema/analytics";
 import * as campaigns from "./schema/campaigns";
 import * as telemetry from "./schema/telemetry";
 import * as quality from "./schema/quality";
+import * as recommendations from "./schema/recommendations";
+import * as automations from "./schema/automations";
 
-export const schema = { ...auth, ...app, ...connections, ...assets, ...content, ...approvals, ...engagement, ...analytics, ...telemetry, ...quality, ...campaigns };
+export const schema = { ...auth, ...app, ...connections, ...assets, ...content, ...approvals, ...engagement, ...analytics, ...telemetry, ...quality, ...campaigns, ...recommendations, ...automations };
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set");

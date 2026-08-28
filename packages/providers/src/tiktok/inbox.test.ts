@@ -65,13 +65,15 @@ describe("TikTok inbox", () => {
     await expect(tiktok.reply!(basic, chFor(basic), { kind: "comment", threadRemoteId: "c1", text: "hi", idempotencyKey: "k3" })).rejects.toMatchObject({ category: "permission" });
   });
 
-  it("maps Business API auth failures to permission and reconciles ambiguous replies by marker", async () => {
+  it("maps Business API auth failures to permission and reconciles ambiguous replies structurally", async () => {
     stub({ "/video/list/": () => ({ body: VIDEOS }), "/business/comment/list/": () => ({ body: { code: 40100, message: "Access token expired" } }) });
     await expect(tiktok.fetchInbox!(full, chFor(full), {})).rejects.toMatchObject({ category: "permission", providerCode: "40100" });
     const fresh = Math.floor(Date.now() / 1000) - 30;
-    stub({ "/video/list/": () => ({ body: VIDEOS }), "/business/comment/list/": () => ({ body: { code: 0, data: { comments: [{ comment_id: "c5", text: "ref deadbeef", create_time: fresh, owner: true }] } } }) });
-    expect(await tiktok.findReply!(full, chFor(full), "deadbeef-key")).toMatchObject({ remoteId: "c5" });
-    expect(await tiktok.findReply!(full, chFor(full), "nomatch1")).toBeNull();
+    const lookup = { kind: "comment" as const, threadRemoteId: "c1", postRemoteId: "v1", text: "thanks!", idempotencyKey: "k", sentAfter: new Date(Date.now() - 120_000).toISOString() };
+    stub({ "/business/comment/reply/list/": () => ({ body: { code: 0, data: { comments: [{ comment_id: "c5", text: "thanks!", create_time: fresh, owner: true }] } } }) });
+    expect(await tiktok.findReply!(full, chFor(full), lookup)).toMatchObject({ remoteId: "c5" });
+    expect(await tiktok.findReply!(full, chFor(full), { ...lookup, text: "different" })).toBeNull();
+    expect(await tiktok.findReply!(full, chFor(full), { ...lookup, sentAfter: new Date().toISOString() })).toBeNull();
   });
 
   it("healthCheck probes user info and lists missing scopes", async () => {

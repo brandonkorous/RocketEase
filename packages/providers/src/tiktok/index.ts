@@ -92,7 +92,7 @@ export function createTikTokProvider(cfg: ProviderConfig): ProviderAdapter {
 
     fetchInbox: (cred, channel, opts) => fetchInbox(cred, channel, opts),
     reply: (cred, channel, req) => reply(cred, channel, req),
-    findReply: (cred, channel, key) => findReply(cred, channel, key),
+    findReply: (cred, channel, lookup) => findReply(cred, channel, lookup),
     fetchInsights: (cred, channel, req) => fetchInsights(cred, channel, req),
     inboxItemsFromWebhook: () => null,
 

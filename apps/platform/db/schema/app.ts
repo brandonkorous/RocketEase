@@ -184,6 +184,29 @@ export const outboxEvent = pgTable(
   (t) => [index("outbox_event_pending_idx").on(t.createdAt).where(sql`${t.relayedAt} is null`)],
 );
 
+/**
+ * Step-up re-authentication (NFR-001). A high-risk action (paid spend) needs a
+ * password or TOTP re-entry within a short window. Rows are keyed by the Better
+ * Auth session id so the proof dies with the session; expired rows are pruned
+ * on write. Never holds the secret itself.
+ */
+export const stepUpVerification = pgTable(
+  "step_up_verification",
+  {
+    id: id(),
+    sessionId: text("session_id").notNull(),
+    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    /** What was re-verified: "password" or "totp". */
+    method: text("method").notNull(),
+    /** Scope of the proof, e.g. "paid_spend". */
+    purpose: text("purpose").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: now("created_at"),
+  },
+  (t) => [index("step_up_session_idx").on(t.sessionId, t.purpose, t.expiresAt)],
+);
+
 export type Workspace = typeof workspace.$inferSelect;
 export type WorkspaceMembership = typeof workspaceMembership.$inferSelect;
 export type AuditEvent = typeof auditEvent.$inferSelect;
+export type StepUpVerification = typeof stepUpVerification.$inferSelect;

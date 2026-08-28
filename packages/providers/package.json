@@ -8,7 +8,10 @@
     "./mock": "./src/mock/index.ts",
     "./meta": "./src/meta/index.ts",
     "./linkedin": "./src/linkedin/index.ts",
-    "./tiktok": "./src/tiktok/index.ts"
+    "./tiktok": "./src/tiktok/index.ts",
+    "./youtube": "./src/youtube/index.ts",
+    "./pinterest": "./src/pinterest/index.ts",
+    "./x": "./src/x/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

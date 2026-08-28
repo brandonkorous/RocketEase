@@ -49,3 +49,14 @@ export type ReplyRequest = {
 };
 
 export type ReplyResult = { remoteId: string; sentAt: string };
+
+/**
+ * What an adapter needs to recognise a reply that may already exist remotely
+ * (ENG-003). Networks that expose no client reference on comments reconcile
+ * structurally — author is the channel, same thread, same text, created at or
+ * after `sentAfter` — so nothing has to be smuggled into the visible text.
+ */
+export type ReplyLookup = ReplyRequest & {
+  /** ISO timestamp of the moment the send attempt started. */
+  sentAfter: string;
+};

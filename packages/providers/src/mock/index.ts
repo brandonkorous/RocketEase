@@ -185,7 +185,7 @@ export const mockProvider: ProviderAdapter = {
 
   async fetchInbox(cred, channel, opts) { assertToken(cred); return fetchInbox(channel.remoteId, opts); },
   async reply(cred, channel, req) { assertToken(cred); return reply(channel.remoteId, req); },
-  async findReply(cred, _channel, key) { assertToken(cred); return findReply(key); },
+  async findReply(cred, channel, lookup) { assertToken(cred); return findReply(channel.remoteId, lookup); },
   async fetchInsights(cred, channel, req) { assertToken(cred); return fetchInsights(channel.remoteId, req); },
   async listAdAccounts(cred) { assertToken(cred); return listAdAccounts(); },
   async fetchPaidObjects(cred, account) { assertToken(cred); return fetchPaidObjects(account); },

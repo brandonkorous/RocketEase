@@ -22,6 +22,9 @@ export async function channelSync(data: JobPayloads["channel.sync"], ctx: Handle
     const cred = await loadCredential(conn);
     const d = await adapter.describeChannel(cred, ch.remoteId, ch.kind);
     const publishable = d.capabilities.formats.length > 0;
+    const probe = adapter.healthCheck ? await adapter.healthCheck(cred, d) : { tokenOk: true, permissionsOk: publishable, missingScopes: [], message: undefined };
+    const status = !probe.tokenOk ? "action_required" : publishable && probe.permissionsOk ? "healthy" : "degraded";
+    const message = probe.message ?? (publishable ? undefined : (d.capabilities.reasons?.formats ?? "Limited permissions"));
     await db
       .update(channel)
       .set({
@@ -30,13 +33,13 @@ export async function channelSync(data: JobPayloads["channel.sync"], ctx: Handle
         avatarUrl: d.avatarUrl ?? null,
         capabilities: d.capabilities,
         channelSecret: d.channelToken ? sealChannelToken(ch.id, d.channelToken) : ch.channelSecret,
-        status: publishable ? "healthy" : "degraded",
-        health: { tokenOk: true, permissionsOk: publishable, lastCheckedAt: new Date().toISOString(), message: publishable ? undefined : (d.capabilities.reasons?.formats ?? "Limited permissions") },
+        status,
+        health: { tokenOk: probe.tokenOk, permissionsOk: probe.tokenOk && probe.permissionsOk && publishable, lastCheckedAt: new Date().toISOString(), message },
         lastSyncAt: new Date(),
         updatedAt: new Date(),
       })
       .where(eq(channel.id, ch.id));
-    l.info("channel synced", { status: publishable ? "healthy" : "degraded" });
+    l.info("channel synced", { status, missingScopes: probe.missingScopes });
   } catch (err) {
     const pe = err instanceof ProviderError ? err : null;
     const status = pe?.category === "permission" ? "action_required" : pe?.category === "deleted" ? "revoked" : "degraded";

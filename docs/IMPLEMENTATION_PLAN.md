@@ -100,9 +100,9 @@ Notes
 |---|---|---|---|
 | 4.1 | ✅ Ingestion pipeline: webhook endpoints (signature verify, fast ack, dedupe via `webhook_receipt`), polling/backfill with cursors, worker processing | INT-003, ENG-001 | 0.13, 1.2 |
 | 4.2 | ✅ Engagement tables: `contact`, `contact_identity`, `conversation`, `message`, `internal_note`, `saved_reply`, `conversation_event` | ENG-001 | — |
-| 4.3 | 🔨 Mock + Meta inbox adapters done (untested live); LinkedIn/TikTok inbox pending (LinkedIn comments API is partner-gated) | ENG-001 | 1.6, 1.7 |
+| 4.3 | ✅ Mock/Meta/LinkedIn/TikTok inbox + insights adapters written (untested live; see `packages/providers/README.md` for what each API cannot do: LinkedIn has no DMs/webhooks and is partner-gated; TikTok has no DMs/mentions and needs a Business Account for comments) | ENG-001 | 1.6, 1.7 |
 | 4.4 | ✅ Inbox UI: three-pane (queue / thread / context), filters, unread, assignment, status, priority, SLA timestamps; mobile drill-in | ENG-002 | 4.2 |
-| 4.5 | ✅ Reply with provider delivery state; **ambiguous-send reconciliation** before retry | ENG-002, ENG-003 | 4.3 |
+| 4.5 | ✅ Reply with provider delivery state (caveat: comment replies on Meta/LinkedIn/TikTok have no client reference, so an ambiguous comment reply can only be reconciled by text match — DMs reconcile via metadata); **ambiguous-send reconciliation** before retry | ENG-002, ENG-003 | 4.3 |
 | 4.6 | 🔨 Notes, snooze, resolve, escalate (priority), saved replies done; response target is a per-workspace default (settings UI pending); snooze/tag/note inputs use browser prompts (replace with popovers) | ENG-002, ENG-004 | 4.4 |
 | 4.7 | ✅ Home + agency overview: unresolved/assigned conversation counts | TEN-003 | 4.2 |
 

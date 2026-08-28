@@ -47,7 +47,7 @@ export const IG_CAPS = (): Capabilities => ({
   insights: { organic: true, audience: true },
   ads: { import: true, manage: false },
   ingestion: { webhooks: true, polling: true },
-  reasons: { links: "Instagram captions don't render clickable links." },
+  reasons: { links: "Instagram captions don't render clickable links.", ads: "Boosting Instagram media needs an Instagram actor on the ad account; manage it from Meta Ads Manager for now." },
   checkedAt: now(),
 });
 
@@ -57,7 +57,7 @@ export const FB_CAPS = (): Capabilities => ({
   limits: { textMaxChars: 63_206, imagesMax: 10, videoMaxSeconds: 14_400, mentions: true, firstComment: true, links: "inline", altText: true, videoMaxBytes: 10 * 1024 * 1024 * 1024 },
   inbox: { comments: true, mentions: true, messages: true, reviews: true, reply: true },
   insights: { organic: true, audience: true },
-  ads: { import: true, manage: false },
+  ads: { import: true, manage: true },
   ingestion: { webhooks: true, polling: true },
   checkedAt: now(),
 });

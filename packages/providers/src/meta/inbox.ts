@@ -1,7 +1,7 @@
 /*
  * Meta inbox: Page/Instagram conversations (Messenger + IG DMs via the Page)
  * and comments on recent posts. Everything maps onto InboxItem; threading:
- * DMs → conversation id, comments → root comment id.
+ * DMs → the customer PSID/IGSID (also what webhooks carry), comments → root comment id.
  */
 import type { InboxItem, InboxPage, ReplyRequest, ReplyResult } from "../inbox-types";
 import type { ChannelDescriptor, Credential, ProviderConfig } from "../types";
@@ -18,10 +18,11 @@ const author = (p: Person | undefined, fallback: string) => ({ remoteId: p?.id ?
 
 function messagesToItems(ch: ChannelDescriptor, c: Conv, since?: string): InboxItem[] {
   const customer = c.participants?.data?.find((p) => p.id !== ch.remoteId);
+  const thread = customer?.id ?? c.id;
   return (c.messages?.data ?? [])
     .filter((m) => !since || m.created_time > since)
     .map((m) => ({
-      remoteId: m.id, threadRemoteId: c.id, kind: "message" as const, direction: m.from?.id === ch.remoteId ? ("outbound" as const) : ("inbound" as const),
+      remoteId: m.id, threadRemoteId: thread, kind: "message" as const, direction: m.from?.id === ch.remoteId ? ("outbound" as const) : ("inbound" as const),
       author: m.from?.id === ch.remoteId ? { remoteId: ch.remoteId, name: ch.name } : author(m.from ?? customer, c.id), text: m.message ?? "", occurredAt: m.created_time,
       attachments: (m.attachments?.data ?? []).flatMap((a) => (a.file_url || a.image_data?.url ? [{ url: a.file_url ?? a.image_data!.url!, mimeType: a.mime_type ?? "application/octet-stream", name: a.name }] : [])),
     }));

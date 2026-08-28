@@ -1,9 +1,11 @@
 export * from "./types";
 export * from "./inbox-types";
 export * from "./insights-types";
+export * from "./ads-types";
 export { validateAgainstCapabilities } from "./validate";
 export { httpJson, categoryFromStatus } from "./http";
-export { mockProvider, mockControl, mockInbox, mockInsights, type MockBehaviour } from "./mock";
+export { missingScopes, probe, retryAfterSeconds } from "./health";
+export { mockProvider, mockControl, mockInbox, mockInsights, mockAds, type MockBehaviour } from "./mock";
 export { createMetaProvider } from "./meta";
 export { createLinkedInProvider } from "./linkedin";
 export { createTikTokProvider } from "./tiktok";

@@ -54,7 +54,7 @@ export async function inboxReply(data: JobPayloads["inbox.reply"], ctx: HandlerC
   const identity = await db.query.contactIdentity.findFirst({ where: (i, { and, eq }) => and(eq(i.contactId, conv.contactId), eq(i.network, ch.network)) });
   await db.update(message).set({ deliveryState: "sending", attempts: sql`${message.attempts} + 1` }).where(eq(message.id, m.id));
   try {
-    const r = await adapter.reply(cred, desc, { kind: conv.kind, threadRemoteId: conv.remoteThreadId, inReplyToRemoteId: m.inReplyToRemoteId ?? undefined, recipientRemoteId: identity?.remoteId, text: m.body, idempotencyKey: key });
+    const r = await adapter.reply(cred, desc, { kind: conv.kind, threadRemoteId: conv.remoteThreadId, inReplyToRemoteId: m.inReplyToRemoteId ?? undefined, recipientRemoteId: identity?.remoteId, postRemoteId: conv.postRemoteId ?? undefined, text: m.body, idempotencyKey: key });
     await markSent(m, r);
     l.info("reply sent", { remoteId: r.remoteId });
   } catch (err) {

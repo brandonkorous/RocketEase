@@ -23,7 +23,7 @@ const POST_METRICS: { metric: CanonicalMetric; base: number; spread: number; sou
 ];
 
 /** Small string hash → [0,1). Stable across processes. */
-function unit(key: string) {
+export function unit(key: string) {
   let h = 2166136261;
   for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
   return ((h >>> 0) % 10_000) / 10_000;

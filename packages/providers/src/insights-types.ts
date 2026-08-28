@@ -14,7 +14,10 @@ export type CanonicalMetric =
   | "engagement"
   | "link_clicks"
   | "followers"
-  | "follower_gain";
+  | "follower_gain"
+  /** Paid-only (scope = paid); imported from ad accounts. */
+  | "spend"
+  | "conversions";
 
 export type InsightFact = {
   /** "channel" for account-level series, "post" for a remote publication. */

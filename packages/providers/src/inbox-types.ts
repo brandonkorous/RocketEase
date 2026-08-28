@@ -41,6 +41,8 @@ export type ReplyRequest = {
   inReplyToRemoteId?: string;
   /** Provider-side recipient for DMs (author remoteId). */
   recipientRemoteId?: string;
+  /** Remote post the thread hangs off (needed by providers whose reply endpoint is post-scoped, e.g. TikTok). */
+  postRemoteId?: string;
   text: string;
   /** Stable per attempt chain; used to reconcile ambiguous sends. */
   idempotencyKey: string;

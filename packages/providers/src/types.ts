@@ -8,6 +8,7 @@
 
 import type { InboxItem, InboxPage, ReplyRequest, ReplyResult } from "./inbox-types";
 import type { InsightsPage, InsightsRequest } from "./insights-types";
+import type { AdAccountDescriptor, PaidInsightsPage, PaidInsightsRequest, PaidObjects, PromotionRequest, PromotionResult } from "./ads-types";
 
 export type ProviderKey = "mock" | "meta" | "linkedin" | "tiktok";
 
@@ -134,6 +135,9 @@ export type PublishResult = {
 
 export type PublicationStatus = { state: "published" | "processing" | "deleted" | "unknown"; url?: string };
 
+/** Cheap token/permission probe (integrations.md connection health). */
+export type HealthReport = { tokenOk: boolean; permissionsOk: boolean; missingScopes: string[]; message?: string };
+
 export type WebhookEvent = {
   /** Provider-unique event id for dedupe. */
   eventId: string;
@@ -183,6 +187,17 @@ export interface ProviderAdapter {
   fetchInsights?(cred: Credential, channel: ChannelDescriptor, req: InsightsRequest): Promise<InsightsPage>;
   /** Turn a parsed webhook event into inbox items (null = not an inbox event). */
   inboxItemsFromWebhook?(event: WebhookEvent): InboxItem[] | null;
+
+  /** Paid (ads-types.ts): read-only imports; `promote` is the only spend mutation and needs explicit user confirmation (CAM-002). */
+  listAdAccounts?(cred: Credential): Promise<AdAccountDescriptor[]>;
+  fetchPaidObjects?(cred: Credential, account: AdAccountDescriptor): Promise<PaidObjects>;
+  fetchPaidInsights?(cred: Credential, account: AdAccountDescriptor, req: PaidInsightsRequest): Promise<PaidInsightsPage>;
+  promote?(cred: Credential, account: AdAccountDescriptor, req: PromotionRequest): Promise<PromotionResult>;
+  /** Reconcile an ambiguous promotion by idempotency key before any retry. */
+  findPromotion?(cred: Credential, account: AdAccountDescriptor, idempotencyKey: string): Promise<PromotionResult | null>;
+  setPaidObjectStatus?(cred: Credential, account: AdAccountDescriptor, remoteId: string, status: "active" | "paused"): Promise<void>;
+  /** Verify the token and required permissions with a cheap read; never throws for permission errors. */
+  healthCheck?(cred: Credential, channel: ChannelDescriptor): Promise<HealthReport>;
 
   verifyWebhook?(req: { headers: Record<string, string>; rawBody: string; query?: Record<string, string> }): boolean;
   parseWebhook?(rawBody: string): WebhookEvent[];

@@ -8,7 +8,7 @@ import { utcToZonedInput } from "@/lib/time";
 import { loadAdsData, type AdsData } from "./ads";
 import { paidAttribution, type PaidAttribution } from "./attribution";
 import { rangeLabel } from "./format";
-import { campaignPerformance, type CampaignPerformance } from "./performance";
+import { campaignPerformance, CAMPAIGN_CARDS, type CampaignPerformance } from "./performance";
 import { listCampaigns, workspaceMembers, type CampaignListRow } from "./queries";
 import { activityTab, audienceTab, contentTab, conversationsTab, type ActivityRow, type AttachableItem, type AudienceData, type CampaignConversationRow, type ContentRow } from "./tabs";
 
@@ -70,7 +70,7 @@ export async function loadCampaignDetail(workspaceId: string, campaignId: string
     paidAttribution(workspaceId, tz),
     listCampaigns(workspaceId, tz, !!c.archivedAt),
     budgetSummary(workspaceId, c),
-    tab === "overview" || tab === "performance" ? campaignPerformance(workspaceId, c.id, filters) : Promise.resolve(null),
+    tab === "overview" || tab === "performance" ? campaignPerformance(workspaceId, c.id, filters, CAMPAIGN_CARDS, tz) : Promise.resolve(null),
     tab === "content" ? contentTab(workspaceId, c.id, tz) : Promise.resolve(null),
     tab === "ads" ? loadAdsData(workspaceId, c, filters, tz, { connect: one(sp.connect) === "1", showAll: one(sp.all) === "1" }) : Promise.resolve(null),
     tab === "audience" ? audienceTab(workspaceId, c.id, filters) : Promise.resolve(null),

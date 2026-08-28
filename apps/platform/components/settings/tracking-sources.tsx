@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Badge, Button } from "@wizeworks/silicaui-react";
-import { disconnectTrackingSource, syncTrackingSourceNow } from "@/lib/actions/settings/tracking-sources";
+import { disconnectTrackingSource, rotateWebhookSecret, syncTrackingSourceNow } from "@/lib/actions/settings/tracking-sources";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 import { ConnectSource, SecretPanel, type NewSecret } from "./tracking-connect";
 
@@ -50,6 +50,7 @@ export function TrackingSources({ workspaceId, sources, canEdit, enabled }: Trac
               pending={pending}
               onSync={() => run(() => syncTrackingSourceNow({ workspaceId, sourceId: s.id }))}
               onDisconnect={() => run(() => disconnectTrackingSource({ workspaceId, sourceId: s.id }))}
+              onRotate={() => run(() => rotateWebhookSecret({ workspaceId, sourceId: s.id }), (r) => { if (r.secret && r.endpoint) setSecret({ secret: r.secret, endpoint: r.endpoint }); })}
             />
           ))}
         </ul>
@@ -62,9 +63,9 @@ export function TrackingSources({ workspaceId, sources, canEdit, enabled }: Trac
   );
 }
 
-type LineProps = { s: TrackingSourceRow; canEdit: boolean; pending: boolean; onSync: () => void; onDisconnect: () => void };
+type LineProps = { s: TrackingSourceRow; canEdit: boolean; pending: boolean; onSync: () => void; onDisconnect: () => void; onRotate: () => void };
 
-function SourceLine({ s, canEdit, pending, onSync, onDisconnect }: LineProps) {
+function SourceLine({ s, canEdit, pending, onSync, onDisconnect, onRotate }: LineProps) {
   const st = STATUS[s.status];
   return (
     <li className="flex flex-wrap items-start gap-4 px-4 py-3">
@@ -86,6 +87,7 @@ function SourceLine({ s, canEdit, pending, onSync, onDisconnect }: LineProps) {
       {canEdit && (
         <div className="flex items-center gap-1">
           <Button size="sm" variant="ghost" color="neutral" disabled={pending} onClick={onSync}>Check now</Button>
+          {s.kind === "webhook" && <Button size="sm" variant="ghost" color="neutral" disabled={pending} onClick={onRotate}>Rotate secret</Button>}
           <Button size="sm" variant="ghost" color="error" disabled={pending} onClick={onDisconnect}>Disconnect</Button>
         </div>
       )}

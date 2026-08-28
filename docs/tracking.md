@@ -71,8 +71,9 @@ Body — one event, or `{ "events": [ ... ] }` (max 500):
   unavailable rather than reading as zero.
 - The response is `{ received, stored, duplicates }`. Storing an event enqueues `tracking.sync`,
   which recomputes that day's facts from the ledger — events are never added into a fact in place.
-- The signing secret is shown **once**, at creation or rotation. It is sealed with the same
-  AES-256-GCM envelope as provider tokens, bound to the source row id, and never returned again.
+- The signing secret is shown **once**, at creation or rotation (Settings → Tracking → Rotate
+  secret; the old secret stops verifying immediately). It is sealed with the same AES-256-GCM
+  envelope as provider tokens, bound to the source row id, and never returned again.
 
 ## Data model
 
@@ -92,7 +93,8 @@ Two systems can see the same click: Meta counts a paid conversion, and GA4 count
 The rule that keeps them additive is the **medium**:
 
 - a row whose `utm_medium` is a paid medium (`paid_social`, `cpc`, `ppc`, …) belongs to the **paid**
-  scope, and the ad platform is authoritative there — the tracking source's copy is excluded;
+  scope, and the ad platform is authoritative there — the tracking source's copy is excluded, in the
+  combined scope as well as the paid one (`conversionTotals` drops it before the sum);
 - everything else belongs to the **organic** scope and only the tracking source reports it.
 
 So `conversions` = ad-reported paid conversions + source-reported non-paid conversions, with no
@@ -121,7 +123,9 @@ takes the queue's backoff.
   from GA4 only; a Shopify or webhook source leaves that step unavailable with a reason.
 - **Attribution summary** — a "Site-reported conversions" block next to the paid one.
 - **Campaign detail** — the same cards scoped by `utm_campaign` matched to the campaign's
-  `tracking.utmCampaign` (falling back to its name).
+  `tracking.utmCampaign` (falling back to its name). The Performance tab's "Organic vs paid" table
+  carries the site-reported conversion count, with the same model / window / source / currency /
+  freshness block underneath it.
 - **CSV export and scheduled reports** — the conversion rows carry their unavailability reason in
   the file rather than a bare blank, plus a `# conversion_sources` provenance line.
 

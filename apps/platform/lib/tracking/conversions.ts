@@ -47,20 +47,21 @@ function scopeWhere(workspaceId: string, f: ReportFilters, p: Period, t: Targets
 }
 
 /**
- * Site-reported totals for a period. `conversions` is omitted in the paid scope
- * (the ad account is authoritative there); revenue is reported in every scope.
+ * Site-reported totals for a period. Paid-medium conversions belong to the ad
+ * platform in EVERY scope, so they are dropped here rather than added on top of
+ * `metric_fact`; revenue and sessions are reported for whatever the scope selects.
  */
 export async function conversionTotals(workspaceId: string, f: ReportFilters, p: Period): Promise<ConversionTotals> {
   const targets = await filterTargets(workspaceId, f);
   const rows = await db
-    .select({ metric: conversionFact.metric, v: sql<number>`sum(${conversionFact.value})::float` })
+    .select({ metric: conversionFact.metric, paid: sql<boolean>`${paidMedium()}`, v: sql<number>`sum(${conversionFact.value})::float` })
     .from(conversionFact)
     .where(scopeWhere(workspaceId, f, p, targets))
-    .groupBy(conversionFact.metric);
+    .groupBy(sql`1, 2`);
   const out: ConversionTotals = {};
   for (const r of rows) {
-    if (r.metric === "conversions" && f.scope === "paid") continue;
-    out[r.metric] = Number(r.v);
+    if (r.metric === "conversions" && r.paid) continue;
+    out[r.metric] = (out[r.metric] ?? 0) + Number(r.v);
   }
   return out;
 }

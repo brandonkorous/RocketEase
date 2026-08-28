@@ -86,7 +86,7 @@ export async function loadAdsData(workspaceId: string, c: Campaign | null, filte
     adCampaignRows(workspaceId, c?.id ?? null, filters, opts.showAll),
     eligiblePosts(workspaceId, c?.id ?? null, accounts, tz),
     promotionRows(workspaceId, c?.id ?? null, tz),
-    c ? campaignPerformance(workspaceId, c.id, filters, ["spend", "roas", "conversions", "ctr_paid", "cpa"]) : Promise.resolve(null),
+    c ? campaignPerformance(workspaceId, c.id, filters, ["spend", "roas", "conversions", "ctr_paid", "cpa"], tz) : Promise.resolve(null),
     paidAttribution(workspaceId, tz),
     db.select({ id: campaignTable.id, name: campaignTable.name }).from(campaignTable).where(and(eq(campaignTable.workspaceId, workspaceId), isNull(campaignTable.archivedAt), inArray(campaignTable.status, ["draft", "active", "paused"]))).orderBy(campaignTable.name),
   ]);

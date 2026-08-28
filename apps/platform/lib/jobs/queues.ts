@@ -4,6 +4,7 @@
  * so names and payloads can't drift.
  */
 import type { Queue } from "pg-boss";
+import type { TriggerKind as AutomationTrigger } from "@/db/schema/automations";
 
 export type JobPayloads = {
   /** Relay pending outbox_event rows into their target queues. Singleton. */
@@ -31,6 +32,12 @@ export type JobPayloads = {
   "ads.sync": { adAccountId: string; since?: string };
   /** Create remote paid objects for a confirmed promotion; reconciles before any retry (CAM-002). */
   "promotion.execute": { promotionId: string };
+  /** Nightly (or on-demand) recommendation + best-time pass; one workspace or all. */
+  "recommendations.compute": { workspaceId?: string };
+  /** Evaluate automation rules for one trigger event (lib/automations). */
+  "automation.evaluate": { trigger: AutomationTrigger; refId: string };
+  /** Resume an automation run whose approval gate was cleared. */
+  "automation.apply": { runId: string };
 };
 
 export type JobName = keyof JobPayloads;
@@ -56,6 +63,9 @@ export const QUEUES: Record<JobName, Omit<Queue, "name">> = {
   "ads.sync": { policy: "singleton", retryLimit: 3, retryDelay: 60, retryBackoff: true, expireInSeconds: 1800 },
   // Spend mutations reconcile before any retry; the handler decides whether a retry is safe.
   "promotion.execute": { policy: "stately", retryLimit: 3, retryDelay: 30, retryBackoff: true, expireInSeconds: 600 },
+  "recommendations.compute": { policy: "singleton", retryLimit: 1, retryDelay: 300, expireInSeconds: 1800 },
+  "automation.evaluate": { ...STANDARD, retryLimit: 3, expireInSeconds: 300 },
+  "automation.apply": { ...STANDARD, retryLimit: 3, expireInSeconds: 300 },
 };
 
 export const JOB_NAMES = Object.keys(QUEUES) as JobName[];

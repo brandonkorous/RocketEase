@@ -14,6 +14,9 @@ import { publicationReconcile } from "./publication-reconcile";
 import { connectionRefresh } from "./connection-refresh";
 import { adsSync } from "./ads-sync";
 import { promotionExecute } from "./promotion-execute";
+import { recommendationsCompute } from "./recommendations-compute";
+import { automationEvaluate } from "./automation-evaluate";
+import { automationApply } from "./automation-apply";
 
 export type HandlerContext = { log: Logger; signal: AbortSignal };
 export type Handler<N extends JobName> = (data: JobPayloads[N], ctx: HandlerContext) => Promise<void>;
@@ -37,4 +40,7 @@ export const handlers: { [N in Exclude<JobName, "outbox.relay">]: Handler<N> } =
   "connection.refresh": connectionRefresh,
   "ads.sync": adsSync,
   "promotion.execute": promotionExecute,
+  "recommendations.compute": recommendationsCompute,
+  "automation.evaluate": automationEvaluate,
+  "automation.apply": automationApply,
 };

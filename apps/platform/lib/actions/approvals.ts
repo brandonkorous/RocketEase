@@ -12,6 +12,7 @@ import { audit } from "@/lib/audit";
 import { track } from "@/lib/telemetry";
 import { AuthorizationError } from "@/lib/authz";
 import { summarizeItem, validateVariant } from "@/lib/content";
+import { emit } from "@/lib/jobs/outbox";
 import { notify } from "@/lib/notifications";
 import { requireCapability, requireWorkspace } from "@/lib/session";
 import { workspacePath } from "@/lib/nav";
@@ -114,6 +115,7 @@ export async function decideRequest(input: z.infer<typeof decideSchema>): Promis
       await tx.update(approvalRequest).set({ state: kind, decidedAt: new Date(), updatedAt: new Date() }).where(eq(approvalRequest.id, req.id));
       await tx.update(contentItem).set({ approvalState: kind === "rejected" ? "changes_requested" : kind, status: kind === "approved" ? "approved" : "changes_requested", updatedAt: new Date() }).where(eq(contentItem.id, item.id));
       if (text) await tx.insert(comment).values({ organizationId: item.organizationId, workspaceId, contentItemId: item.id, versionId: req.versionId, authorUserId: ctx.session.user.id, body: text });
+      await emit(tx, "automation.evaluate", { trigger: "approval.decided", refId: req.id }, { organizationId: item.organizationId, workspaceId, dedupeKey: `automation:approval:${req.id}` });
     });
     await audit({ action: `approval.${kind}`, actorUserId: ctx.session.user.id, organizationId: item.organizationId, workspaceId, targetType: "approval_request", targetId: req.id, summary: { note: text } });
     await track("approval_decided", { userId: ctx.session.user.id, organizationId: item.organizationId, workspaceId, surface: "action:decideRequest", props: { decision: kind } });
@@ -197,7 +199,10 @@ export async function addComment(workspaceId: string, itemId: string, body: stri
 export async function resolveComment(workspaceId: string, commentId: string): Promise<ActionState> {
   return guard(async () => {
     const ctx = await requireCapability(workspaceId, "content.comment");
-    await db.update(comment).set({ resolvedAt: new Date(), resolvedByUserId: ctx.session.user.id }).where(and(eq(comment.id, commentId), eq(comment.workspaceId, workspaceId)));
+    const [row] = await db.update(comment).set({ resolvedAt: new Date(), resolvedByUserId: ctx.session.user.id }).where(and(eq(comment.id, commentId), eq(comment.workspaceId, workspaceId))).returning({ itemId: comment.contentItemId });
+    if (!row) return fail("Comment not found.");
+    revalidatePath(workspacePath(workspaceId, "approvals"));
+    revalidatePath(workspacePath(workspaceId, `posts/${row.itemId}`));
     return { ok: "Resolved." };
   });
 }

@@ -9,6 +9,7 @@ import { workspace, workspaceMembership } from "@/db/schema/app";
 import { approvalPolicy } from "@/db/schema/approvals";
 import { channel } from "@/db/schema/connections";
 import { inboxSettings, savedReply } from "@/db/schema/engagement";
+import { automationsData, EMPTY_AUTOMATIONS, type AutomationsData } from "@/lib/automations/queries";
 import { readGoals, readTracking, type GoalKey, type TrackingSettings } from "@/lib/actions/settings/catalog";
 import { auth } from "@/lib/auth";
 import type { WorkspaceContext } from "@/lib/session";
@@ -22,9 +23,10 @@ export type SectionData = {
   tracking: TrackingSettings;
   goals: GoalKey[];
   prefs: Record<string, boolean>;
+  automations: AutomationsData;
 };
 
-const EMPTY: SectionData = { policies: [], channels: [], sessions: [], inbox: { minutes: 60, replies: [] }, tracking: readTracking({}), goals: [], prefs: {} };
+const EMPTY: SectionData = { policies: [], channels: [], sessions: [], inbox: { minutes: 60, replies: [] }, tracking: readTracking({}), goals: [], prefs: {}, automations: EMPTY_AUTOMATIONS };
 
 /** Loads only what the requested section renders. */
 export async function loadSection(section: string, ctx: WorkspaceContext): Promise<SectionData> {
@@ -50,6 +52,9 @@ export async function loadSection(section: string, ctx: WorkspaceContext): Promi
     const [ws] = await db.select({ settings: workspace.settings }).from(workspace).where(eq(workspace.id, workspaceId));
     data.tracking = readTracking(ws?.settings ?? {});
     data.goals = readGoals(ws?.settings ?? {});
+  }
+  if (section === "automations") {
+    data.automations = await automationsData(workspaceId, ctx.workspace.timezone);
   }
   if (section === "notifications") {
     const [m] = await db.select({ prefs: workspaceMembership.notificationPreferences }).from(workspaceMembership).where(and(eq(workspaceMembership.workspaceId, workspaceId), eq(workspaceMembership.userId, ctx.session.user.id)));

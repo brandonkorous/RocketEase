@@ -7,6 +7,7 @@ import type { InboxItem } from "@make-it-social/providers";
 import { db, type Db } from "@/db";
 import type { Channel } from "@/db/schema/connections";
 import { contact, contactIdentity, conversation, conversationEvent, inboxSettings, message } from "@/db/schema/engagement";
+import { emit } from "@/lib/jobs/outbox";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
@@ -69,6 +70,8 @@ async function ingestOne(tx: Tx, ch: Channel, item: InboxItem): Promise<boolean>
     })
     .where(eq(conversation.id, conv.id));
   if (reopen) await tx.insert(conversationEvent).values({ workspaceId: ch.workspaceId, conversationId: conv.id, kind: "reopened", data: { reason: "new_inbound" } });
+  // Automation rules classify the item (flows.md "Unified inbox" step 2); evaluated out of band, never inline.
+  if (inbound) await emit(tx, "automation.evaluate", { trigger: "inbox.message_received", refId: inserted.id }, { organizationId: ch.organizationId, workspaceId: ch.workspaceId, dedupeKey: `automation:inbox:${inserted.id}` });
   return true;
 }
 

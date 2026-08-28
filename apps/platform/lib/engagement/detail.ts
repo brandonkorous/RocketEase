@@ -43,7 +43,7 @@ export async function conversationDetail(workspaceId: string, id: string, tz: st
     contact: { id: contact.id, name: contact.displayName, avatarUrl: contact.avatarUrl, handle: identity?.handle ?? null, profileUrl: identity?.profileUrl ?? null, network: identity?.network ?? ch.network, email: contact.email, location: contact.location, tags: contact.tags, since: formatInZone(contact.firstSeenAt, tz, { dateStyle: "medium" }) },
     messages: msgs.map(({ m, by }) => ({ id: m.id, direction: m.direction, body: m.body, attachments: m.attachments, at: formatInZone(m.occurredAt, tz, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }), dayKey: formatInZone(m.occurredAt, tz, { dateStyle: "medium" }), by, state: m.deliveryState, error: m.error, rating: m.rating })),
     notes: notes.map(({ n, by }) => ({ id: n.id, by, at: formatInZone(n.createdAt, tz, { dateStyle: "medium" }), body: n.body })),
-    activity: events.map(({ e }) => ({ id: e.id, label: EVENT_LABEL[e.kind] ?? e.kind, at: fmt(e.createdAt), network: ch.network })),
+    activity: events.map(({ e }) => ({ id: e.id, label: e.kind === "automation" ? `Applied by rule ${String(e.data.ruleName ?? "")}`.trim() : (EVENT_LABEL[e.kind] ?? e.kind), at: fmt(e.createdAt), network: ch.network })),
     savedReplies: replies,
     textMax: conv.kind === "message" ? 2000 : (ch.capabilities.limits.textMaxChars ?? 2000),
   };

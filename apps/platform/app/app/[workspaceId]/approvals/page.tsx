@@ -10,6 +10,7 @@ import { user } from "@/db/schema/auth";
 import { contentItem, contentVersion, postVariant } from "@/db/schema/content";
 import { channel } from "@/db/schema/connections";
 import { canDecide } from "@/lib/approvals";
+import { pendingAutomationApprovals } from "@/lib/automations/queries";
 import { hasCapability, requireWorkspace } from "@/lib/session";
 import { presignGet } from "@/lib/storage";
 import { formatInZone } from "@/lib/time";
@@ -92,7 +93,7 @@ export default async function ApprovalsPage({ params, searchParams }: { params: 
     const media = await Promise.all(previewAssetIds.map(async (id) => { const t = pThumbs.find((r) => r.assetId === id); const o = pOrig.find((a) => a.id === id); return { id, url: t ? await presignGet(t.storageKey) : o?.kind === "image" ? await presignGet(o.key) : null, alt: o?.alt ?? "" }; }));
     detail = {
       ...row,
-      snapshot: snapshot ? { text: snapshot.sharedText, link: snapshot.link, media } : null,
+      snapshot: snapshot ? { text: snapshot.sharedText, link: snapshot.link, firstComment: snapshot.variants.find((v) => v.firstComment)?.firstComment ?? null, schedule: snapshot.variants.find((v) => v.scheduledAt)?.scheduledAt ?? null, media } : null,
       versions: versions.map((v) => ({ id: v.v.id, number: v.v.number, reason: v.v.reason, by: v.by, at: formatInZone(v.v.createdAt, tz, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }), current: v.v.id === row.versionId })),
       timeline: [
         { kind: "submitted", label: "Submitted", by: row.requester, at: row.createdAt },
@@ -100,7 +101,7 @@ export default async function ApprovalsPage({ params, searchParams }: { params: 
         ...decisions.map((d) => ({ kind: d.d.decision, label: d.d.decision.replace("_", " "), by: d.by ?? "—", at: formatInZone(d.d.createdAt, tz, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) })),
         ...(row.state === "pending" ? [{ kind: "pending", label: "Pending review", by: row.assignee?.name ?? "Approvers", at: "Current step" }] : []),
       ],
-      comments: comments.map((c) => ({ id: c.c.id, by: c.by ?? "—", image: c.image, body: c.c.body, at: formatInZone(c.c.createdAt, tz, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }), mine: c.c.authorUserId === me.userId, resolved: Boolean(c.c.resolvedAt) })),
+      comments: comments.map((c) => ({ id: c.c.id, by: c.by ?? "—", image: c.image, body: c.c.body, at: formatInZone(c.c.createdAt, tz, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }), mine: c.c.authorUserId === me.userId, resolved: Boolean(c.c.resolvedAt), field: c.c.field, assetId: c.c.assetId, parentId: c.c.parentId })),
     };
   }
 
@@ -111,6 +112,7 @@ export default async function ApprovalsPage({ params, searchParams }: { params: 
   const data: ApprovalsData = {
     workspaceId, timezone: tz, tab, counts, rows: filtered, detail, reviewers, channels: [...new Map(variants.map((v) => [v.ch.id, { id: v.ch.id, name: v.ch.name, network: v.ch.network }])).values()],
     filters: { assignee: sp.assignee ?? "", channel: sp.channel ?? "", sort: sp.sort ?? "due" }, canComment: hasCapability(ctx.workspace, "content.comment"), isClientApprover: ctx.workspace.role === "client_approver",
+    automations: await pendingAutomationApprovals(workspaceId, tz, { role: ctx.workspace.role }),
   };
   return (
     <Suspense>

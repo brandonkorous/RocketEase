@@ -25,6 +25,7 @@ export async function succeed(job: Job, v: Variant, item: Item, ch: { id: string
     await tx.update(postVariant).set({ status: "published", publishedAt: new Date(result.publishedAt), remoteId: result.remoteId, remoteUrl: result.url ?? null, lastError: null, updatedAt: new Date() }).where(eq(postVariant.id, v.id));
     await tx.insert(remotePublication).values({ variantId: v.id, channelId: ch.id, remoteId: result.remoteId, url: result.url ?? null, publishedAt: new Date(result.publishedAt) }).onConflictDoNothing();
     await tx.update(publishJob).set({ state: "succeeded", finishedAt: new Date() }).where(eq(publishJob.id, job.id));
+    await emit(tx, "automation.evaluate", { trigger: "post.published", refId: v.id }, { organizationId: item.organizationId, workspaceId: item.workspaceId, dedupeKey: `automation:published:${v.id}` });
   });
   await summarizeItem(item.id);
   await audit({ action: "publish.succeeded", organizationId: item.organizationId, workspaceId: item.workspaceId, targetType: "post_variant", targetId: v.id, summary: { after: { remoteId: result.remoteId, channel: ch.name } } });
@@ -50,6 +51,7 @@ export async function finish(jobId: string, v: { id: string; channelId: string }
   await db.transaction(async (tx) => {
     await tx.update(publishJob).set({ state: "failed", finishedAt: new Date(), lastError: failure }).where(eq(publishJob.id, jobId));
     await tx.update(postVariant).set({ status: "failed", lastError: failure, updatedAt: new Date() }).where(eq(postVariant.id, v.id));
+    await emit(tx, "automation.evaluate", { trigger: "post.failed", refId: v.id }, { organizationId: item.organizationId, workspaceId: item.workspaceId, dedupeKey: `automation:failed:${v.id}` });
   });
   await summarizeItem(item.id);
   const ch = await db.query.channel.findFirst({ where: (c, { eq }) => eq(c.id, v.channelId) });

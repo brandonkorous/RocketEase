@@ -6,6 +6,7 @@ import { Avatar, Badge, Button, Checkbox } from "@wizeworks/silicaui-react";
 import { bulkDecide } from "@/lib/actions/approvals";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 import { ApprovalDetail } from "./approvals/detail";
+import { AutomationQueue } from "./approvals/automation-queue";
 import { STATE, type ApprovalRow, type ApprovalsData, type Nav } from "./approvals/types";
 import { NetMark } from "./net-mark";
 
@@ -30,6 +31,7 @@ export function ApprovalsScreen({ data }: { data: ApprovalsData }) {
         <label className="flex flex-col text-xs text-secondary/70">Channel<select className="select select-sm mt-1 w-45" value={data.filters.channel} onChange={(e) => nav({ channel: e.target.value || null })}><option value="">All channels</option>{data.channels.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></label>
         {(data.filters.assignee || data.filters.channel) && <button type="button" className="mb-2 text-sm text-info hover:underline" onClick={() => nav({ assignee: null, channel: null })}>Clear all</button>}
       </div>
+      {data.automations.length > 0 && <div className="mt-4"><AutomationQueue workspaceId={data.workspaceId} rows={data.automations} /></div>}
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <section className="rounded-box border border-base-300" aria-label="Approval queue">
           <div className="flex gap-5 overflow-x-auto border-b border-base-300 px-4" role="tablist">

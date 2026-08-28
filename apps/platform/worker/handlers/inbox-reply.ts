@@ -44,24 +44,28 @@ export async function inboxReply(data: JobPayloads["inbox.reply"], ctx: HandlerC
   const cred = await loadCredential(conn);
   const desc = toDescriptor(ch);
   const key = m.idempotencyKey ?? m.id;
+  // Anything created before the row existed cannot be this reply (ENG-003 structural reconciliation).
+  const sentAfter = new Date(m.createdAt.getTime() - 60_000).toISOString();
+  const lookup = () => ({ kind: conv.kind, threadRemoteId: conv.remoteThreadId, inReplyToRemoteId: m.inReplyToRemoteId ?? undefined, postRemoteId: conv.postRemoteId ?? undefined, text: m.body, idempotencyKey: key, sentAfter });
 
   if (m.deliveryState === "ambiguous") {
-    const found = await adapter.findReply?.(cred, desc, key);
+    const found = await adapter.findReply?.(cred, desc, lookup());
     if (found) { l.info("ambiguous reply reconciled as sent"); return markSent(m, found); }
     l.info("ambiguous reply not found remotely; sending again");
   }
 
   const identity = await db.query.contactIdentity.findFirst({ where: (i, { and, eq }) => and(eq(i.contactId, conv.contactId), eq(i.network, ch.network)) });
+  const request = { kind: conv.kind, threadRemoteId: conv.remoteThreadId, inReplyToRemoteId: m.inReplyToRemoteId ?? undefined, recipientRemoteId: identity?.remoteId, postRemoteId: conv.postRemoteId ?? undefined, text: m.body, idempotencyKey: key };
   await db.update(message).set({ deliveryState: "sending", attempts: sql`${message.attempts} + 1` }).where(eq(message.id, m.id));
   try {
-    const r = await adapter.reply(cred, desc, { kind: conv.kind, threadRemoteId: conv.remoteThreadId, inReplyToRemoteId: m.inReplyToRemoteId ?? undefined, recipientRemoteId: identity?.remoteId, postRemoteId: conv.postRemoteId ?? undefined, text: m.body, idempotencyKey: key });
+    const r = await adapter.reply(cred, desc, request);
     await markSent(m, r);
     l.info("reply sent", { remoteId: r.remoteId });
   } catch (err) {
     if (!(err instanceof ProviderError)) { await db.update(message).set({ deliveryState: "queued", error: String(err) }).where(eq(message.id, m.id)); throw err; }
     if (err.ambiguous) {
       await db.update(message).set({ deliveryState: "ambiguous", error: err.message }).where(eq(message.id, m.id));
-      const found = await adapter.findReply?.(cred, desc, key);
+      const found = await adapter.findReply?.(cred, desc, { ...request, sentAfter });
       if (found) { l.info("reply reconciled after ambiguous error"); return markSent(m, found); }
       throw err; // retry → reconcile first
     }

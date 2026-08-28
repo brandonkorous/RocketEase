@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ApprovalPolicies } from "@/components/approval-policies";
 import { SecurityPanel } from "@/components/security-panel";
+import { AutomationsSettings } from "@/components/settings/automations";
 import { InboxSettings } from "@/components/settings/inbox-settings";
 import { NotificationSettings } from "@/components/settings/notification-settings";
 import { TrackingSettings } from "@/components/settings/tracking-settings";
@@ -33,6 +34,8 @@ export function SectionBody({ section, label, ctx, data }: Props) {
       );
     case "inbox":
       return <InboxSettings workspaceId={workspace.id} minutes={data.inbox.minutes} replies={data.inbox.replies} canEdit={canEdit} canHandle={hasCapability(workspace, "conversations.handle")} />;
+    case "automations":
+      return <AutomationsSettings workspaceId={workspace.id} data={data.automations} canEdit={canEdit} />;
     case "tracking":
       return <TrackingSettings workspaceId={workspace.id} initial={data.tracking} canEdit={canEdit} />;
     case "notifications":

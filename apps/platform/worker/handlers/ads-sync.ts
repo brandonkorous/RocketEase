@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { adAccount, adCreative, adCampaign } from "@/db/schema/campaigns";
 import type { JobPayloads } from "@/lib/jobs/queues";
 import { toAccountDescriptor, upsertPaidFacts, upsertPaidObjects } from "@/lib/campaigns/paid-import";
+import { emit } from "@/lib/jobs/outbox";
 import { getAdapter, loadCredential } from "@/lib/providers";
 import type { HandlerContext } from "./index";
 
@@ -40,6 +41,7 @@ export async function adsSync(data: JobPayloads["ads.sync"], ctx: HandlerContext
       facts = await upsertPaidFacts({ ...account, channelId: account.channelId }, page, postByAd);
     }
     await db.update(adAccount).set({ lastSyncAt: until, lastError: account.channelId ? null : "No channel is linked to this ad account, so spend is imported without facts.", updatedAt: until }).where(eq(adAccount.id, account.id));
+    await emit(db, "automation.evaluate", { trigger: "campaign.budget_threshold", refId: account.id }, { organizationId: account.organizationId, workspaceId: account.workspaceId, dedupeKey: `automation:budget:${account.id}:${dayStr(until)}` });
     l.info("ads synced", { ...counts, ...facts });
   } catch (err) {
     const msg = err instanceof ProviderError ? `${err.category}: ${err.message}` : String(err);

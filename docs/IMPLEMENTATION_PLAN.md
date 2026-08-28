@@ -176,6 +176,38 @@ Four agent-run streams with disjoint file ownership; the lead integrates, genera
 3. **quality** — 5.7 data quality, 5.8 telemetry, publication reconcile + token refresh jobs, OTel, Playwright + tenant-isolation suite, CI.
 4. **providers** — LinkedIn/TikTok inbox+insights, Meta webhook mappings, token lifecycle, healthCheck, vitest suite, providers README.
 
+## Immediate next steps (in order) — refreshed 2026-08-28
+
+M0–M6 are built and verified against the mock provider. What remains before a real launch:
+
+1. **Credentials & app review** — Meta (Facebook/Instagram + Marketing API), LinkedIn Community Management (partner-gated), TikTok Business. Every real adapter is written but untested live; `packages/providers/README.md` lists scopes and prerequisites.
+2. **Deploy** — containers exist (`Dockerfile`, `Dockerfile.worker`, `deploy/k8s`); wire into the sparx.works Terraform / AKS cluster (needs the Terraform repo path), Key Vault for `TOKEN_MASTER_KEY`, Azure Blob (S3 API) for storage, OTLP endpoint.
+3. **Hardening leftovers** — step-up re-auth before paid spend (M6), comment-reply reconciliation marker for non-DM replies (4.5 caveat), field/asset-anchored comments (3.4), composer UTM prefill from Settings → Tracking, stable-green e2e in dev (green expected in CI's production build).
+4. **M7** — best-time analysis (composer already reserves the slot), explainable recommendations, automation rules with approval gates, more providers (YouTube, Pinterest, X), GA/commerce connections, SSO/SCIM, white-label agency reporting.
+
+## Decisions to make before the milestone that needs them
+
+| Decision | Needed by | Recommendation |
+|---|---|---|
+| Job queue: `pg-boss` vs Redis/BullMQ | M0.13 | pg-boss (no new infra; Postgres already in Terraform) |
+| Object storage: Azure Blob vs S3-compatible | M1.9 | Azure Blob via S3-compatible SDK abstraction (`lib/storage.ts`) so local dev can use MinIO |
+| Secrets/KMS: Azure Key Vault | M1.3 | Key Vault in prod; env-provided key in dev |
+| Email provider | M0.10 | Whatever sparx already uses (Resend/SES/ACS) — abstract behind `lib/mail.ts` |
+| Meta app review scope + TikTok access timeline | M1.6/1.8 | Start app review applications now; they gate launch providers |
+| Virus scanning | M1.9 | ClamAV sidecar or cloud scan; block publish on `unscanned` |
+| Analytics warehouse | M5 | Postgres aggregates first (per architecture.md); revisit after measured need |
+
+---
+
+## Parallel workstreams (started 2026-08-28) — all four landed the same day
+
+Four agent-run streams with disjoint file ownership; the lead integrates, generates migrations serially, reviews diffs, and verifies in the browser:
+
+1. **campaigns** — M6 (schema `campaigns.ts` + migration, ads contract/adapters, `ads.sync`/`promotion.execute`, campaigns list/detail per mockups, analytics paid cells).
+2. **product-gaps** — 2.10 quick compose, 2.11 goals step, 2.12 templates/bulk reschedule, settings sections (Inbox, Tracking, Notifications), replace prompt() dialogs.
+3. **quality** — 5.7 data quality, 5.8 telemetry, publication reconcile + token refresh jobs, OTel, Playwright + tenant-isolation suite, CI.
+4. **providers** — LinkedIn/TikTok inbox+insights, Meta webhook mappings, token lifecycle, healthCheck, vitest suite, providers README.
+
 ## Immediate next steps (in order)
 
 1. **M0.9** authorization helper + tests — everything mutating depends on it.

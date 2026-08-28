@@ -13,11 +13,24 @@ export function loadState(): E2EState {
   return JSON.parse(readFileSync(path.join(STATE_DIR, "state.json"), "utf8")) as E2EState;
 }
 
-/** Dev-mode pages hydrate late and drop early clicks: retry a submit until the URL moves on. */
-export async function clickUntilUrl(page: Page, button: RegExp, url: RegExp) {
+/** Resolves once React has hydrated the page (dev-mode compiles can take a while on first load). */
+export async function waitForHydration(page: Page) {
+  await page.waitForFunction(() => {
+    const el = document.querySelector("main, form, body > div");
+    return !!el && Object.keys(el).some((k) => k.startsWith("__reactFiber"));
+  }, undefined, { timeout: 60_000 });
+}
+
+/**
+ * Dev-mode pages can be reloaded under us (Fast Refresh after a file save) which
+ * wipes form state; re-run `prepare` (fills) before each submit attempt.
+ */
+export async function submitUntilUrl(page: Page, prepare: () => Promise<void>, button: RegExp, url: RegExp) {
   for (let i = 0; i < 4; i++) {
+    await waitForHydration(page);
+    await prepare();
     await page.getByRole("button", { name: button }).first().click();
-    if (await page.waitForURL(url, { timeout: 8_000 }).then(() => true).catch(() => false)) return;
+    if (await page.waitForURL(url, { timeout: 10_000 }).then(() => true).catch(() => false)) return;
   }
   await page.waitForURL(url, { timeout: 15_000 });
 }
@@ -25,18 +38,16 @@ export async function clickUntilUrl(page: Page, button: RegExp, url: RegExp) {
 /** Signup → onboarding (org + workspace, goals) → lands in the workspace shell. Returns the workspace id. */
 export async function signupAndOnboard(page: Page, u: { name: string; email: string; password: string; organizationName: string; workspaceName: string }): Promise<string> {
   await page.goto("/signup");
-  await page.waitForLoadState("networkidle");
-  await page.locator("#name").fill(u.name);
-  await page.locator("#email").fill(u.email);
-  await page.locator("#password").fill(u.password);
-  await clickUntilUrl(page, /create account/i, /\/onboarding/);
-  await page.waitForLoadState("networkidle");
-  await page.locator("#organizationName").fill(u.organizationName);
-  await page.locator("#workspaceName").fill(u.workspaceName);
-  await clickUntilUrl(page, /create workspace/i, /\/onboarding\/goals/);
-  await page.waitForLoadState("networkidle");
-  await page.getByRole("checkbox").first().check();
-  await clickUntilUrl(page, /^continue$/i, /\/app\/[^/]+\/home/);
+  await submitUntilUrl(page, async () => {
+    await page.locator("#name").fill(u.name);
+    await page.locator("#email").fill(u.email);
+    await page.locator("#password").fill(u.password);
+  }, /create account/i, /\/onboarding/);
+  await submitUntilUrl(page, async () => {
+    await page.locator("#organizationName").fill(u.organizationName);
+    await page.locator("#workspaceName").fill(u.workspaceName);
+  }, /create workspace/i, /\/onboarding\/goals/);
+  await submitUntilUrl(page, () => page.getByRole("checkbox").first().check(), /^continue$/i, /\/app\/[^/]+\/home/);
   const m = page.url().match(/\/app\/([^/]+)\/home/);
   expect(m).not.toBeNull();
   return m![1];

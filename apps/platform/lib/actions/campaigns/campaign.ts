@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { CAMPAIGN_OBJECTIVES, CAMPAIGN_STATUSES, campaign, campaignEvent, type CampaignObjective, type CampaignStatus, type CampaignTracking } from "@/db/schema/campaigns";
 import { audit } from "@/lib/audit";
+import { track } from "@/lib/telemetry";
 import { requireCapability } from "@/lib/session";
 import { zonedToUtc } from "@/lib/time";
 import { fail, guard, type ActionState } from "../content/shared";
@@ -47,6 +48,7 @@ export async function createCampaign(workspaceId: string, input: CampaignInput):
     const [row] = await db.insert(campaign).values({ ...n.values, organizationId: ctx.workspace.organizationId, workspaceId, ownerUserId: n.values.ownerUserId ?? ctx.session.user.id, createdByUserId: ctx.session.user.id }).returning({ id: campaign.id });
     await db.insert(campaignEvent).values({ workspaceId, campaignId: row.id, kind: "created", actorUserId: ctx.session.user.id, data: { name: n.values.name, objective: n.values.objective } });
     await audit({ action: "campaign.create", actorUserId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId, targetType: "campaign", targetId: row.id, summary: { after: n.values } });
+    await track("campaign_created", { organizationId: ctx.workspace.organizationId, workspaceId, surface: "campaigns", props: { objective: n.values.objective } });
     return { ok: "Campaign created.", id: row.id };
   });
 }

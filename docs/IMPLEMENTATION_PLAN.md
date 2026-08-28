@@ -8,7 +8,7 @@ Legend: ✅ done · 🔨 in progress · ⬜ not started · `REQ-ID` traces to re
 
 ---
 
-## Milestone 0 — Foundations (Phase 0) — ✅ done (OTel export + Playwright/isolation suite still open)
+## Milestone 0 — Foundations (Phase 0) — ✅ done (OTel export via `lib/otel.ts`; Playwright suite in `apps/platform/e2e` incl. tenant isolation, wired into CI)
 
 | # | Feature | Reqs | Status |
 |---|---|---|---|
@@ -70,9 +70,9 @@ Notes
 | 2.7 | ✅ Post detail page: variants, validation, versions/activity, retry failed destinations | PUB-005 | 2.3 |
 | 2.8 | ✅ Home (matches overview mockup) with real attention queue: failed posts, disconnected channels, upcoming | — | 2.5 |
 | 2.9 | 🔨 Notifications: table + worker writes + email on publish failure done; in-app center UI pending: in-app center + email for publish failures; preference model | COL-003 | 0.10 |
-| 2.10 | 🔨 Mobile: composer is responsive; dedicated linear quick-compose pending (linear flow) | flows.md | 2.3 |
-| 2.11 | 🔨 Onboarding: Home 5-step checklist driven by real state; goals step pending: goals step, connect step, invite step, first-post step; checklist driven by domain events | ONB-001 | 1.4, 2.4, 0.11 |
-| 2.12 | Templates + reuse with lineage; bulk reschedule | PUB-006 (P1) | 2.6 |
+| 2.10 | ✅ Mobile quick compose (`create/quick`, 4-step linear flow on the composer hooks) | flows.md | 2.3 |
+| 2.11 | ✅ Onboarding goals step + Home checklist driven by real state: goals step, connect step, invite step, first-post step; checklist driven by domain events | ONB-001 | 1.4, 2.4, 0.11 |
+| 2.12 | ✅ Templates + reuse with lineage (`content_template`); bulk reschedule from the calendar list | PUB-006 (P1) | 2.6 |
 
 **Gate (roadmap Phase 1):** create → schedule → publish passes e2e on Meta + LinkedIn sandboxes; duplicate-publish tests (retry, ambiguous timeout, replay) pass; activation path measurable.
 
@@ -103,7 +103,7 @@ Notes
 | 4.3 | ✅ Mock/Meta/LinkedIn/TikTok inbox + insights adapters written (untested live; see `packages/providers/README.md` for what each API cannot do: LinkedIn has no DMs/webhooks and is partner-gated; TikTok has no DMs/mentions and needs a Business Account for comments) | ENG-001 | 1.6, 1.7 |
 | 4.4 | ✅ Inbox UI: three-pane (queue / thread / context), filters, unread, assignment, status, priority, SLA timestamps; mobile drill-in | ENG-002 | 4.2 |
 | 4.5 | ✅ Reply with provider delivery state (caveat: comment replies on Meta/LinkedIn/TikTok have no client reference, so an ambiguous comment reply can only be reconciled by text match — DMs reconcile via metadata); **ambiguous-send reconciliation** before retry | ENG-002, ENG-003 | 4.3 |
-| 4.6 | 🔨 Notes, snooze, resolve, escalate (priority), saved replies done; response target is a per-workspace default (settings UI pending); snooze/tag/note inputs use browser prompts (replace with popovers) | ENG-002, ENG-004 | 4.4 |
+| 4.6 | ✅ Notes, snooze, resolve, escalate, saved replies (Settings → Inbox), response target | ENG-002, ENG-004 | 4.4 |
 | 4.7 | ✅ Home + agency overview: unresolved/assigned conversation counts | TEN-003 | 4.2 |
 
 **Gate (roadmap Phase 2):** reply delivery/reconciliation reliable; agency isolation tests pass with inbox data.
@@ -120,8 +120,8 @@ Notes
 | 5.4 | ✅ Analytics UI (per `images/analytics.png`; paid/attribution cells fill in with M6): overview (scorecard, trend, channel mix, top content), content, engagement tabs; persistent date/comparison/scope filters; definitions & freshness on every metric | ANA-001, ANA-002 | 5.3 |
 | 5.5 | ✅ CSV export with filters/definitions/freshness stamped | ANA-003 P0 | 5.4 |
 | 5.6 | ✅ Saved reports (definitions, runs, scheduler, run-time recipient check), scheduled delivery with run-time permission checks | ANA-003 P1 | 5.5, 0.10 |
-| 5.7 | 🔨 Data-quality checks (freshness, duplicates, implausible values, reconciliation) | analytics.md | 5.3 |
-| 5.8 | 🔨 Product telemetry events (privacy-safe) | analytics.md | — |
+| 5.7 | ✅ Data-quality checks (nightly `quality.check`: freshness, duplicates, implausible, revisions, reconciliation → `data_quality_issue`, surfaced in analytics + export header) (freshness, duplicates, implausible values, reconciliation) | analytics.md | 5.3 |
+| 5.8 | ✅ Product telemetry (`lib/telemetry.ts` → `product_event`, privacy-safe) events (privacy-safe) | analytics.md | — |
 
 **Gate (roadmap Phase 3):** provider totals reconcile within documented rules; every displayed metric has a published contract.
 
@@ -167,7 +167,7 @@ Accessibility review (WCAG 2.2 AA), threat model updates, privacy/retention, per
 
 ---
 
-## Parallel workstreams (started 2026-08-28)
+## Parallel workstreams (started 2026-08-28) — all four landed the same day
 
 Four agent-run streams with disjoint file ownership; the lead integrates, generates migrations serially, reviews diffs, and verifies in the browser:
 

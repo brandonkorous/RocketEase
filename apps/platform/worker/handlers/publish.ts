@@ -1,18 +1,14 @@
 import { and, eq } from "drizzle-orm";
 import { ProviderError, type PublishResult } from "@make-it-social/providers";
 import { db } from "@/db";
-import { contentItem, postVariant, publishJob, remotePublication, type VariantError } from "@/db/schema/content";
-import { audit } from "@/lib/audit";
-import { track } from "@/lib/telemetry";
-import { mediaForAssets, resolveVariant, summarizeItem, validateVariant } from "@/lib/content";
-import { emit } from "@/lib/jobs/outbox";
+import { postVariant, publishJob, type VariantError } from "@/db/schema/content";
+import { mediaForAssets, resolveVariant, validateVariant } from "@/lib/content";
 import type { JobPayloads } from "@/lib/jobs/queues";
-import { notify } from "@/lib/notifications";
 import { getAdapter, loadCredential, toDescriptor } from "@/lib/providers";
 import type { HandlerContext } from "./index";
+import { MAX_ATTEMPTS, err, finish, retryLater, succeed } from "./publish/outcome";
 
-const MAX_ATTEMPTS = 5;
-const backoffSeconds = (attempt: number) => Math.min(3600, 60 * 2 ** (attempt - 1));
+type Attempt = { result: PublishResult | null; failure: VariantError | null; retryable: boolean };
 
 /**
  * Execute one publish job (architecture.md "Request and job patterns"):
@@ -23,126 +19,55 @@ const backoffSeconds = (attempt: number) => Math.min(3600, 60 * 2 ** (attempt - 
  *      retryable → new job with backoff; permanent → failed + notification
  */
 export async function publishExecute(data: JobPayloads["publish.execute"], ctx: HandlerContext) {
-  const claimed = await db
-    .update(publishJob)
-    .set({ state: "running", startedAt: new Date() })
-    .where(and(eq(publishJob.id, data.publishJobId), eq(publishJob.state, "queued")))
-    .returning();
-  const job = claimed[0];
+  const [job] = await db.update(publishJob).set({ state: "running", startedAt: new Date() }).where(and(eq(publishJob.id, data.publishJobId), eq(publishJob.state, "queued"))).returning();
   if (!job) return; // canceled, or another worker took it
   const l = ctx.log.child({ publishJobId: job.id, variantId: job.variantId, attempt: job.attempt });
 
   const v = await db.query.postVariant.findFirst({ where: (p, { eq }) => eq(p.id, job.variantId) });
   const item = v ? await db.query.contentItem.findFirst({ where: (c, { eq }) => eq(c.id, v.contentItemId) }) : null;
-  if (!v || !item || v.status !== "scheduled") {
-    await db.update(publishJob).set({ state: "canceled", finishedAt: new Date() }).where(eq(publishJob.id, job.id));
-    return;
-  }
+  if (!v || !item || v.status !== "scheduled") return cancel(job.id);
   // Version pin: if the item moved on to a newer version, this job is stale.
-  if (job.versionId && item.currentVersionId && job.versionId !== item.currentVersionId) {
-    await db.update(publishJob).set({ state: "canceled", finishedAt: new Date(), lastError: err("stale_version", "A newer version was scheduled") }).where(eq(publishJob.id, job.id));
-    return;
-  }
-  if (item.approvalState === "pending" || item.approvalState === "changes_requested") {
-    return finish(job.id, v, item, "failed", err("approval", "Approval is no longer valid for this version"), l);
-  }
+  if (job.versionId && item.currentVersionId && job.versionId !== item.currentVersionId) return cancel(job.id, err("stale_version", "A newer version was scheduled"));
+  if (item.approvalState === "pending" || item.approvalState === "changes_requested") return finish(job.id, v, item, err("approval", "Approval is no longer valid for this version"), l);
 
   const ch = await db.query.channel.findFirst({ where: (c, { eq }) => eq(c.id, v.channelId) });
   const conn = ch ? await db.query.providerConnection.findFirst({ where: (c, { eq }) => eq(c.id, ch.connectionId) }) : null;
-  if (!ch || !conn || ["disconnected", "revoked"].includes(ch.status)) {
-    return finish(job.id, v, item, "failed", err("permission", "Channel is disconnected"), l);
-  }
+  if (!ch || !conn || ["disconnected", "revoked"].includes(ch.status)) return finish(job.id, v, item, err("permission", "Channel is disconnected"), l);
 
-  const validation = await validateVariant(item, v);
-  const blocking = validation.issues.filter((i) => i.severity === "error");
-  if (blocking.length) return finish(job.id, v, item, "failed", err("validation", blocking[0].message, blocking[0].code), l);
+  const blocking = (await validateVariant(item, v)).issues.filter((i) => i.severity === "error");
+  if (blocking.length) return finish(job.id, v, item, err("validation", blocking[0].message, blocking[0].code), l);
 
   await db.update(postVariant).set({ status: "publishing", attempts: v.attempts + 1, updatedAt: new Date() }).where(eq(postVariant.id, v.id));
+  const attempt = await tryPublish(conn, ch, item, v, job.id, l);
+  if (attempt.result) return succeed(job, v, item, ch, attempt.result, l);
+  if (attempt.retryable && job.attempt < MAX_ATTEMPTS) return retryLater(job, v, item, attempt.failure!, l);
+  await finish(job.id, v, item, attempt.failure ?? err("unknown", "Publish failed"), l);
+}
 
+async function cancel(jobId: string, lastError?: VariantError) {
+  await db.update(publishJob).set({ state: "canceled", finishedAt: new Date(), lastError: lastError ?? null }).where(eq(publishJob.id, jobId));
+}
+
+/** Publish once; an ambiguous provider error is reconciled with findPublication before it counts as a failure. */
+async function tryPublish(conn: Parameters<typeof loadCredential>[0], ch: Parameters<typeof toDescriptor>[0], item: Parameters<typeof resolveVariant>[0], v: Parameters<typeof resolveVariant>[1], jobId: string, l: HandlerContext["log"]): Promise<Attempt> {
   const adapter = getAdapter(conn.provider);
   const descriptor = toDescriptor(ch);
   const r = resolveVariant(item, v);
-  let result: PublishResult | null = null;
-  let failure: VariantError | null = null;
-  let retryable = false;
-
   try {
     const cred = await loadCredential(conn);
     const { media } = await mediaForAssets(r.assetIds, { forPublish: true });
     try {
-      result = await adapter.publish(cred, descriptor, { idempotencyKey: v.idempotencyKey, format: v.format, text: r.text, media, link: r.link, firstComment: r.firstComment, settings: v.settings });
+      const result = await adapter.publish(cred, descriptor, { idempotencyKey: v.idempotencyKey, format: v.format, text: r.text, media, link: r.link, firstComment: r.firstComment, settings: v.settings });
+      return { result, failure: null, retryable: false };
     } catch (e) {
-      if (e instanceof ProviderError && e.ambiguous) {
-        // Reconcile BEFORE deciding anything (NFR-003: no duplicate publish).
-        await db.update(publishJob).set({ state: "reconciling" }).where(eq(publishJob.id, job.id));
-        l.warn("ambiguous publish result; reconciling");
-        result = await adapter.findPublication(cred, descriptor, v.idempotencyKey);
-        if (!result) {
-          failure = err(e.category, e.message, e.providerCode, true);
-          retryable = e.retryable;
-        }
-      } else throw e;
+      if (!(e instanceof ProviderError && e.ambiguous)) throw e;
+      await db.update(publishJob).set({ state: "reconciling" }).where(eq(publishJob.id, jobId));
+      l.warn("ambiguous publish result; reconciling");
+      const result = await adapter.findPublication(cred, descriptor, v.idempotencyKey);
+      return result ? { result, failure: null, retryable: false } : { result: null, failure: err(e.category, e.message, e.providerCode, true), retryable: e.retryable };
     }
   } catch (e) {
     const pe = e instanceof ProviderError ? e : new ProviderError(e instanceof Error ? e.message : "Unknown error", { category: "unknown", retryable: false });
-    failure = err(pe.category, pe.message, pe.providerCode, pe.ambiguous);
-    retryable = pe.retryable;
+    return { result: null, failure: err(pe.category, pe.message, pe.providerCode, pe.ambiguous), retryable: pe.retryable };
   }
-
-  if (result) {
-    await db.transaction(async (tx) => {
-      await tx.update(postVariant).set({ status: "published", publishedAt: new Date(result!.publishedAt), remoteId: result!.remoteId, remoteUrl: result!.url ?? null, lastError: null, updatedAt: new Date() }).where(eq(postVariant.id, v.id));
-      await tx
-        .insert(remotePublication)
-        .values({ variantId: v.id, channelId: ch.id, remoteId: result!.remoteId, url: result!.url ?? null, publishedAt: new Date(result!.publishedAt) })
-        .onConflictDoNothing();
-      await tx.update(publishJob).set({ state: "succeeded", finishedAt: new Date() }).where(eq(publishJob.id, job.id));
-    });
-    await summarizeItem(item.id);
-    await audit({ action: "publish.succeeded", organizationId: item.organizationId, workspaceId: item.workspaceId, targetType: "post_variant", targetId: v.id, summary: { after: { remoteId: result.remoteId, channel: ch.name } } });
-    await track("post_published", { organizationId: item.organizationId, workspaceId: item.workspaceId, surface: "job:publish.execute", props: { network: ch.network, format: v.format, attempt: job.attempt } });
-    l.info("published", { remoteId: result.remoteId });
-    return;
-  }
-
-  // Failure path.
-  if (retryable && job.attempt < MAX_ATTEMPTS) {
-    const delay = failure?.category === "rate_limit" ? Math.max(backoffSeconds(job.attempt), 300) : backoffSeconds(job.attempt);
-    const at = new Date(Date.now() + delay * 1000);
-    await db.transaction(async (tx) => {
-      await tx.update(publishJob).set({ state: "failed", finishedAt: new Date(), lastError: failure }).where(eq(publishJob.id, job.id));
-      await tx.update(postVariant).set({ status: "scheduled", lastError: failure, updatedAt: new Date() }).where(eq(postVariant.id, v.id));
-      const [next] = await tx.insert(publishJob).values({ workspaceId: item.workspaceId, variantId: v.id, versionId: job.versionId, scheduledFor: at, attempt: job.attempt + 1 }).returning({ id: publishJob.id });
-      await emit(tx, "publish.execute", { publishJobId: next.id }, { organizationId: item.organizationId, workspaceId: item.workspaceId, dedupeKey: `publish:${next.id}`, runAt: at });
-    });
-    l.warn("publish failed; retry scheduled", { category: failure?.category, inSeconds: delay });
-    return;
-  }
-  await finish(job.id, v, item, "failed", failure ?? err("unknown", "Publish failed"), l);
-}
-
-function err(category: string, message: string, providerCode?: string, ambiguous?: boolean): VariantError {
-  return { category, message, providerCode, ambiguous, at: new Date().toISOString() };
-}
-
-async function finish(jobId: string, v: { id: string; channelId: string }, item: { id: string; organizationId: string; workspaceId: string; title: string; ownerUserId: string | null }, state: "failed", failure: VariantError, l: HandlerContext["log"]) {
-  await db.transaction(async (tx) => {
-    await tx.update(publishJob).set({ state, finishedAt: new Date(), lastError: failure }).where(eq(publishJob.id, jobId));
-    await tx.update(postVariant).set({ status: "failed", lastError: failure, updatedAt: new Date() }).where(eq(postVariant.id, v.id));
-  });
-  await summarizeItem(item.id);
-  const ch = await db.query.channel.findFirst({ where: (c, { eq }) => eq(c.id, v.channelId) });
-  await audit({ action: "publish.failed", organizationId: item.organizationId, workspaceId: item.workspaceId, targetType: "post_variant", targetId: v.id, result: "error", summary: { note: `${failure.category}: ${failure.message}` } });
-  await track("post_failed", { organizationId: item.organizationId, workspaceId: item.workspaceId, surface: "job:publish.execute", outcome: "error", props: { network: ch?.network ?? null, category: failure.category, ambiguous: Boolean(failure.ambiguous) } });
-  await notify({
-    workspaceId: item.workspaceId,
-    organizationId: item.organizationId,
-    userId: item.ownerUserId,
-    kind: "publish.failed",
-    title: `Post failed to publish to ${ch?.name ?? "a channel"}`,
-    body: failure.message,
-    href: `/app/${item.workspaceId}/posts/${item.id}`,
-    email: true,
-  });
-  l.error("publish failed permanently", { category: failure.category, message: failure.message });
 }

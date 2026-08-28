@@ -1,9 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
-import { loadState, pageAs } from "./helpers";
+import { loadState, pageAs, waitForHydration } from "./helpers";
 
 /** Connect the demo network to the workspace through the real consent + selection flow. */
 async function connectDemoNetwork(page: Page, workspaceId: string) {
   await page.goto(`/app/${workspaceId}/accounts`);
+  await waitForHydration(page);
   if (await page.getByText("Demo Brand", { exact: false }).first().isVisible().catch(() => false)) return;
   await page.getByRole("link", { name: /connect demo/i }).click();
   await page.getByRole("button", { name: "Allow" }).click();
@@ -12,14 +13,17 @@ async function connectDemoNetwork(page: Page, workspaceId: string) {
   await page.waitForURL(/\/accounts\?connected=1/);
 }
 
-/** Dev-mode pages hydrate late; a click before hydration is dropped. Retry until the action's toast shows. */
-async function clickUntilToast(page: Page, button: RegExp, toast: RegExp) {
+/** Dev-mode reloads (Fast Refresh) can wipe the form; re-open the tools and re-fill before each attempt. */
+async function simulateUntilToast(page: Page, marker: string) {
   for (let i = 0; i < 4; i++) {
-    await page.getByRole("button", { name: button }).click();
-    if (await page.getByText(toast).first().isVisible({ timeout: 5_000 }).catch(() => false)) return;
-    await page.waitForTimeout(1_500);
+    await waitForHydration(page);
+    const tools = page.locator("details", { hasText: "Demo network tools" });
+    if (!(await tools.getAttribute("open").then((v) => v !== null))) await tools.locator("summary").click();
+    await page.getByLabel("Simulated message").fill(marker);
+    await page.getByRole("button", { name: /simulate new dm/i }).click();
+    if (await page.getByText(/incoming message simulated/i).first().isVisible({ timeout: 6_000 }).catch(() => false)) return;
   }
-  await expect(page.getByText(toast).first()).toBeVisible();
+  await expect(page.getByText(/incoming message simulated/i).first()).toBeVisible();
 }
 
 test.describe("inbox", () => {
@@ -29,11 +33,9 @@ test.describe("inbox", () => {
     const page = await pageAs(browser, userA);
     await connectDemoNetwork(page, userA.workspaceId);
     await page.goto(`/app/${userA.workspaceId}/inbox`);
-    await page.waitForLoadState("networkidle");
+    await waitForHydration(page);
     const marker = `E2E hello ${Date.now()}`;
-    await page.getByText("Demo network tools (local only)").click();
-    await page.getByLabel("Simulated message").fill(marker);
-    await clickUntilToast(page, /simulate new dm/i, /incoming message simulated/i);
+    await simulateUntilToast(page, marker);
     // Ingestion goes webhook receipt → worker → conversation; poll the page until it lands.
     await expect
       .poll(async () => {

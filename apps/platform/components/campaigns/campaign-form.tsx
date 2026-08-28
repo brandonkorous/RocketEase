@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@wizeworks/silicaui-react";
-import { CAMPAIGN_OBJECTIVES } from "@/db/schema/campaigns";
 import { createCampaign, updateCampaign, type CampaignInput } from "@/lib/actions/campaigns";
 import { OBJECTIVE_LABEL } from "@/lib/campaigns/format";
 import { workspacePath } from "@/lib/nav";
@@ -37,7 +36,7 @@ export function CampaignForm({ workspaceId, initial, members, defaultOwnerId, on
     <form onSubmit={submit} className="flex flex-col gap-3">
       <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
         <Field label="Campaign name"><input className="input input-sm" required value={v.name} onChange={(e) => set("name", e.target.value)} placeholder="Summer Collection Launch" /></Field>
-        <Field label="Objective"><select className="select select-sm" value={v.objective} onChange={(e) => set("objective", e.target.value)}>{CAMPAIGN_OBJECTIVES.map((o) => (<option key={o} value={o}>{OBJECTIVE_LABEL[o]}</option>))}</select></Field>
+        <Field label="Objective"><select className="select select-sm" value={v.objective} onChange={(e) => set("objective", e.target.value)}>{(Object.keys(OBJECTIVE_LABEL) as (keyof typeof OBJECTIVE_LABEL)[]).map((o) => (<option key={o} value={o}>{OBJECTIVE_LABEL[o]}</option>))}</select></Field>
       </div>
       <Field label="Description"><textarea className="textarea textarea-sm" rows={2} value={v.description} onChange={(e) => set("description", e.target.value)} placeholder="What this campaign is for and how success is measured." /></Field>
       <div className="grid gap-3 sm:grid-cols-3">

@@ -70,6 +70,8 @@ export const workspaceMembership = pgTable(
     role: workspaceRole("role").notNull().default("viewer"),
     /** Explicit per-capability grants for "If granted" cells in the role matrix. */
     grants: jsonb("grants").$type<string[]>().notNull().default([]),
+    /** Per-user email opt-in by notification kind; a missing key uses the kind's default. */
+    notificationPreferences: jsonb("notification_preferences").$type<Record<string, boolean>>().notNull().default({}),
     pinned: boolean("pinned").notNull().default(false),
     lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
     createdAt: now("created_at"),

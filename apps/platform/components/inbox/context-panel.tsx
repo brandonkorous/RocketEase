@@ -6,6 +6,7 @@ import type { ConversationDetailData } from "@/lib/engagement/detail";
 import { addInternalNote, assignConversation, setContactTags, updateContact } from "@/lib/actions/inbox";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 import { NetMark } from "../net-mark";
+import { TextPopover } from "./text-popover";
 import type { InboxScreenData } from "./types";
 
 const TAG_COLORS = ["bg-info/10 text-info", "bg-success/10 text-success", "bg-warning/10 text-warning", "bg-base-200 text-base-content"];
@@ -35,8 +36,8 @@ function ContactFields({ d, workspaceId, canHandle }: { d: ConversationDetailDat
 }
 
 function Tags({ d, workspaceId, canHandle }: { d: ConversationDetailData; workspaceId: string; canHandle: boolean }) {
-  const { run } = useActionFeedback();
-  const add = () => { const t = window.prompt("Add a tag (e.g. Lead, VIP)"); if (t) run(() => setContactTags(workspaceId, d.contact.id, [...d.contact.tags, t])); };
+  const { run, pending } = useActionFeedback();
+  const add = (t: string) => run(() => setContactTags(workspaceId, d.contact.id, [...d.contact.tags, t]));
   return (
     <div className="mt-4 border-t border-base-300 pt-4">
       <h4 className="text-sm font-semibold">Details</h4>
@@ -44,7 +45,7 @@ function Tags({ d, workspaceId, canHandle }: { d: ConversationDetailData; worksp
         {d.contact.tags.map((t, i) => (
           <span key={t} className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${TAG_COLORS[i % TAG_COLORS.length]}`}>{t}{canHandle && <button type="button" aria-label={`Remove ${t}`} className="opacity-60 hover:opacity-100" onClick={() => run(() => setContactTags(workspaceId, d.contact.id, d.contact.tags.filter((x) => x !== t)))}>×</button>}</span>
         ))}
-        {canHandle && <button type="button" onClick={add} className="flex h-6 w-6 items-center justify-center rounded-full border border-base-300 text-sm hover:bg-base-200" aria-label="Add tag">+</button>}
+        {canHandle && <TextPopover trigger={<button type="button" className="flex h-6 w-6 items-center justify-center rounded-full border border-base-300 text-sm hover:bg-base-200" aria-label="Add tag">+</button>} title="Add a tag" placeholder="e.g. Lead, VIP" maxLength={30} submitLabel="Add" pending={pending} onSubmit={add} />}
         {d.contact.tags.length === 0 && !canHandle && <span className="text-xs text-secondary/70">No tags</span>}
       </div>
     </div>
@@ -52,11 +53,11 @@ function Tags({ d, workspaceId, canHandle }: { d: ConversationDetailData; worksp
 }
 
 function Notes({ d, workspaceId, canHandle }: { d: ConversationDetailData; workspaceId: string; canHandle: boolean }) {
-  const { run } = useActionFeedback();
-  const add = () => { const t = window.prompt("Internal note"); if (t) run(() => addInternalNote(workspaceId, d.id, t)); };
+  const { run, pending } = useActionFeedback();
+  const add = (t: string) => run(() => addInternalNote(workspaceId, d.id, t));
   return (
     <div className="mt-4 border-t border-base-300 pt-4">
-      <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Notes</h4>{canHandle && <button type="button" className="text-xs text-secondary hover:underline" onClick={add}>Add note</button>}</div>
+      <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Notes</h4>{canHandle && <TextPopover trigger={<button type="button" className="text-xs text-secondary hover:underline">Add note</button>} title="Internal note" placeholder="Only your team sees this" multiline submitLabel="Add note" pending={pending} onSubmit={add} />}</div>
       <ul className="mt-2 flex flex-col gap-2">
         {d.notes.slice(0, 4).map((n) => (<li key={n.id} className="rounded-field bg-warning/10 p-3 text-sm"><div className="text-xs text-secondary">{n.by} • {n.at}</div><p className="mt-1 whitespace-pre-wrap">{n.body}</p></li>))}
         {d.notes.length === 0 && <li className="text-xs text-secondary/70">No notes yet.</li>}

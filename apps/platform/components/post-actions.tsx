@@ -5,6 +5,7 @@ import { Button, Input } from "@wizeworks/silicaui-react";
 import { cancelSchedule, deleteDraft, duplicateItem, rescheduleItem, retryFailed } from "@/lib/actions/content";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 import { workspacePath } from "@/lib/nav";
+import { ConfirmDialog } from "./confirm-dialog";
 
 type Props = { workspaceId: string; itemId: string; canPublish: boolean; hasFailed: boolean; hasScheduled: boolean; scheduledLocal: string | null; timezone: string; isDraft: boolean };
 
@@ -14,7 +15,7 @@ export function PostActions({ workspaceId, itemId, canPublish, hasFailed, hasSch
   const [when, setWhen] = useState(scheduledLocal ?? "");
 
   const onDuplicate = () => run(async () => { const r = await duplicateItem(workspaceId, itemId); if ("itemId" in r) router.push(workspacePath(workspaceId, `create?item=${r.itemId}`)); return "itemId" in r ? { ok: "Duplicated." } : r; });
-  const onDelete = () => { if (confirm("Delete this draft?")) run(() => deleteDraft(workspaceId, itemId), (r) => { if (r.ok) router.push(workspacePath(workspaceId, "calendar")); }); };
+  const onDelete = () => run(() => deleteDraft(workspaceId, itemId), (r) => { if (r.ok) router.push(workspacePath(workspaceId, "calendar")); });
   void notify;
 
   return (
@@ -30,7 +31,7 @@ export function PostActions({ workspaceId, itemId, canPublish, hasFailed, hasSch
       )}
       {canPublish && hasScheduled && <Button variant="ghost" color="neutral" disabled={pending} onClick={() => run(() => cancelSchedule(workspaceId, itemId))}>Unschedule</Button>}
       <Button variant="ghost" color="neutral" disabled={pending} onClick={onDuplicate}>Duplicate</Button>
-      {isDraft && <Button variant="ghost" color="error" disabled={pending} onClick={onDelete}>Delete</Button>}
+      {isDraft && <ConfirmDialog trigger={<Button variant="ghost" color="error" disabled={pending}>Delete</Button>} title="Delete this draft?" description="The draft and its per-channel variants are removed. Published history is never deleted." confirmLabel="Delete" onConfirm={onDelete} />}
     </div>
   );
 }

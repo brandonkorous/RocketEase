@@ -7,6 +7,7 @@ import { deleteReport, runReportNow } from "@/lib/actions/reports";
 import type { ReportListRow, RunRow } from "@/lib/analytics/reports";
 import { workspacePath } from "@/lib/nav";
 import { useActionFeedback } from "@/lib/use-action-feedback";
+import { ConfirmDialog } from "./confirm-dialog";
 import { ReportForm, type ReportFormInitial } from "./reports/report-form";
 
 export type ReportsData = { workspaceId: string; definitions: ReportListRow[]; runs: RunRow[]; channels: { id: string; name: string }[]; canManage: boolean; newInitial: ReportFormInitial | null };
@@ -22,7 +23,7 @@ function DefinitionRow({ d, workspaceId, canManage }: { d: ReportListRow; worksp
       <td className="py-2 text-sm">{CADENCE[d.cadence]}{d.recipients ? ` · ${d.recipients} recipient${d.recipients > 1 ? "s" : ""}` : ""}</td>
       <td className="py-2 text-xs text-secondary">{d.lastRun ?? "Never"}</td>
       <td className="py-2 text-xs text-secondary">{d.nextRun ?? "—"}</td>
-      <td className="py-2 text-right">{canManage && (<span className="flex justify-end gap-1"><Button size="xs" variant="outline" color="neutral" loading={pending} onClick={() => run(() => runReportNow(workspaceId, d.id))}>Run now</Button><Button size="xs" variant="ghost" color="error" disabled={pending} onClick={() => { if (window.confirm(`Delete "${d.name}"?`)) run(() => deleteReport(workspaceId, d.id)); }}>Delete</Button></span>)}</td>
+      <td className="py-2 text-right">{canManage && (<span className="flex justify-end gap-1"><Button size="xs" variant="outline" color="neutral" loading={pending} onClick={() => run(() => runReportNow(workspaceId, d.id))}>Run now</Button><ConfirmDialog trigger={<Button size="xs" variant="ghost" color="error" disabled={pending}>Delete</Button>} title={`Delete "${d.name}"?`} description="Scheduled deliveries stop. Generated files stay in the history below." confirmLabel="Delete" onConfirm={() => run(() => deleteReport(workspaceId, d.id))} /></span>)}</td>
     </tr>
   );
 }

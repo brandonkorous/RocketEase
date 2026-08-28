@@ -6,6 +6,7 @@ import type { WorkspaceRole } from "@/db/schema/app";
 import { deletePolicy, savePolicy } from "@/lib/actions/approval-policies";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 import { PolicyForm, type PolicyDraft } from "./approval-policy-form";
+import { ConfirmDialog } from "./confirm-dialog";
 
 export type PolicyView = { id: string; name: string; enabled: boolean; channelIds: string[]; authorRoles: WorkspaceRole[]; approverRoles: WorkspaceRole[]; separationOfDuty: boolean; dueHours: number };
 
@@ -15,7 +16,7 @@ export function ApprovalPolicies({ workspaceId, policies, channels, canEdit }: {
   const { run, pending } = useActionFeedback();
   const [editing, setEditing] = useState<PolicyDraft | null>(null);
   const save = (d: PolicyDraft) => run(() => savePolicy({ workspaceId, policyId: d.id, ...d }), (r) => { if (!r.error) setEditing(null); });
-  const remove = (p: PolicyView) => { if (confirm(`Delete policy "${p.name}"?`)) run(() => deletePolicy(workspaceId, p.id)); };
+  const remove = (p: PolicyView) => run(() => deletePolicy(workspaceId, p.id));
 
   return (
     <section className="mt-8" aria-labelledby="policies-h">
@@ -30,7 +31,7 @@ export function ApprovalPolicies({ workspaceId, policies, channels, canEdit }: {
               <span className="flex items-center gap-2 text-sm font-semibold">{p.name}{!p.enabled && <Badge size="xs" variant="soft" color="neutral">Off</Badge>}</span>
               <span className="block text-xs text-secondary">Posts by {p.authorRoles.length ? p.authorRoles.map((r) => r.replace("_", " ")).join(", ") : "anyone"} · {p.channelIds.length ? `${p.channelIds.length} channel${p.channelIds.length === 1 ? "" : "s"}` : "all channels"} · approvers: {p.approverRoles.map((r) => r.replace("_", " ")).join(", ")} · {p.dueHours}h{p.separationOfDuty ? " · SoD" : ""}</span>
             </span>
-            {canEdit && (<><Button size="sm" variant="outline" color="neutral" onClick={() => setEditing({ ...p })}>Edit</Button><Button size="sm" variant="ghost" color="error" disabled={pending} onClick={() => remove(p)}>Delete</Button></>)}
+            {canEdit && (<><Button size="sm" variant="outline" color="neutral" onClick={() => setEditing({ ...p })}>Edit</Button><ConfirmDialog trigger={<Button size="sm" variant="ghost" color="error" disabled={pending}>Delete</Button>} title={`Delete policy "${p.name}"?`} description="Posts matching it will no longer require review before scheduling." confirmLabel="Delete" onConfirm={() => remove(p)} /></>)}
           </li>
         ))}
       </ul>

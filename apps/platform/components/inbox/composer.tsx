@@ -5,17 +5,18 @@ import { Button, Textarea } from "@wizeworks/silicaui-react";
 import type { ConversationDetailData } from "@/lib/engagement/detail";
 import { addInternalNote, saveSavedReply, sendReply } from "@/lib/actions/inbox";
 import { useActionFeedback } from "@/lib/use-action-feedback";
+import { TextPopover } from "./text-popover";
 
 type Mode = "reply" | "note";
 
-function SavedReplies({ d, onPick, onSave, text }: { d: ConversationDetailData; onPick: (body: string) => void; onSave: () => void; text: string }) {
+function SavedReplies({ d, onPick, onSave, text }: { d: ConversationDetailData; onPick: (body: string) => void; onSave: (title: string) => void; text: string }) {
   return (
     <div className="flex items-center gap-1">
       <select className="select select-xs w-auto max-w-45" value="" onChange={(e) => { const r = d.savedReplies.find((x) => x.id === e.target.value); if (r) onPick(r.body); }} aria-label="Insert saved reply">
         <option value="">Saved replies{d.savedReplies.length ? ` (${d.savedReplies.length})` : ""}</option>
         {d.savedReplies.map((r) => (<option key={r.id} value={r.id}>{r.title}</option>))}
       </select>
-      {text.trim().length > 0 && <Button size="xs" variant="ghost" color="neutral" onClick={onSave}>Save as reply</Button>}
+      {text.trim().length > 0 && <TextPopover trigger={<Button size="xs" variant="ghost" color="neutral">Save as reply</Button>} title="Name this saved reply" placeholder="e.g. Shipping times" initial={text.slice(0, 40)} maxLength={80} onSubmit={onSave} />}
     </div>
   );
 }
@@ -27,10 +28,7 @@ export function ReplyComposer({ d, workspaceId, canHandle }: { d: ConversationDe
   const over = text.length > d.textMax;
   const clear = (r: { error?: string }) => { if (!r.error) setText(""); };
   const send = (resolve: boolean) => run(() => sendReply(workspaceId, d.id, text, { resolve }), clear);
-  const saveAsReply = () => {
-    const title = window.prompt("Name this saved reply", text.slice(0, 40));
-    if (title) run(() => saveSavedReply(workspaceId, { title, body: text }));
-  };
+  const saveAsReply = (title: string) => run(() => saveSavedReply(workspaceId, { title, body: text }));
 
   if (!canHandle) return <div className="border-t border-base-300 px-4 py-3 text-sm text-secondary">You can read this conversation but your role can&apos;t reply.</div>;
   return (

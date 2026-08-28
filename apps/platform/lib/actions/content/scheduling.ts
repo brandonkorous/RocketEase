@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { contentItem, contentVersion, postVariant, publishJob, type PostVariant, type VersionSnapshot } from "@/db/schema/content";
 import { matchPolicy } from "@/lib/approvals";
 import { audit } from "@/lib/audit";
+import { track } from "@/lib/telemetry";
 import { AuthorizationError, can } from "@/lib/authz";
 import { summarizeItem, validateVariant } from "@/lib/content";
 import { emit } from "@/lib/jobs/outbox";
@@ -64,6 +65,7 @@ export async function scheduleItem(input: z.infer<typeof scheduleSchema>): Promi
       return id;
     });
     await audit({ action: when === "now" ? "content.publish" : "content.schedule", actorUserId: ctx.session.user.id, organizationId: item.organizationId, workspaceId, targetType: "content_item", targetId: item.id, summary: { after: { versionId, scheduledAt: at.toISOString(), channels: variants.map((v) => v.channelId) } } });
+    await track("post_scheduled", { userId: ctx.session.user.id, organizationId: item.organizationId, workspaceId, surface: "action:scheduleItem", props: { mode: when === "now" ? "now" : "later", channels: variants.length } });
     revalidatePath(workspacePath(workspaceId, "calendar"));
     return { ok: when === "now" ? "Publishing now." : "Scheduled.", redirect: workspacePath(workspaceId, `posts/${item.id}`) };
   });

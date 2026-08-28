@@ -9,15 +9,12 @@ import { useActionFeedback } from "@/lib/use-action-feedback";
 import { NetMark } from "../net-mark";
 import { ReplyComposer } from "./composer";
 import { MessageList } from "./message-list";
+import { SnoozePopover } from "./snooze-popover";
 import { STATUS_BADGE, type InboxScreenData } from "./types";
 
 function Controls({ data, d }: { data: InboxScreenData; d: ConversationDetailData }) {
   const { run, pending } = useActionFeedback();
   const ws = data.workspaceId;
-  const snooze = () => {
-    const until = window.prompt("Snooze until (YYYY-MM-DDTHH:MM, workspace time)", new Date(Date.now() + 86_400_000).toISOString().slice(0, 16));
-    if (until) run(() => setConversationStatus(ws, d.id, "snoozed", until));
-  };
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-base-300 px-4 py-2">
       <label className="flex items-center gap-1.5 text-xs text-secondary">Assign to
@@ -35,7 +32,7 @@ function Controls({ data, d }: { data: InboxScreenData; d: ConversationDetailDat
         <Button size="xs" variant="outline" color="neutral" loading={pending} onClick={() => run(() => setConversationStatus(ws, d.id, "open"))}>Reopen</Button>
       ) : (
         <>
-          <Button size="xs" variant="ghost" color="neutral" disabled={pending} onClick={snooze}>Snooze</Button>
+          <SnoozePopover timezone={data.timezone} pending={pending} onSnooze={(until) => run(() => setConversationStatus(ws, d.id, "snoozed", until))} />
           <Button size="xs" variant="outline" color="neutral" loading={pending} onClick={() => run(() => setConversationStatus(ws, d.id, "resolved"))}>Resolve</Button>
         </>
       )}

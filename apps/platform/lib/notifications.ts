@@ -8,6 +8,7 @@ import { user } from "@/db/schema/auth";
 import { notification } from "@/db/schema/app";
 import { workspaceMembership } from "@/db/schema/app";
 import { emit } from "./jobs/outbox";
+import { emailWanted } from "./actions/settings/catalog";
 
 export type NotifyInput = {
   workspaceId: string;
@@ -32,7 +33,9 @@ export async function notify(input: NotifyInput) {
   await db.transaction(async (tx) => {
     for (const uid of recipients) {
       await tx.insert(notification).values({ organizationId: input.organizationId, workspaceId: input.workspaceId, userId: uid, kind: input.kind, title: input.title, body: input.body ?? null, href: input.href ?? null });
-      if (input.email) {
+      // Per-member email opt-in (Settings → Notifications) overrides the caller's default.
+      const [m] = await tx.select({ prefs: workspaceMembership.notificationPreferences }).from(workspaceMembership).where(and(eq(workspaceMembership.workspaceId, input.workspaceId), eq(workspaceMembership.userId, uid)));
+      if (emailWanted(m?.prefs ?? {}, input.kind, Boolean(input.email))) {
         const u = await tx.query.user.findFirst({ where: (x, { eq }) => eq(x.id, uid) });
         if (u?.email) {
           const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5001";

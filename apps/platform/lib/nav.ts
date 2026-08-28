@@ -41,6 +41,8 @@ export const SETTINGS_SECTIONS = [
   { slug: "brand", label: "Brand" },
   { slug: "team", label: "Team and roles" },
   { slug: "notifications", label: "Notifications" },
+  { slug: "inbox", label: "Inbox" },
+  { slug: "tracking", label: "Tracking" },
   { slug: "accounts", label: "Connected accounts" },
   { slug: "billing", label: "Billing" },
   { slug: "security", label: "Security" },

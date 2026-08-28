@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { asset } from "@/db/schema/assets";
 import { contentItem, postVariant } from "@/db/schema/content";
 import { audit } from "@/lib/audit";
+import { track } from "@/lib/telemetry";
 import { inferFormat, summarizeItem, validateVariant } from "@/lib/content";
 import { requireCapability } from "@/lib/session";
 import { workspacePath } from "@/lib/nav";
@@ -33,6 +34,7 @@ export async function createDraft(workspaceId: string): Promise<{ itemId: string
     const ctx = await requireCapability(workspaceId, "content.create");
     const [row] = await db.insert(contentItem).values({ organizationId: ctx.workspace.organizationId, workspaceId, ownerUserId: ctx.session.user.id, createdByUserId: ctx.session.user.id }).returning({ id: contentItem.id });
     await audit({ action: "content.create", actorUserId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId, targetType: "content_item", targetId: row.id });
+    await track("draft_created", { userId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId, surface: "action:createDraft" });
     return { itemId: row.id };
   });
 }

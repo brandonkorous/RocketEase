@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import { track } from "@/lib/telemetry";
 import { requireUser } from "@/lib/session";
 import { db } from "@/db";
 import { workspace, workspaceMembership } from "@/db/schema/app";
@@ -99,6 +100,7 @@ export async function createOrganizationAndWorkspace(_prev: OnboardingState, for
     targetId: ws.id,
     summary: { after: { name: workspaceName, timezone } },
   });
+  await Promise.all([track("workspace_created", { userId: session.user.id, organizationId: org.id, workspaceId: ws.id, surface: "action:onboarding" }), track("onboarding_step_completed", { userId: session.user.id, organizationId: org.id, workspaceId: ws.id, surface: "action:onboarding", props: { step: "create_workspace", isAgency } })]);
 
-  redirect(`/app/${ws.id}/home`);
+  redirect(`/onboarding/goals?workspace=${ws.id}`);
 }

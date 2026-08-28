@@ -19,12 +19,15 @@ export function MobileHeader({ switcher, setOpen }: Pick<Props, "switcher" | "se
   );
 }
 
+/** On phones "Create" opens the linear quick-compose flow instead of the three-pane composer. */
+const mobileSegment = (key: string, segment: string) => (key === "create" ? "create/quick" : segment);
+
 export function MobileDock({ workspaceId, isActive, setOpen }: Pick<Props, "workspaceId" | "isActive" | "setOpen">) {
   const router = useRouter();
   return (
     <Dock className="fixed inset-x-0 bottom-0 z-30 border-t border-base-300 bg-base-100 md:hidden">
       {PRIMARY_NAV.filter((n) => MOBILE_NAV.includes(n.key)).map((n) => (
-        <DockItem key={n.key} active={isActive(n.segment)} onClick={() => router.push(workspacePath(workspaceId, n.segment))}>{NAV_ICONS[n.key]}<DockLabel>{n.label}</DockLabel></DockItem>
+        <DockItem key={n.key} active={isActive(n.segment)} onClick={() => router.push(workspacePath(workspaceId, mobileSegment(n.key, n.segment)))}>{NAV_ICONS[n.key]}<DockLabel>{n.label}</DockLabel></DockItem>
       ))}
       <DockItem onClick={() => setOpen(true)}><MenuIcon size={18} /><DockLabel>More</DockLabel></DockItem>
     </Dock>

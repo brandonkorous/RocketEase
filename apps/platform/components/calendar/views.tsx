@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Badge } from "@wizeworks/silicaui-react";
+import { useState } from "react";
+import { Badge, Checkbox } from "@wizeworks/silicaui-react";
 import { workspacePath } from "@/lib/nav";
 import { NetMark } from "../net-mark";
+import { BulkBar } from "./bulk-bar";
 import { DAY_NAMES, STATUS_COLOR, fmtDay, hourLabel, type CalendarData, type CalendarPost, type Nav } from "./types";
 
 type DragProps = { draggable?: boolean; onDragStart?: () => void; onDragEnd?: () => void };
@@ -50,12 +52,17 @@ export function MonthView({ data, days, byDay, dragging, dragProps, onDrop, nav 
 }
 
 export function ListView({ data }: { data: CalendarData }) {
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const schedulable = [...new Set(data.posts.filter((p) => p.status === "scheduled").map((p) => p.itemId))];
+  const toggle = (itemId: string, on: boolean) => setChecked((c) => { const n = new Set(c); on ? n.add(itemId) : n.delete(itemId); return n; });
   return (
     <ul className="divide-y divide-base-300">
+      {data.canPublish && schedulable.length > 0 && <li><BulkBar workspaceId={data.workspaceId} selected={[...checked]} total={schedulable.length} onToggleAll={(on) => setChecked(new Set(on ? schedulable : []))} onDone={() => setChecked(new Set())} /></li>}
       {data.posts.length === 0 && data.unscheduled.length === 0 && <li className="p-8 text-center text-sm text-secondary/70">Nothing here yet. Create a post to fill the calendar.</li>}
       {data.posts.map((p) => (
-        <li key={p.variantId}>
-          <Link href={workspacePath(data.workspaceId, `posts/${p.itemId}`)} className="flex items-center gap-3 px-4 py-3 hover:bg-base-200">
+        <li key={p.variantId} className="flex items-center">
+          {data.canPublish && schedulable.length > 0 && <span className="pl-4">{p.status === "scheduled" ? <Checkbox checked={checked.has(p.itemId)} onChange={(e) => toggle(p.itemId, e.target.checked)} aria-label={`Select ${p.title}`} /> : <span className="inline-block w-4" aria-hidden="true" />}</span>}
+          <Link href={workspacePath(data.workspaceId, `posts/${p.itemId}`)} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:bg-base-200">
             <span className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-base-200">{p.thumbUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={p.thumbUrl} alt="" className="h-full w-full object-cover" />}</span>
             <NetMark network={p.network} />
             <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{p.title}</span><span className="block truncate text-xs text-secondary/70">{p.text || "No text"}</span></span>

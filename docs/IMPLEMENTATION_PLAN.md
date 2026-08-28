@@ -110,18 +110,18 @@ Notes
 
 ---
 
-## Milestone 5 — Analytics & Reports (Phase 3)
+## Milestone 5 — Analytics & Reports (Phase 3) — ✅ core done (mock + Meta insights; 5.7/5.8 in progress on the quality track)
 
 | # | Feature | Reqs | Depends on |
 |---|---|---|---|
-| 5.1 | Metric contract registry (name, definition, formula, unit, grains, provider mapping, freshness, version) | ANA-002 | — |
-| 5.2 | Insights ingestion: per-channel organic metrics, raw provenance retained, freshness tracked | ANA-001 | 4.1, 1.6 |
-| 5.3 | Aggregates in Postgres (daily facts per variant/channel), revision + backfill notes | analytics.md | 5.2 |
-| 5.4 | Analytics UI: overview (scorecard, trend, channel mix, top content), content, engagement tabs; persistent date/comparison/scope filters; definitions & freshness on every metric | ANA-001, ANA-002 | 5.3 |
-| 5.5 | CSV export with filters/definitions/freshness stamped | ANA-003 P0 | 5.4 |
-| 5.6 | Saved reports, scheduled delivery with run-time permission checks | ANA-003 P1 | 5.5, 0.10 |
-| 5.7 | Data-quality checks (freshness, duplicates, implausible values, reconciliation) | analytics.md | 5.3 |
-| 5.8 | Product telemetry events (privacy-safe) | analytics.md | — |
+| 5.1 | ✅ Metric contract registry (`lib/analytics/metrics.ts`, DEFINITIONS_VERSION) (name, definition, formula, unit, grains, provider mapping, freshness, version) | ANA-002 | — |
+| 5.2 | ✅ Insights ingestion (`insights.ingest`, 15-min tick, 3-day revision tail): per-channel organic metrics, raw provenance retained, freshness tracked | ANA-001 | 4.1, 1.6 |
+| 5.3 | ✅ Aggregates in Postgres (`metric_fact` grain store with revision) (daily facts per variant/channel), revision + backfill notes | analytics.md | 5.2 |
+| 5.4 | ✅ Analytics UI (per `images/analytics.png`; paid/attribution cells fill in with M6): overview (scorecard, trend, channel mix, top content), content, engagement tabs; persistent date/comparison/scope filters; definitions & freshness on every metric | ANA-001, ANA-002 | 5.3 |
+| 5.5 | ✅ CSV export with filters/definitions/freshness stamped | ANA-003 P0 | 5.4 |
+| 5.6 | ✅ Saved reports (definitions, runs, scheduler, run-time recipient check), scheduled delivery with run-time permission checks | ANA-003 P1 | 5.5, 0.10 |
+| 5.7 | 🔨 Data-quality checks (freshness, duplicates, implausible values, reconciliation) | analytics.md | 5.3 |
+| 5.8 | 🔨 Product telemetry events (privacy-safe) | analytics.md | — |
 
 **Gate (roadmap Phase 3):** provider totals reconcile within documented rules; every displayed metric has a published contract.
 
@@ -166,6 +166,15 @@ Accessibility review (WCAG 2.2 AA), threat model updates, privacy/retention, per
 | Analytics warehouse | M5 | Postgres aggregates first (per architecture.md); revisit after measured need |
 
 ---
+
+## Parallel workstreams (started 2026-08-28)
+
+Four agent-run streams with disjoint file ownership; the lead integrates, generates migrations serially, reviews diffs, and verifies in the browser:
+
+1. **campaigns** — M6 (schema `campaigns.ts` + migration, ads contract/adapters, `ads.sync`/`promotion.execute`, campaigns list/detail per mockups, analytics paid cells).
+2. **product-gaps** — 2.10 quick compose, 2.11 goals step, 2.12 templates/bulk reschedule, settings sections (Inbox, Tracking, Notifications), replace prompt() dialogs.
+3. **quality** — 5.7 data quality, 5.8 telemetry, publication reconcile + token refresh jobs, OTel, Playwright + tenant-isolation suite, CI.
+4. **providers** — LinkedIn/TikTok inbox+insights, Meta webhook mappings, token lifecycle, healthCheck, vitest suite, providers README.
 
 ## Immediate next steps (in order)
 

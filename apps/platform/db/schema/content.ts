@@ -159,6 +159,31 @@ export const remotePublication = pgTable(
   (t) => [uniqueIndex("remote_publication_channel_remote_idx").on(t.channelId, t.remoteId)],
 );
 
+export type TemplateVariant = { channelId: string; format: string; textOverride: string | null; assetIdsOverride: string[] | null; firstComment: string | null; linkOverride: string | null; settings: Record<string, unknown> };
+
+/** Reusable post template (content-model.md "Templates and reuse"). Lineage: `sourceItemId` → template → audit `content.create_from_template`. */
+export const contentTemplate = pgTable(
+  "content_template",
+  {
+    id: id(),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id").notNull().references(() => workspace.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    sharedText: text("shared_text").notNull().default(""),
+    sharedAssetIds: jsonb("shared_asset_ids").$type<string[]>().notNull().default([]),
+    link: text("link"),
+    tagIds: jsonb("tag_ids").$type<string[]>().notNull().default([]),
+    variants: jsonb("variants").$type<TemplateVariant[]>().notNull().default([]),
+    sourceItemId: text("source_item_id").references(() => contentItem.id, { onDelete: "set null" }),
+    usageCount: integer("usage_count").notNull().default(0),
+    createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: now("created_at"),
+    updatedAt: now("updated_at"),
+  },
+  (t) => [index("content_template_ws_idx").on(t.workspaceId, t.name)],
+);
+
 export type ContentItem = typeof contentItem.$inferSelect;
+export type ContentTemplate = typeof contentTemplate.$inferSelect;
 export type PostVariant = typeof postVariant.$inferSelect;
 export type PublishJobRow = typeof publishJob.$inferSelect;

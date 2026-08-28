@@ -3,17 +3,15 @@ import Link from "next/link";
 import { and, count, desc, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { Badge } from "@wizeworks/silicaui-react";
 import { buttonClasses } from "@wizeworks/silicaui-react/server";
-import { CheckIcon } from "@make-it-social/ui/icons";
 import { NetMark } from "@/components/library-screen";
 import { db } from "@/db";
-import { workspaceMembership } from "@/db/schema/app";
-import { asset } from "@/db/schema/assets";
 import { contentItem, postVariant } from "@/db/schema/content";
 import { channel } from "@/db/schema/connections";
 import { hasCapability, requireWorkspace } from "@/lib/session";
 import { formatInZone } from "@/lib/time";
 import { workspacePath } from "@/lib/nav";
 import { conversationSummary } from "@/lib/engagement/summary";
+import { Checklist, loadChecklist } from "./checklist";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -22,30 +20,20 @@ export default async function HomePage({ params }: { params: Promise<{ workspace
   const { workspace, session } = await requireWorkspace(workspaceId);
   const tz = workspace.timezone;
 
-  const [channels, [{ n: assetCount }], [{ n: members }], failed, upcoming, recentPublished, [{ n: scheduledCount }], convs] = await Promise.all([
+  const [channels, checklist, failed, upcoming, recentPublished, [{ n: scheduledCount }], convs] = await Promise.all([
     db.select().from(channel).where(and(eq(channel.workspaceId, workspaceId), ne(channel.status, "disconnected"))),
-    db.select({ n: count() }).from(asset).where(and(eq(asset.workspaceId, workspaceId), isNull(asset.deletedAt))),
-    db.select({ n: count() }).from(workspaceMembership).where(eq(workspaceMembership.workspaceId, workspaceId)),
+    loadChecklist(workspaceId),
     db.select({ item: contentItem }).from(contentItem).where(and(eq(contentItem.workspaceId, workspaceId), isNull(contentItem.deletedAt), inArray(contentItem.status, ["failed", "partially_published"]))).orderBy(desc(contentItem.updatedAt)).limit(5),
     db.select({ v: postVariant, item: contentItem, ch: channel }).from(postVariant).innerJoin(contentItem, eq(contentItem.id, postVariant.contentItemId)).innerJoin(channel, eq(channel.id, postVariant.channelId)).where(and(eq(postVariant.workspaceId, workspaceId), eq(postVariant.status, "scheduled"), gte(postVariant.scheduledAt, new Date()))).orderBy(postVariant.scheduledAt).limit(6),
     db.select({ item: contentItem }).from(contentItem).where(and(eq(contentItem.workspaceId, workspaceId), isNull(contentItem.deletedAt), eq(contentItem.status, "published"))).orderBy(desc(contentItem.updatedAt)).limit(5),
     db.select({ n: count() }).from(contentItem).where(and(eq(contentItem.workspaceId, workspaceId), isNull(contentItem.deletedAt), eq(contentItem.status, "scheduled"))),
     conversationSummary(workspaceId, session.user.id, tz),
   ]);
-  void assetCount;
   const disconnected = channels.filter((c) => c.status === "action_required" || c.status === "revoked");
   const hasPosts = Number(scheduledCount) > 0 || recentPublished.length > 0;
   const firstName = session.user.name.split(" ")[0];
   const canCreate = hasCapability(workspace, "content.create");
-
-  const steps = [
-    { n: 1, title: "Create your workspace", desc: "Set up your workspace and brand to get organized.", done: true, cta: "Complete workspace", href: workspacePath(workspaceId, "settings/general") },
-    { n: 2, title: "Connect social accounts", desc: "Add your social profiles to start publishing.", done: channels.length > 0, cta: "Connect accounts", href: workspacePath(workspaceId, "accounts") },
-    { n: 3, title: "Invite your team", desc: "Collaborate with teammates and assign roles.", done: Number(members) > 1, cta: "Invite teammates", href: workspacePath(workspaceId, "team") },
-    { n: 4, title: "Create your first post", desc: "Design and schedule content across your channels.", done: hasPosts, cta: "Create post", href: workspacePath(workspaceId, "create") },
-    { n: 5, title: "Review your analytics", desc: "Track performance and optimize your strategy.", done: false, cta: "View analytics", href: workspacePath(workspaceId, "analytics") },
-  ];
-  const allDone = steps.slice(0, 4).every((s) => s.done);
+  const allDone = checklist.allDone;
   const attention = failed.length + disconnected.length;
 
   return (
@@ -68,25 +56,7 @@ export default async function HomePage({ params }: { params: Promise<{ workspace
         </section>
       )}
 
-      {!allDone && (
-        <section className="mt-5 rounded-box border border-base-300 p-5" aria-labelledby="steps-h">
-          <h2 id="steps-h" className="text-base font-semibold">Get started in 5 simple steps</h2>
-          <p className="text-sm text-secondary">Follow these steps to get the most out of Make It Social.</p>
-          <ol className="mt-5 grid gap-6 md:grid-cols-5">
-            {steps.map((s, i) => (
-              <li key={s.n} className="relative flex flex-col items-center text-center">
-                <span className={`absolute left-0 top-0 flex h-6 w-6 items-center justify-center rounded-full border text-xs font-semibold ${s.done ? "border-base-content bg-base-content text-base-100" : "border-base-300"}`}>{s.done ? <CheckIcon size={12} /> : s.n}</span>
-                <div className={`mt-2 flex h-16 w-24 items-center justify-center rounded-lg border border-base-300 ${s.done ? "bg-base-200" : ""}`}>
-                  {i === 1 ? <span className="flex gap-1"><NetMark network="instagram" /><NetMark network="facebook" /><NetMark network="linkedin" /></span> : <span className="text-2xl text-secondary/50">{["＋", "", "👥", "✈", "📈"][i]}</span>}
-                </div>
-                <h3 className="mt-3 text-sm font-semibold">{s.title}</h3>
-                <p className="mt-1 text-xs text-secondary">{s.desc}</p>
-                <Link href={s.href} className={`${buttonClasses({ variant: "outline", color: "neutral", size: "sm" })} mt-3`}>{s.done ? "Review" : s.cta}</Link>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+      {!allDone && <Checklist steps={checklist.steps} />}
 
       <div className="mt-5 grid gap-4 md:grid-cols-3">
         <Card title="Connected accounts" href={workspacePath(workspaceId, "accounts")} linkLabel="Manage">

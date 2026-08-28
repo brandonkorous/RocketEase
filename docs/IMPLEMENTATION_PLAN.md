@@ -143,7 +143,7 @@ Notes
 
 ## Milestone 7 — Improve & Expand (Phase 5)
 
-Explainable recommendations, best-time analysis, content reuse insights, automation rules with approval gates, additional providers (YouTube, Pinterest, X), GA/commerce/CRM connections, SSO/SCIM, white-label agency reporting. Sequence after Phase 4 evidence; not planned in detail yet.
+✅ Explainable recommendations, best-time analysis, content reuse insights, automation rules with approval gates, YouTube/Pinterest/X adapters (all 2026-08-28, verified against mock data). Open: GA/commerce/CRM connections, SSO/SCIM, white-label agency reporting.
 
 ---
 
@@ -182,8 +182,8 @@ M0–M6 are built and verified against the mock provider. What remains before a 
 
 1. **Credentials & app review** — Meta (Facebook/Instagram + Marketing API), LinkedIn Community Management (partner-gated), TikTok Business. Every real adapter is written but untested live; `packages/providers/README.md` lists scopes and prerequisites.
 2. **Deploy** — containers exist (`Dockerfile`, `Dockerfile.worker`, `deploy/k8s`); wire into the sparx.works Terraform / AKS cluster (needs the Terraform repo path), Key Vault for `TOKEN_MASTER_KEY`, Azure Blob (S3 API) for storage, OTLP endpoint.
-3. **Hardening leftovers** — step-up re-auth before paid spend (M6), comment-reply reconciliation marker for non-DM replies (4.5 caveat), field/asset-anchored comments (3.4), composer UTM prefill from Settings → Tracking, stable-green e2e in dev (green expected in CI's production build).
-4. **M7** — best-time analysis (composer already reserves the slot), explainable recommendations, automation rules with approval gates, more providers (YouTube, Pinterest, X), GA/commerce connections, SSO/SCIM, white-label agency reporting.
+3. ~~Hardening leftovers~~ — ✅ done 2026-08-28: step-up re-auth (password/TOTP, 5-min window) before paid spend, structural comment-reply reconciliation (no text markers), field/asset-anchored approval comments, composer UTM prefill, e2e hardened for dev compile latency.
+4. **M7** — ✅ best-time analysis + explainable recommendations (`lib/recommendations`), ✅ automation rules with approval gates (Settings → Automations), ✅ YouTube/Pinterest/X adapters (untested live; see providers README for tier/quota gates). Remaining: GA/commerce/CRM connections (conversion tracking source), SSO/SCIM (step-up needs an SSO branch), white-label agency reporting.
 
 ## Decisions to make before the milestone that needs them
 

@@ -11,6 +11,8 @@ import { hasCapability, requireWorkspace } from "@/lib/session";
 import { formatInZone } from "@/lib/time";
 import { workspacePath } from "@/lib/nav";
 import { conversationSummary } from "@/lib/engagement/summary";
+import { listRecommendations } from "@/lib/recommendations/store";
+import { RecommendationsPulse } from "@/components/recommendations/panel";
 import { Checklist, loadChecklist } from "./checklist";
 
 export const metadata: Metadata = { title: "Home" };
@@ -20,7 +22,7 @@ export default async function HomePage({ params }: { params: Promise<{ workspace
   const { workspace, session } = await requireWorkspace(workspaceId);
   const tz = workspace.timezone;
 
-  const [channels, checklist, failed, upcoming, recentPublished, [{ n: scheduledCount }], convs] = await Promise.all([
+  const [channels, checklist, failed, upcoming, recentPublished, [{ n: scheduledCount }], convs, recs] = await Promise.all([
     db.select().from(channel).where(and(eq(channel.workspaceId, workspaceId), ne(channel.status, "disconnected"))),
     loadChecklist(workspaceId),
     db.select({ item: contentItem }).from(contentItem).where(and(eq(contentItem.workspaceId, workspaceId), isNull(contentItem.deletedAt), inArray(contentItem.status, ["failed", "partially_published"]))).orderBy(desc(contentItem.updatedAt)).limit(5),
@@ -28,6 +30,7 @@ export default async function HomePage({ params }: { params: Promise<{ workspace
     db.select({ item: contentItem }).from(contentItem).where(and(eq(contentItem.workspaceId, workspaceId), isNull(contentItem.deletedAt), eq(contentItem.status, "published"))).orderBy(desc(contentItem.updatedAt)).limit(5),
     db.select({ n: count() }).from(contentItem).where(and(eq(contentItem.workspaceId, workspaceId), isNull(contentItem.deletedAt), eq(contentItem.status, "scheduled"))),
     conversationSummary(workspaceId, session.user.id, tz),
+    listRecommendations(workspaceId, { statuses: ["open"], limit: 3 }),
   ]);
   const disconnected = channels.filter((c) => c.status === "action_required" || c.status === "revoked");
   const hasPosts = Number(scheduledCount) > 0 || recentPublished.length > 0;
@@ -83,8 +86,8 @@ export default async function HomePage({ params }: { params: Promise<{ workspace
             </>
           )}
         </Card>
-        <Card title="Performance overview" href={workspacePath(workspaceId, "analytics")} linkLabel="Analytics">
-          <Empty title="No data yet" body="Once you publish content, your performance insights will appear here." cta="Learn how analytics work" href={workspacePath(workspaceId, "analytics")} />
+        <Card title="Recommendations" href={workspacePath(workspaceId, "analytics/recommendations")} linkLabel="See all">
+          <RecommendationsPulse workspaceId={workspaceId} recs={recs} hasChannels={channels.length > 0} hasPublished={recentPublished.length > 0} />
         </Card>
         <Card title="Top posts" href={workspacePath(workspaceId, "analytics")} linkLabel="Analytics">
           {recentPublished.length === 0 ? (

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Checkbox, Input, Radio, Textarea } from "@wizeworks/silicaui-react";
 import { NetMark } from "../library-screen";
+import { BestTimes } from "./best-times";
 import type { Approval, ComposerChannel, Method, Reviewer } from "./types";
 import type { ComposerState } from "./use-composer";
 
@@ -69,11 +70,7 @@ function ScheduleDetails({ s, timezone }: { s: ComposerState; timezone: string }
       <h2 className="text-sm font-semibold">Schedule details</h2>
       <div className="mt-3"><DateTime s={s} /></div>
       <p className="mt-2 text-xs text-secondary/70">{timezone.replace("_", " ")}</p>
-      <div className="mt-3 rounded-lg border border-base-300 p-3">
-        <p className="text-sm font-semibold">Best times</p>
-        <p className="text-xs text-secondary/70">Based on your audience activity</p>
-        <p className="mt-2 rounded-field bg-base-200 px-3 py-2 text-xs text-secondary">Suggestions appear after this workspace has two weeks of analytics.</p>
-      </div>
+      <BestTimes s={s} timezone={timezone} />
     </div>
   );
 }
@@ -86,6 +83,7 @@ function UtmSection({ s }: { s: ComposerState }) {
       {open && (
         <div className="mt-3 flex flex-col gap-2">
           {(["source", "medium", "campaign"] as const).map((k) => (<Input key={k} size="sm" placeholder={`utm_${k}`} value={s.utm[k]} onChange={(e) => s.setUtm({ ...s.utm, [k]: e.target.value })} aria-label={`utm_${k}`} />))}
+          {s.utmFromDefaults && <p className="text-xs text-secondary/70">Pre-filled from workspace defaults (Settings → Tracking). Edits here apply to this post only.</p>}
           {!s.link && <p className="text-xs text-secondary/70">Add a link under Advanced options to apply UTM parameters.</p>}
         </div>
       )}

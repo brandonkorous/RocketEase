@@ -34,7 +34,7 @@ export function AnalyticsScreen({ data }: { data: AnalyticsData }) {
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <AttributionPanel data={data} />
         <section className="rounded-box border border-base-300 p-4 xl:col-span-2" aria-label="Reports">
-          <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">Reports</h2><Link href={workspacePath(data.workspaceId, "reports")} className="text-xs font-medium hover:underline">View all reports →</Link></div>
+          <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">Reports</h2><span className="flex items-center gap-3"><Link href={workspacePath(data.workspaceId, "analytics/recommendations")} className="text-xs font-medium hover:underline">Recommendations →</Link><Link href={workspacePath(data.workspaceId, "reports")} className="text-xs font-medium hover:underline">View all reports →</Link></span></div>
           <p className="mt-3 text-sm text-secondary">Save this view as a report, export it as CSV with definitions and freshness stamped, or schedule it for delivery.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href={`${workspacePath(data.workspaceId, "reports")}?new=1&from=${data.filters.from}&to=${data.filters.to}&range=${data.filters.preset}${data.filters.channelId ? `&channel=${data.filters.channelId}` : ""}`} className="btn btn-outline btn-sm">Save as report</Link>

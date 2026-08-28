@@ -87,17 +87,10 @@ export async function submitUntilUrl(page: Page, prepare: () => Promise<void>, b
   await page.waitForURL(url, { timeout: 60_000 });
 }
 
-/** A click before hydration toggles the DOM box without updating form state; re-toggle until Continue reacts. */
+/** Goals are uncontrolled inputs, so one check is enough even before hydration. */
 async function pickGoalUntilEnabled(page: Page) {
   const cb = page.getByRole("checkbox").first();
-  const btn = page.getByRole("button", { name: /^continue$/i }).first();
-  for (let i = 0; i < 12; i++) {
-    if (await btn.isEnabled().catch(() => false)) return;
-    await cb.click().catch(() => undefined);
-    await page.waitForTimeout(500);
-    if (await btn.isEnabled().catch(() => false)) return;
-    await page.waitForTimeout(1_000);
-  }
+  await cb.check().catch(() => undefined);
 }
 
 /** Signup → onboarding (org + workspace, goals) → lands in the workspace shell. Returns the workspace id. */
@@ -107,12 +100,18 @@ export async function signupAndOnboard(page: Page, u: { name: string; email: str
     await page.locator("#name").fill(u.name);
     await page.locator("#email").fill(u.email);
     await page.locator("#password").fill(u.password);
+    await page.getByRole("checkbox", { name: /i agree to the terms/i }).check();
   }, /create account/i, /\/onboarding/);
   await submitUntilUrl(page, async () => {
     await page.locator("#organizationName").fill(u.organizationName);
     await page.locator("#workspaceName").fill(u.workspaceName);
-  }, /create workspace/i, /\/onboarding\/goals/);
-  await submitUntilUrl(page, () => pickGoalUntilEnabled(page), /^continue$/i, /\/app\/[^/]+\/home/);
+  }, /^continue$/i, /\/onboarding\?step=connect&workspace=/);
+  const ws = new URL(page.url()).searchParams.get("workspace")!;
+  // Goals step (required by the checklist); the optional connect/invite/first-post steps are exercised by their own specs.
+  await gotoReady(page, `/onboarding?step=goals&workspace=${ws}`);
+  await submitUntilUrl(page, () => pickGoalUntilEnabled(page), /^continue$/i, /step=first-post/);
+  await gotoReady(page, `/onboarding?step=done&workspace=${ws}`);
+  await clickUntilUrl(page, page.getByRole("link", { name: /go to dashboard/i }), /\/app\/[^/]+\/home/);
   const m = page.url().match(/\/app\/([^/]+)\/home/);
   expect(m).not.toBeNull();
   return m![1];

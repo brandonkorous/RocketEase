@@ -30,7 +30,7 @@ const KIND_LABEL: Record<string, string> = {
   mock_profile: "Demo profile",
 };
 
-export function ChannelSelectForm({ workspaceId, connectionId, channels, error }: { workspaceId: string; connectionId: string; channels: SelectableChannel[]; error: string | null }) {
+export function ChannelSelectForm({ workspaceId, connectionId, channels, error, next = null }: { workspaceId: string; connectionId: string; channels: SelectableChannel[]; error: string | null; next?: string | null }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(selectChannels, {});
   const router = useRouter();
   const [discarding, start] = useTransition();
@@ -39,6 +39,7 @@ export function ChannelSelectForm({ workspaceId, connectionId, channels, error }
     <form action={action} className="mt-8 max-w-180">
       <input type="hidden" name="workspaceId" value={workspaceId} />
       <input type="hidden" name="connectionId" value={connectionId} />
+      {next && <input type="hidden" name="next" value={next} />}
       {(error || state.error) && (
         <Alert color="error" role="alert" className="mb-4">
           <AlertContent>{error ?? state.error}</AlertContent>

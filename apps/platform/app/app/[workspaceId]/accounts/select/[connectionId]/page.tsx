@@ -9,8 +9,9 @@ import { workspacePath } from "@/lib/nav";
 
 export const metadata: Metadata = { title: "Choose accounts" };
 
-export default async function SelectChannelsPage({ params }: { params: Promise<{ workspaceId: string; connectionId: string }> }) {
-  const { workspaceId, connectionId } = await params;
+export default async function SelectChannelsPage({ params, searchParams }: { params: Promise<{ workspaceId: string; connectionId: string }>; searchParams: Promise<{ next?: string }> }) {
+  const [{ workspaceId, connectionId }, sp] = await Promise.all([params, searchParams]);
+  const next = sp.next && sp.next.startsWith("/") && !sp.next.startsWith("//") ? sp.next : null;
   const ctx = await requireCapability(workspaceId, "channels.manage");
   const conn = await db.query.providerConnection.findFirst({ where: (c, { and, eq }) => and(eq(c.id, connectionId), eq(c.workspaceId, workspaceId)) });
   if (!conn) redirect(workspacePath(workspaceId, "accounts"));
@@ -35,6 +36,7 @@ export default async function SelectChannelsPage({ params }: { params: Promise<{
       <ChannelSelectForm
         workspaceId={workspaceId}
         connectionId={conn.id}
+        next={next}
         error={error}
         channels={available.map((c) => ({
           key: `${c.kind}:${c.remoteId}`,

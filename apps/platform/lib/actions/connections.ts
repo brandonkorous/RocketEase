@@ -89,7 +89,8 @@ export async function selectChannels(_prev: ActionState, formData: FormData): Pr
   });
   if ("error" in res && res.error) return res;
   revalidatePath(workspacePath(workspaceId, "accounts"));
-  redirect(`${workspacePath(workspaceId, "accounts")}?connected=1`);
+  const next = String(formData.get("next") ?? "");
+  redirect(next.startsWith("/") && !next.startsWith("//") ? next : `${workspacePath(workspaceId, "accounts")}?connected=1`);
 }
 
 /** Abandon a connection that never had channels selected (cancel on the select screen). */

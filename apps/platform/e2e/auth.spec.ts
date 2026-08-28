@@ -16,6 +16,6 @@ test.describe("auth", () => {
     await gotoReady(page, "/app/nope/home");
     await page.waitForURL(/\/login/, { timeout: 60_000 });
     await waitForHydration(page);
-    await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible({ timeout: 60_000 });
   });
 });

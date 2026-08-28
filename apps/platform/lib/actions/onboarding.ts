@@ -23,6 +23,8 @@ const schema = z.object({
   workspaceName: z.string().trim().min(2, "Give your workspace a name").max(80),
   timezone: z.string().trim().min(1).max(64),
   isAgency: z.boolean().default(false),
+  workspaceType: z.enum(["brand", "client"]).default("brand"),
+  industry: z.string().trim().max(60).optional(),
 });
 
 export type OnboardingState = { error?: string; fieldErrors?: Partial<Record<keyof z.infer<typeof schema>, string>> };
@@ -39,6 +41,8 @@ export async function createOrganizationAndWorkspace(_prev: OnboardingState, for
     workspaceName: formData.get("workspaceName"),
     timezone: formData.get("timezone"),
     isAgency: formData.get("isAgency") === "on",
+    workspaceType: formData.get("workspaceType") || "brand",
+    industry: formData.get("industry") || undefined,
   });
   if (!parsed.success) {
     const fieldErrors: OnboardingState["fieldErrors"] = {};
@@ -48,7 +52,7 @@ export async function createOrganizationAndWorkspace(_prev: OnboardingState, for
     }
     return { fieldErrors };
   }
-  const { organizationName, workspaceName, timezone, isAgency } = parsed.data;
+  const { organizationName, workspaceName, timezone, isAgency, workspaceType, industry } = parsed.data;
   const h = await headers();
 
   // Organization via Better Auth so membership/roles stay in its tables.
@@ -70,6 +74,7 @@ export async function createOrganizationAndWorkspace(_prev: OnboardingState, for
       name: workspaceName,
       slug: slugify(workspaceName),
       timezone,
+      settings: { workspaceType, ...(industry ? { industry } : {}) },
     })
     .returning();
 
@@ -102,5 +107,5 @@ export async function createOrganizationAndWorkspace(_prev: OnboardingState, for
   });
   await Promise.all([track("workspace_created", { userId: session.user.id, organizationId: org.id, workspaceId: ws.id, surface: "action:onboarding" }), track("onboarding_step_completed", { userId: session.user.id, organizationId: org.id, workspaceId: ws.id, surface: "action:onboarding", props: { step: "create_workspace", isAgency } })]);
 
-  redirect(`/onboarding/goals?workspace=${ws.id}`);
+  redirect(`/onboarding?step=connect&workspace=${ws.id}`);
 }

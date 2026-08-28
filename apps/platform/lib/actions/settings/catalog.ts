@@ -42,3 +42,5 @@ export function emailWanted(prefs: Record<string, boolean>, kind: string, fallba
   if (kind in prefs) return prefs[kind];
   return NOTIFICATION_KINDS.find((k) => k.kind === kind)?.email ?? fallback;
 }
+
+export const INDUSTRIES = ["Agency", "Health & Fitness", "Retail & E-commerce", "Food & Beverage", "Beauty & Fashion", "Technology & SaaS", "Media & Entertainment", "Education", "Finance", "Travel & Hospitality", "Nonprofit", "Other"] as const;

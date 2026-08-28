@@ -16,6 +16,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   const { provider } = await params;
   const workspaceId = req.nextUrl.searchParams.get("workspaceId") ?? "";
   const reconnect = req.nextUrl.searchParams.get("reconnect") ?? undefined;
+  const next = req.nextUrl.searchParams.get("next") ?? "";
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : null;
   if (!isProviderKey(provider)) return NextResponse.json({ error: "Unknown provider" }, { status: 404 });
 
   try {
@@ -26,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
       organizationId: ctx.workspace.organizationId,
       workspaceId,
       reconnectConnectionId: reconnect,
-      redirectTo: workspacePath(workspaceId, "accounts"),
+      redirectTo: safeNext ?? workspacePath(workspaceId, "accounts"),
     });
     await audit({ action: "connection.start", actorUserId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId, targetType: "provider", targetId: provider });
     // PKCE params are always supplied; adapters that do not need them ignore them.

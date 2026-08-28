@@ -3,6 +3,7 @@ import { db } from "@/db";
 import type { Campaign } from "@/db/schema/campaigns";
 import { parseAnalyticsFilters, periodLabel, type AnalyticsFilters } from "@/lib/analytics/periods";
 import { hasCapability, requireWorkspace } from "@/lib/session";
+import { stepUpChallenge, type StepUpChallenge } from "@/lib/step-up";
 import { utcToZonedInput } from "@/lib/time";
 import { loadAdsData, type AdsData } from "./ads";
 import { paidAttribution, type PaidAttribution } from "./attribution";
@@ -39,6 +40,8 @@ export type CampaignDetailData = {
   attribution: PaidAttribution | null; perf: CampaignPerformance | null; budget: { planned: number | null; spent: number; remaining: number | null; pct: number | null; dailyAverage: number | null };
   content: { rows: ContentRow[]; attachable: AttachableItem[] } | null; ads: AdsData | null; audience: AudienceData | null;
   conversations: CampaignConversationRow[] | null; activity: ActivityRow[] | null;
+  /** Re-authentication the session needs before confirming paid spend (ads tab only). */
+  stepUp: StepUpChallenge | null;
 };
 
 function header(c: Campaign, owner: { id: string; name: string } | null, tz: string): CampaignHeader {
@@ -56,13 +59,13 @@ async function budgetSummary(workspaceId: string, c: Campaign) {
 }
 
 export async function loadCampaignDetail(workspaceId: string, campaignId: string, sp: Search): Promise<CampaignDetailData> {
-  const { workspace } = await requireWorkspace(workspaceId);
+  const { workspace, session } = await requireWorkspace(workspaceId);
   const tz = workspace.timezone;
   const c = await db.query.campaign.findFirst({ where: (x, { and, eq }) => and(eq(x.id, campaignId), eq(x.workspaceId, workspaceId)) });
   if (!c) notFound();
   const tab = (CAMPAIGN_TABS.some((t) => t.key === one(sp.tab)) ? one(sp.tab) : "overview") as CampaignTab;
   const filters = parseAnalyticsFilters(sp, tz);
-  const [members, attribution, list, budget, perf, content, ads, audience, conversations, activity] = await Promise.all([
+  const [members, attribution, list, budget, perf, content, ads, audience, conversations, activity, stepUp] = await Promise.all([
     workspaceMembers(workspaceId),
     paidAttribution(workspaceId, tz),
     listCampaigns(workspaceId, tz, !!c.archivedAt),
@@ -73,12 +76,13 @@ export async function loadCampaignDetail(workspaceId: string, campaignId: string
     tab === "audience" ? audienceTab(workspaceId, c.id, filters) : Promise.resolve(null),
     tab === "conversations" ? conversationsTab(workspaceId, c.id, tz) : Promise.resolve(null),
     tab === "activity" || tab === "overview" ? activityTab(c.id, tz) : Promise.resolve(null),
+    tab === "ads" ? stepUpChallenge(session.user.id, session.session.id, "paid_spend") : Promise.resolve(null),
   ]);
   const row = list.find((r) => r.id === c.id);
   const owner = members.find((m) => m.id === c.ownerUserId) ?? null;
   return {
     workspaceId, timezone: tz, tab, campaign: header(c, owner, tz), networks: row?.networks ?? [], contentCount: row?.contentCount ?? 0, members,
     canManage: hasCapability(workspace, "campaigns.manage"), canDraft: hasCapability(workspace, "campaigns.draft"), filters, periodLabel: periodLabel(filters),
-    attribution, perf, budget, content, ads, audience, conversations, activity: activity ? activity.slice(0, tab === "overview" ? 6 : 100) : null,
+    attribution, perf, budget, content, ads, audience, conversations, activity: activity ? activity.slice(0, tab === "overview" ? 6 : 100) : null, stepUp,
   };
 }

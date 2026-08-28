@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, Button } from "@wizeworks/silicaui-react";
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, Button } from "@wizeworks/silicaui-react";
 import { promoteVariant, type PromoteInput } from "@/lib/actions/campaigns";
+import { verifyStepUp } from "@/lib/actions/security/step-up";
 import type { EligiblePost } from "@/lib/campaigns/ads";
 import type { CampaignDetailData } from "@/lib/campaigns/detail";
 import { OBJECTIVE_LABEL, formatMoney } from "@/lib/campaigns/format";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 import { NetMark } from "../net-mark";
+import { StepUpField } from "../security/step-up-field";
 
 type Draft = Omit<PromoteInput, "confirmed" | "variantId" | "campaignId">;
 const OBJECTIVES = ["engagement", "traffic", "awareness", "leads", "conversions"] as const;
@@ -26,7 +28,7 @@ function Summary({ post, d, data }: { post: EligiblePost; d: Draft; data: Campai
       <dt className="text-secondary">Audience</dt><dd>{d.countries.trim() || "Automatic (provider default)"}</dd>
       <dt className="text-secondary">Tracking</dt><dd className="break-all text-xs">{tracking || "No UTM parameters on this campaign"}</dd>
       <dt className="text-secondary">Initial state</dt><dd>{d.initialStatus === "active" ? "Live immediately — spend starts right away" : "Paused — no spend until you switch it on in the ad account"}</dd>
-      <dt className="text-secondary">Policy</dt><dd className="text-xs text-secondary">{data.campaign.budgetAmount !== null ? `Capped by the campaign's remaining planned budget (${formatMoney(data.budget.remaining, data.campaign.currency)}).` : "No campaign budget cap set."} This action is audited under your name.</dd>
+      <dt className="text-secondary">Policy</dt><dd className="text-xs text-secondary">{data.campaign.budgetAmount !== null ? `Capped by the campaign's remaining planned budget (${formatMoney(data.budget.remaining, data.campaign.currency)}).` : "No campaign budget cap set."} This action is audited under your name and needs a fresh identity check.</dd>
     </dl>
   );
 }
@@ -36,8 +38,29 @@ export function PromoteDialog({ post, data, onClose }: { post: EligiblePost; dat
   const { run, pending } = useActionFeedback();
   const [d, setD] = useState<Draft>({ adAccountId: post.accounts[0]?.id ?? "", name: `${post.title} · boost`, objective: data.campaign.objective, budgetKind: "daily", amount: 20, startAt: "", endAt: "", countries: "", initialStatus: "paused" });
   const [review, setReview] = useState(false);
+  const [secret, setSecret] = useState("");
+  const [stale, setStale] = useState(false);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((s) => ({ ...s, [k]: v }));
-  const confirm = () => run(() => promoteVariant(data.workspaceId, { ...d, amount: Number(d.amount), variantId: post.variantId, campaignId: data.campaign.id, confirmed: true }), (r) => { if (!r.error) onClose(); });
+  const challenge = data.stepUp;
+  const needsStepUp = Boolean(challenge) && (stale || !challenge!.fresh);
+
+  // Step up first (NFR-001), then create the promotion — one click, no spend until both pass.
+  const confirm = () =>
+    run(
+      async () => {
+        if (needsStepUp) {
+          const secretInput = challenge!.method === "totp" ? { code: secret } : { password: secret };
+          const v = await verifyStepUp({ workspaceId: data.workspaceId, purpose: "paid_spend", ...secretInput });
+          if (v.error) return v;
+          setSecret("");
+          setStale(false);
+        }
+        const r = await promoteVariant(data.workspaceId, { ...d, amount: Number(d.amount), variantId: post.variantId, campaignId: data.campaign.id, confirmed: true });
+        if ("stepUpRequired" in r && r.stepUpRequired) setStale(true);
+        return r;
+      },
+      (r) => { if (!r.error) onClose(); },
+    );
   return (
     <section className="rounded-box border border-base-300 p-4" aria-label="Promote post">
       <div className="flex items-start justify-between gap-2"><h3 className="text-sm font-semibold">Promote “{post.title}”</h3><Button size="xs" variant="ghost" color="neutral" onClick={onClose}>Close</Button></div>
@@ -60,7 +83,8 @@ export function PromoteDialog({ post, data, onClose }: { post: EligiblePost; dat
           <AlertDialogTitle>Confirm promotion{d.initialStatus === "active" ? " and start spending" : ""}</AlertDialogTitle>
           <AlertDialogDescription>Check the summary. Confirming creates the campaign, ad set and ad in the ad account under your name.</AlertDialogDescription>
           <Summary post={post} d={d} data={data} />
-          <div className="mt-4 flex justify-end gap-2"><AlertDialogCancel><Button variant="ghost" color="neutral" size="sm">Back</Button></AlertDialogCancel><AlertDialogAction color="primary" size="sm" loading={pending} onClick={confirm}>{d.initialStatus === "active" ? "Confirm and go live" : "Confirm (paused)"}</AlertDialogAction></div>
+          {needsStepUp && <StepUpField challenge={challenge!} value={secret} onChange={setSecret} what="Creating ads" />}
+          <div className="mt-4 flex justify-end gap-2"><AlertDialogCancel><Button variant="ghost" color="neutral" size="sm">Back</Button></AlertDialogCancel><Button color="primary" size="sm" loading={pending} disabled={needsStepUp && !secret.trim()} onClick={confirm}>{d.initialStatus === "active" ? "Confirm and go live" : "Confirm (paused)"}</Button></div>
         </AlertDialogContent>
       </AlertDialog>
     </section>

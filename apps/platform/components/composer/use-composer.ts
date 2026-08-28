@@ -16,7 +16,29 @@ function defaultWhen(tz: string) {
   return { date: `${g("year")}-${g("month")}-${g("day")}`, time: `${g("hour")}:${minute}` };
 }
 
-function withUtm(link: string, utm: { source: string; medium: string; campaign: string }) {
+const UTM_KEYS = ["source", "medium", "campaign"] as const;
+export type Utm = { source: string; medium: string; campaign: string };
+
+/**
+ * Splits a saved link into its bare URL and the UTM values already on it.
+ * A link that carries none falls back to the workspace's Settings → Tracking
+ * defaults, which the composer then labels as coming from those defaults.
+ */
+function splitLink(link: string | null, defaults: Utm): { base: string; utm: Utm; fromDefaults: boolean } {
+  const fallback = { base: link ?? "", utm: { ...defaults }, fromDefaults: UTM_KEYS.some((k) => defaults[k]) };
+  if (!link) return fallback;
+  try {
+    const u = new URL(link);
+    const found = Object.fromEntries(UTM_KEYS.map((k) => [k, u.searchParams.get(`utm_${k}`) ?? ""])) as Utm;
+    if (!UTM_KEYS.some((k) => found[k])) return fallback;
+    for (const k of UTM_KEYS) u.searchParams.delete(`utm_${k}`);
+    return { base: u.toString().replace(/\?$/, ""), utm: found, fromDefaults: false };
+  } catch {
+    return fallback;
+  }
+}
+
+function withUtm(link: string, utm: Utm) {
   if (!link) return "";
   try {
     const u = new URL(link);
@@ -29,15 +51,18 @@ function withUtm(link: string, utm: { source: string; medium: string; campaign: 
   }
 }
 
-export function useComposer(args: { workspaceId: string; timezone: string; item: ComposerItem; channels: ComposerChannel[]; assets: ComposerAsset[]; approval: Approval }) {
-  const { workspaceId, timezone, item, channels, assets, approval } = args;
+export function useComposer(args: { workspaceId: string; timezone: string; item: ComposerItem; channels: ComposerChannel[]; assets: ComposerAsset[]; approval: Approval; tracking: Utm }) {
+  const { workspaceId, timezone, item, channels, assets, approval, tracking } = args;
   const router = useRouter();
   const dw = defaultWhen(timezone);
+  const initialLink = splitLink(item.link, tracking);
   const [title, setTitle] = useState(item.title);
   const [text, setText] = useState(item.sharedText);
   const [assetIds, setAssetIds] = useState<string[]>(item.sharedAssetIds);
-  const [link, setLink] = useState(item.link ?? "");
-  const [utm, setUtm] = useState({ source: "", medium: "social", campaign: "" });
+  const [link, setLink] = useState(initialLink.base);
+  const [utm, setUtmValue] = useState<Utm>(initialLink.utm);
+  const [utmEdited, setUtmEdited] = useState(false);
+  const setUtm = (v: Utm) => { setUtmEdited(true); setUtmValue(v); };
   const [selected, setSelected] = useState<string[]>(item.channelIds.length ? item.channelIds : channels.filter((c) => c.formats.length).slice(0, 6).map((c) => c.id));
   const [customize, setCustomize] = useState(Object.values(item.variants).some((v) => v.textOverride !== null || v.firstComment));
   const [overrides, setOverrides] = useState<Record<string, Override>>(Object.fromEntries(Object.entries(item.variants).map(([k, v]) => [k, { textOverride: v.textOverride, firstComment: v.firstComment ?? "", linkOverride: v.linkOverride }])));
@@ -108,7 +133,7 @@ export function useComposer(args: { workspaceId: string; timezone: string; item:
   return {
     title, setTitle, text, setText, assetIds, setAssetIds, link, setLink, utm, setUtm, selected, toggleChannel, customize, setCustomize, overrides, setOverrides,
     validation, save, method, setMethod, date, setDate, time, setTime, reviewer, setReviewer, reviewNote, setReviewNote, submitError, pending, submit,
-    effectiveLink, selectedChannels, chosenAssets, issues, router,
+    effectiveLink, selectedChannels, chosenAssets, issues, router, utmFromDefaults: initialLink.fromDefaults && !utmEdited,
   };
 }
 

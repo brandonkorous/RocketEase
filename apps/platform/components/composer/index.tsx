@@ -13,17 +13,19 @@ import { MediaPicker } from "./media-picker";
 import { PrimaryContent } from "./primary-content";
 import { TemplateDialog } from "./template-dialog";
 import type { Approval, ComposerAsset, ComposerChannel, ComposerItem, Reviewer } from "./types";
-import { useComposer } from "./use-composer";
+import { useComposer, type Utm } from "./use-composer";
 
 export type { ComposerAsset, ComposerChannel, ComposerItem } from "./types";
 
-export type ComposerProps = { workspaceId: string; timezone: string; item: ComposerItem; channels: ComposerChannel[]; assets: ComposerAsset[]; canPublish: boolean; approval: Approval; reviewers: Reviewer[]; templates: TemplateRow[] };
+export type ComposerProps = { workspaceId: string; timezone: string; item: ComposerItem; channels: ComposerChannel[]; assets: ComposerAsset[]; canPublish: boolean; approval: Approval; reviewers: Reviewer[]; templates: TemplateRow[];
+  /** Workspace UTM defaults (Settings → Tracking) used to pre-fill new drafts. */
+  tracking: Utm };
 
 const LABEL = { now: "Publish now", draft: "Save as draft", review: "Request approval →", schedule: "Review & schedule →" } as const;
 
 export function Composer(props: ComposerProps) {
-  const { workspaceId, timezone, item, channels, assets, canPublish, approval, reviewers, templates } = props;
-  const s = useComposer({ workspaceId, timezone, item, channels, assets, approval });
+  const { workspaceId, timezone, item, channels, assets, canPublish, approval, reviewers, templates, tracking } = props;
+  const s = useComposer({ workspaceId, timezone, item, channels, assets, approval, tracking });
   const [picker, setPicker] = useState(false);
   const [deleting, startDelete] = useTransition();
   const onDelete = () => startDelete(async () => { await deleteDraft(workspaceId, item.id); s.router.push(workspacePath(workspaceId, "calendar")); });

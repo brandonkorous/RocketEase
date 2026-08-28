@@ -2,12 +2,14 @@ import "server-only";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import type { ComposerAsset, ComposerChannel, ComposerItem, ComposerProps } from "@/components/composer";
 import { db } from "@/db";
+import { workspace as workspaceTable } from "@/db/schema/app";
 import { asset, assetRendition } from "@/db/schema/assets";
 import { user } from "@/db/schema/auth";
 import { contentItem, postVariant } from "@/db/schema/content";
 import { createDraft } from "@/lib/actions/content";
 import { approvalRequirement, reviewerOptions } from "@/lib/actions/approvals";
 import { createFromTemplate, listTemplates } from "@/lib/actions/templates";
+import { readTracking } from "@/lib/actions/settings/catalog";
 import { publishableChannels } from "@/lib/content";
 import { hasCapability, type WorkspaceContext } from "@/lib/session";
 import { presignGet } from "@/lib/storage";
@@ -48,11 +50,13 @@ export async function loadComposer(ctx: WorkspaceContext, sp: CreateSearch, base
     variants: Object.fromEntries(variants.map((v) => [v.channelId, { format: v.format, textOverride: v.textOverride, assetIdsOverride: v.assetIdsOverride, firstComment: v.firstComment, linkOverride: v.linkOverride, validation: v.validation?.issues ?? [] }])),
   };
 
-  const [approval, reviewerRows, templates] = await Promise.all([approvalRequirement(workspaceId, item.id), reviewerOptions(workspaceId), listTemplates(workspaceId)]);
+  const [approval, reviewerRows, templates, ws] = await Promise.all([approvalRequirement(workspaceId, item.id), reviewerOptions(workspaceId), listTemplates(workspaceId), db.select({ settings: workspaceTable.settings }).from(workspaceTable).where(eq(workspaceTable.id, workspaceId))]);
+  const t = readTracking(ws[0]?.settings ?? {});
   const names = reviewerRows.length ? await db.select({ id: user.id, name: user.name }).from(user).where(inArray(user.id, reviewerRows.map((r) => r.userId))) : [];
   const reviewers = reviewerRows.filter((r) => r.userId !== ctx.session.user.id).map((r) => ({ userId: r.userId, name: names.find((n) => n.id === r.userId)?.name ?? "Member", role: r.role }));
   const canPublish = hasCapability(ctx.workspace, "content.publish") || ctx.workspace.role === "creator";
-  return { kind: "ready", props: { workspaceId, timezone: ctx.workspace.timezone, item: initial, channels: channelRows, assets, canPublish, approval, reviewers, templates } };
+  const tracking = { source: t.utmSource, medium: t.utmMedium, campaign: t.utmCampaign };
+  return { kind: "ready", props: { workspaceId, timezone: ctx.workspace.timezone, item: initial, channels: channelRows, assets, canPublish, approval, reviewers, templates, tracking } };
 }
 
 async function loadAssets(workspaceId: string): Promise<ComposerAsset[]> {

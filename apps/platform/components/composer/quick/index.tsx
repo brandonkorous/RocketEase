@@ -17,8 +17,8 @@ const LABEL = { now: "Publish now", draft: "Save as draft", review: "Request app
  * three-pane view, walked one step at a time in a single column.
  */
 export function QuickCompose(props: ComposerProps) {
-  const { workspaceId, timezone, item, channels, assets, canPublish, approval, reviewers } = props;
-  const s = useComposer({ workspaceId, timezone, item, channels, assets, approval });
+  const { workspaceId, timezone, item, channels, assets, canPublish, approval, reviewers, tracking } = props;
+  const s = useComposer({ workspaceId, timezone, item, channels, assets, approval, tracking });
   const [step, setStep] = useState(item.channelIds.length ? 1 : 0);
   const [picker, setPicker] = useState(false);
   const last = step === STEPS.length - 1;

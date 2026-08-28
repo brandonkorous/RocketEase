@@ -9,6 +9,7 @@ import { audit } from "@/lib/audit";
 import { emit } from "@/lib/jobs/outbox";
 import { getAdapter } from "@/lib/providers";
 import { requireCapability } from "@/lib/session";
+import { hasFreshStepUp } from "@/lib/step-up";
 import { zonedToUtc } from "@/lib/time";
 import { fail, guard, type ActionState } from "../content/shared";
 
@@ -56,10 +57,12 @@ async function budgetIssue(workspaceId: string, campaignId: string | null, plann
  * CAM-002: never spends without an explicit confirmation. Eligibility, policy
  * and budget checks run here; the worker only executes what was confirmed.
  */
-export async function promoteVariant(workspaceId: string, input: PromoteInput): Promise<ActionState & { promotionId?: string }> {
+export async function promoteVariant(workspaceId: string, input: PromoteInput): Promise<ActionState & { promotionId?: string; stepUpRequired?: true }> {
   return guard(async () => {
     const ctx = await requireCapability(workspaceId, "campaigns.manage");
     if (input.confirmed !== true) return fail("Review the summary and confirm before promoting.");
+    // NFR-001: paid spend needs a recent re-authentication on this session.
+    if (!(await hasFreshStepUp(ctx.session.session.id, "paid_spend"))) return { ...fail("Confirm your identity before creating ads."), stepUpRequired: true as const };
     const { variant, item, ch, account, conn, campaign } = await loadTargets(workspaceId, input);
     if (!variant || !item || !ch) return fail("Post not found.");
     if (variant.status !== "published" || !variant.remoteId) return fail("Only published posts can be promoted.");

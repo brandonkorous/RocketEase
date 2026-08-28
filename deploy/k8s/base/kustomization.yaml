@@ -1,0 +1,15 @@
+# Base manifests for the sparx AKS cluster. Images, hostnames, and secrets are
+# supplied by the overlay / the sparx.works Terraform. Never commit real secrets.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: make-it-social
+resources:
+  - namespace.yaml
+  - web.yaml
+  - platform.yaml
+  - worker.yaml
+  - migrate-job.yaml
+  - ingress.yaml
+labels:
+  - pairs: { app.kubernetes.io/part-of: make-it-social }
+    includeSelectors: false

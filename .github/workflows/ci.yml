@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: mis
+          POSTGRES_PASSWORD: mis
+          POSTGRES_DB: make_it_social
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mis -d make_it_social"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgres://mis:mis@localhost:5432/make_it_social
+      BETTER_AUTH_SECRET: ci-only-secret-not-for-production-0000
+      BETTER_AUTH_URL: http://localhost:5001
+      NEXT_PUBLIC_APP_URL: http://localhost:5001
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm -r typecheck
+      - name: Unit tests
+        run: pnpm -r test
+      - name: Migrations apply cleanly and schema is in sync
+        working-directory: apps/platform
+        run: |
+          pnpm db:migrate
+          pnpm exec drizzle-kit check
+          pnpm exec drizzle-kit generate --name ci-drift-check
+          if ls db/migrations/*ci-drift-check* >/dev/null 2>&1; then
+            echo "::error::Schema changed without a migration. Run pnpm db:generate and commit the result."
+            exit 1
+          fi
+      - name: Build
+        run: pnpm -r build
+
+  images:
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions: { contents: read, packages: write }
+    strategy:
+      matrix:
+        include:
+          - { name: web, file: apps/web/Dockerfile }
+          - { name: platform, file: apps/platform/Dockerfile }
+          - { name: worker, file: apps/platform/Dockerfile.worker }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Swap registry/login for the sparx ACR when wiring into the sparx.works Terraform.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ matrix.name }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/${{ matrix.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

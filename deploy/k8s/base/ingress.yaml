@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: make-it-social
+  annotations:
+    # Ingress class and cert-manager issuer follow the sparx cluster conventions (set in the overlay).
+    nginx.ingress.kubernetes.io/proxy-body-size: 512m # media uploads
+spec:
+  rules:
+    - host: make-it-social.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: web, port: { number: 80 } } }
+    - host: app.make-it-social.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: platform, port: { number: 80 } } }

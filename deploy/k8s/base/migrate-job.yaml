@@ -1,0 +1,20 @@
+# Runs before platform/worker roll. Migrations are forward-compatible
+# (architecture.md), so old pods keep serving while this executes.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: make-it-social/worker:latest
+          command: ["pnpm", "exec", "drizzle-kit", "migrate"]
+          envFrom:
+            - secretRef: { name: platform-env }

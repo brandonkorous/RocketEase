@@ -1,0 +1,25 @@
+{
+  "name": "@make-it-social/providers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./mock": "./src/mock/index.ts",
+    "./meta": "./src/meta/index.ts",
+    "./linkedin": "./src/linkedin/index.ts",
+    "./tiktok": "./src/tiktok/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "^5",
+    "vitest": "^4.0.0"
+  }
+}

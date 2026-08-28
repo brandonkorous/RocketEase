@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: platform } }
+  template:
+    metadata: { labels: { app: platform } }
+    spec:
+      containers:
+        - name: platform
+          image: make-it-social/platform:latest
+          ports: [{ containerPort: 3000 }]
+          envFrom:
+            # DATABASE_URL, BETTER_AUTH_SECRET, SMTP_URL, TOKEN_MASTER_KEY, provider client secrets
+            - secretRef: { name: platform-env }
+            # BETTER_AUTH_URL, NEXT_PUBLIC_APP_URL, MAIL_FROM, LOG_LEVEL
+            - configMapRef: { name: platform-config }
+          readinessProbe: { httpGet: { path: /api/health, port: 3000 }, initialDelaySeconds: 5 }
+          livenessProbe: { httpGet: { path: /api/health, port: 3000 }, periodSeconds: 20 }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 1, memory: 1Gi }
+          securityContext: { runAsNonRoot: true, allowPrivilegeEscalation: false }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: platform
+spec:
+  selector: { app: platform }
+  ports: [{ port: 80, targetPort: 3000 }]

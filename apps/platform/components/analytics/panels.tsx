@@ -1,0 +1,130 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { METRICS, formatMetric } from "@/lib/analytics/metrics";
+import { filtersToQuery } from "@/lib/analytics/periods";
+import type { AnalyticsData } from "@/lib/analytics/screen";
+import { workspacePath } from "@/lib/nav";
+import { NetMark } from "../net-mark";
+import { Donut, Legend, LineChart, StackedBars } from "./charts";
+import { MetricInfo } from "./scorecard";
+
+export function Panel({ title, info, action, children }: { title: string; info?: keyof typeof METRICS; action?: { label: string; href: string }; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col rounded-box border border-base-300 p-4" aria-label={title}>
+      <div className="flex items-center justify-between gap-2"><h2 className="flex items-center text-sm font-semibold">{title}{info && <MetricInfo m={METRICS[info]} freshness={null} />}</h2></div>
+      <div className="mt-3 flex-1">{children}</div>
+      {action && <Link href={action.href} className="mt-3 text-xs font-medium hover:underline">{action.label} →</Link>}
+    </section>
+  );
+}
+
+const ROWS = ["reach", "impressions", "engagement", "link_clicks"] as const;
+
+export function OrganicVsPaid({ data }: { data: AnalyticsData }) {
+  const paidNote = METRICS.spend.unavailable;
+  return (
+    <Panel title="Organic vs Paid performance" info="engagement">
+      <table className="w-full text-sm">
+        <thead className="text-xs text-secondary"><tr><th className="pb-2 text-left font-medium">Metric</th><th className="pb-2 text-right font-medium">Organic</th><th className="pb-2 text-right font-medium">Paid</th></tr></thead>
+        <tbody className="divide-y divide-base-300">
+          {ROWS.map((k) => (<tr key={k}><td className="py-2">{METRICS[k].name}</td><td className="py-2 text-right font-semibold">{formatMetric(METRICS[k], data.organic[k] ?? (data.hasData ? 0 : null))}</td><td className="py-2 text-right text-secondary/70" title={paidNote}>—</td></tr>))}
+          <tr><td className="py-2">Spend</td><td className="py-2 text-right text-secondary/70">n/a</td><td className="py-2 text-right text-secondary/70" title={paidNote}>—</td></tr>
+        </tbody>
+      </table>
+      <p className="mt-2 text-xs text-secondary/70">Paid columns fill in once ad accounts are imported.</p>
+    </Panel>
+  );
+}
+
+export function TrendPanel({ data }: { data: AnalyticsData }) {
+  const networks = [...new Set(data.trend.map((p) => p.network))];
+  return (
+    <Panel title="Cross-channel engagement trend" info="engagement">
+      <Legend networks={networks} />
+      <div className="mt-2"><LineChart points={data.trend} /></div>
+    </Panel>
+  );
+}
+
+export function FunnelPanel({ data }: { data: AnalyticsData }) {
+  const steps = [
+    { k: "reach" as const, v: data.organic.reach ?? null },
+    { k: "engagement" as const, v: data.organic.engagement ?? null },
+    { k: "link_clicks" as const, v: data.organic.link_clicks ?? null },
+    { k: "conversions" as const, v: null },
+  ];
+  const top = steps[0].v ?? 0;
+  return (
+    <Panel title="Conversion funnel" info="ctr">
+      <ol className="flex flex-col gap-2">
+        {steps.map((s, i) => {
+          const prev = i > 0 ? steps[i - 1].v : null;
+          const rate = s.v !== null && prev ? `${((s.v / prev) * 100).toFixed(1)}%` : null;
+          const width = s.v !== null && top ? Math.max(12, (s.v / top) * 100) : 12;
+          return (
+            <li key={s.k} className="flex items-center gap-3 text-sm">
+              <span className="h-8 rounded-field bg-base-300" style={{ width: `${width}%` }} aria-hidden="true" />
+              <span className="flex-1 text-secondary">{METRICS[s.k].name}</span>
+              {rate && <span className="text-xs text-secondary/70">{rate}</span>}
+              <span className="font-semibold">{s.v === null ? <span className="text-secondary/50" title={METRICS[s.k].unavailable}>—</span> : formatMetric(METRICS[s.k], s.v)}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="mt-2 text-xs text-secondary/70">Conversions need a connected tracking source.</p>
+    </Panel>
+  );
+}
+
+export function AudiencePanel({ data }: { data: AnalyticsData }) {
+  const networks = [...new Set(data.followers.map((p) => p.network))];
+  const total = data.followersTotal;
+  const prev = data.followersPrev;
+  const pct = total !== null && prev ? ((total - prev) / prev) * 100 : null;
+  return (
+    <Panel title="Audience growth" info="followers">
+      <div className="text-xs text-secondary">Total followers</div>
+      <div className="flex items-baseline gap-2"><span className="text-2xl font-bold tracking-tight">{total === null ? "—" : total.toLocaleString()}</span>{pct !== null && <span className={`text-xs ${pct >= 0 ? "text-success" : "text-error"}`}>{pct >= 0 ? "↑" : "↓"} {Math.abs(pct).toFixed(1)}%{data.compareLabel ? ` vs ${data.compareLabel}` : ""}</span>}</div>
+      <div className="mt-2"><Legend networks={networks} /></div>
+      <div className="mt-2"><StackedBars points={data.followers} /></div>
+    </Panel>
+  );
+}
+
+export function ChannelMixPanel({ data }: { data: AnalyticsData }) {
+  const total = data.mix.reduce((s, m) => s + m.value, 0);
+  return (
+    <Panel title="Channel mix (by engagement)" info="engagement">
+      <div className="flex flex-wrap items-center gap-4">
+        <Donut slices={data.mix} total={total} />
+        <ul className="flex flex-col gap-1.5 text-sm">
+          {data.mix.map((m) => (<li key={m.channelId} className="flex items-center gap-2"><NetMark network={m.network} size={14} /><span className="min-w-0 flex-1 truncate">{m.name}</span><span className="font-semibold">{formatMetric(METRICS.engagement, m.value)}</span><span className="text-xs text-secondary/70">({total ? ((m.value / total) * 100).toFixed(1) : "0.0"}%)</span></li>))}
+          {data.mix.length === 0 && <li className="text-xs text-secondary/70">No engagement recorded yet.</li>}
+        </ul>
+      </div>
+    </Panel>
+  );
+}
+
+export function TopPostsPanel({ data }: { data: AnalyticsData }) {
+  const router = useRouter();
+  const base = `${workspacePath(data.workspaceId, "analytics")}?${filtersToQuery(data.filters)}`;
+  return (
+    <section className="rounded-box border border-base-300 p-4" aria-label="Top posts">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">Top posts</h2>
+        <select className="select select-xs w-auto" value={data.topBy} onChange={(e) => router.push(`${base}&top=${e.target.value}`)} aria-label="Rank top posts by"><option value="engagement">By engagement</option><option value="reach">By reach</option><option value="link_clicks">By link clicks</option></select>
+      </div>
+      <table className="mt-3 w-full text-sm">
+        <thead className="text-xs text-secondary"><tr><th className="pb-1 text-left font-medium">Post</th><th className="pb-1 text-right font-medium">Reach</th><th className="pb-1 text-right font-medium">Engagement</th></tr></thead>
+        <tbody className="divide-y divide-base-300">
+          {data.top.map((p, i) => (<tr key={i}><td className="py-2"><Link href={workspacePath(data.workspaceId, `posts/${p.itemId}`)} className="flex items-center gap-2 hover:underline"><NetMark network={p.network} size={14} /><span className="min-w-0"><span className="block truncate font-medium">{p.title}</span><span className="block text-xs text-secondary/70">{p.publishedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · {p.channelName}</span></span></Link></td><td className="py-2 text-right">{formatMetric(METRICS.reach, p.reach)}</td><td className="py-2 text-right font-semibold">{formatMetric(METRICS.engagement, p.engagement)}</td></tr>))}
+          {data.top.length === 0 && <tr><td colSpan={3} className="py-4 text-center text-xs text-secondary/70">No published posts with insights in this period.</td></tr>}
+        </tbody>
+      </table>
+      <Link href={workspacePath(data.workspaceId, "content")} className="mt-3 block text-xs font-medium hover:underline">View all posts →</Link>
+    </section>
+  );
+}

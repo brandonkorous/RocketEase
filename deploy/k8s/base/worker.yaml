@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: worker } }
+  template:
+    metadata: { labels: { app: worker } }
+    spec:
+      terminationGracePeriodSeconds: 30 # pg-boss graceful stop waits up to 15s
+      containers:
+        - name: worker
+          image: make-it-social/worker:latest
+          envFrom:
+            - secretRef: { name: platform-env }
+            - configMapRef: { name: platform-config }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 1, memory: 1Gi }
+          securityContext: { runAsNonRoot: true, allowPrivilegeEscalation: false }

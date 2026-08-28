@@ -1,0 +1,52 @@
+{
+  "name": "@make-it-social/platform",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 5001",
+    "build": "next build",
+    "start": "next start -p 5001",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "auth:generate": "npx auth@latest generate --config scripts/auth-schema.config.ts --output db/schema/auth.ts -y",
+    "worker": "tsx watch worker/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1120.0",
+    "@aws-sdk/s3-request-presigner": "^3.1120.0",
+    "@better-auth/drizzle-adapter": "^1.7.2",
+    "@make-it-social/providers": "workspace:*",
+    "@make-it-social/ui": "workspace:*",
+    "@wizeworks/silicaui": "^0.55.0",
+    "@wizeworks/silicaui-react": "^0.55.0",
+    "better-auth": "^1.7.2",
+    "drizzle-orm": "^0.45.2",
+    "next": "^15.3.0",
+    "nodemailer": "^9.0.6",
+    "pg-boss": "^12.28.0",
+    "postgres": "^3.4.9",
+    "qrcode": "^1.5.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "sharp": "^0.35.4",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/node": "^22",
+    "@types/nodemailer": "^8.0.1",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^16.4.0",
+    "drizzle-kit": "^0.31.10",
+    "tailwindcss": "^4.1.0",
+    "tsx": "^4.23.12",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

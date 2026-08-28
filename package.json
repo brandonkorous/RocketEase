@@ -1,0 +1,18 @@
+{
+  "name": "make-it-social",
+  "private": true,
+  "packageManager": "pnpm@10.9.0",
+  "scripts": {
+    "dev": "docker compose up -d && pnpm -r --parallel --stream run \"/^(dev|worker)$/\"",
+    "dev:web": "pnpm --filter @make-it-social/web dev",
+    "dev:platform": "docker compose up -d && pnpm --filter @make-it-social/platform --parallel run \"/^(dev|worker)$/\"",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @make-it-social/platform db:migrate",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "worker": "pnpm --filter @make-it-social/platform worker",
+    "test": "pnpm -r test"
+  }
+}

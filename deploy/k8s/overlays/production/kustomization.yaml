@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  # CI tags every image with the git SHA; the sparx pipeline pins these.
+  - name: make-it-social/web
+    newName: ghcr.io/wizeworks/make-it-social/web
+    newTag: latest
+  - name: make-it-social/platform
+    newName: ghcr.io/wizeworks/make-it-social/platform
+    newTag: latest
+  - name: make-it-social/worker
+    newName: ghcr.io/wizeworks/make-it-social/worker
+    newTag: latest
+configMapGenerator:
+  - name: platform-config
+    literals:
+      - BETTER_AUTH_URL=https://app.make-it-social.com
+      - NEXT_PUBLIC_APP_URL=https://app.make-it-social.com
+      - MAIL_FROM=Make It Social <no-reply@make-it-social.com>
+      - LOG_LEVEL=info
+# Secret `platform-env` is created by the sparx.works Terraform (Key Vault -> k8s Secret). Not generated here.

@@ -12,7 +12,8 @@
     "./youtube": "./src/youtube/index.ts",
     "./pinterest": "./src/pinterest/index.ts",
     "./x": "./src/x/index.ts",
-    "./google-business": "./src/google-business/index.ts"
+    "./google-business": "./src/google-business/index.ts",
+    "./client": "./src/client.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

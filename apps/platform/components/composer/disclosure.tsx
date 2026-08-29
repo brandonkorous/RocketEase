@@ -1,7 +1,7 @@
 "use client";
 
 import { Input, Radio } from "@wizeworks/silicaui-react";
-import { planDisclosure } from "@make-it-social/providers";
+import { planDisclosure } from "@make-it-social/providers/client";
 import { SYNTHETIC_CHOICES, previewLine } from "@/lib/disclosure";
 import type { SyntheticFlag } from "@/db/schema/content";
 import { NetMark } from "../library-screen";

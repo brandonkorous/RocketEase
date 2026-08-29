@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { validateAgainstCapabilities } from "@make-it-social/providers";
-import type { Capabilities } from "@make-it-social/providers";
+import { validateAgainstCapabilities } from "@make-it-social/providers/client";
+import type { Capabilities } from "@make-it-social/providers/client";
 import { countHashtags, hashtagLimits, insertTags, limitWarning, normalizeTags, renderTags } from "./hashtags";
 
 describe("normalizeTags", () => {

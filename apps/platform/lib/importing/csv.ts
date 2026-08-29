@@ -5,7 +5,7 @@
  * composer runs. Remote media is NEVER fetched — `media_urls` is carried as a
  * note on the draft so a person can attach the real assets from the Library.
  */
-import { validateAgainstCapabilities, type Capabilities, type ValidationIssue } from "@make-it-social/providers";
+import { validateAgainstCapabilities, type Capabilities, type ValidationIssue } from "@make-it-social/providers/client";
 
 export const IMPORT_HEADERS = ["text", "channels", "scheduled_at", "first_comment", "link", "media_urls"] as const;
 export type ImportHeader = (typeof IMPORT_HEADERS)[number];

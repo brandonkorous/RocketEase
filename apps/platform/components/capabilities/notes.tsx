@@ -1,5 +1,5 @@
-import type { CapabilityPath, CatalogEntry } from "@make-it-social/providers";
-import { CAPABILITY_PATHS, extraNotes, reasonFor } from "@make-it-social/providers";
+import type { CapabilityPath, CatalogEntry } from "@make-it-social/providers/client";
+import { CAPABILITY_PATHS, extraNotes, reasonFor } from "@make-it-social/providers/client";
 import { NetMark } from "@/components/net-mark";
 import { CAPABILITY_LABELS as LABELS } from "@/lib/capabilities";
 

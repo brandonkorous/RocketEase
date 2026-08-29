@@ -2,7 +2,7 @@
  * Draft orchestration (M8.8). Pure: the generator is injected, so this module
  * is testable without the SDK. Nothing here writes, saves, schedules, or sends.
  */
-import { validateAgainstCapabilities, type Capabilities } from "@make-it-social/providers";
+import { validateAgainstCapabilities, type Capabilities } from "@make-it-social/providers/client";
 import type { BrandVoice } from "./brand-voice";
 import { captionPrompt, parseVariants, repurposePrompt, replyPrompt, type DraftTarget, type Prompt, type ThreadTurn } from "./prompts";
 

@@ -4,8 +4,8 @@
  * comes from @make-it-social/providers (CAPABILITY_CATALOG for a network,
  * the channel's own stored capabilities for a connected account).
  */
-import type { Capabilities, CapabilityPath } from "@make-it-social/providers";
-import { capabilitySupported, reasonFor } from "@make-it-social/providers";
+import type { Capabilities, CapabilityPath } from "@make-it-social/providers/client";
+import { capabilitySupported, reasonFor } from "@make-it-social/providers/client";
 import type { CapabilityItem } from "@/components/shared/why-not";
 
 export const CAPABILITY_COLUMNS: { path: CapabilityPath; label: string; group: string }[] = [

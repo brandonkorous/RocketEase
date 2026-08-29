@@ -4,7 +4,7 @@ Guidance for Claude Code when working in this repository.
 
 ## What this repo is
 
-**Make It Social** — "Everything social. One workflow." A social marketing operating system (plan, publish, engage, promote, measure) for businesses and agencies.
+**RocketEase** — "Effortless Launch. Better by Design." A social marketing operating system (plan, publish, engage, promote, measure) for businesses and agencies.
 
 ## RULE #0.5 — Files requirements
 
@@ -17,9 +17,9 @@ Guidance for Claude Code when working in this repository.
 
 pnpm workspace monorepo (`pnpm-workspace.yaml`: `apps/*`, `packages/*`). Not a git repository.
 
-- `apps/web/` — `@make-it-social/web`: the marketing site (landing page) — Next.js 15 App Router, React 19, Tailwind v4, **Silica UI** (`@wizeworks/silicaui` + `@wizeworks/silicaui-react`). Built from `docs/originals/landing.md`.
-- `apps/platform/` — `@make-it-social/platform`: the authenticated product at `/app/:workspaceId/...`. Next.js 15 + Silica UI + **Better Auth** (email/password + organization plugin) + **Drizzle** on **self-hosted Postgres** (Docker locally, Azure in prod via the sparx.works Terraform → sparx AKS cluster). Phase 0 done: tenancy (Organization → Workspace → 8 workspace role presets), audit log, onboarding, black-sidebar shell, every route from navigation.md as a designed empty state, agency overview. No provider integrations yet.
-- `packages/ui/` — `@make-it-social/ui`: shared source-only package (icons: `Mark`, `PlatformIcon`). Import as `@make-it-social/ui/icons`; both apps list it in `transpilePackages`.
+- `apps/web/` — `@rocketease/web`: the marketing site (landing page) — Next.js 15 App Router, React 19, Tailwind v4, **Silica UI** (`@wizeworks/silicaui` + `@wizeworks/silicaui-react`). Built from `docs/originals/landing.md`.
+- `apps/platform/` — `@rocketease/platform`: the authenticated product at `/app/:workspaceId/...`. Next.js 15 + Silica UI + **Better Auth** (email/password + organization plugin) + **Drizzle** on **self-hosted Postgres** (Docker locally, Azure in prod via the sparx.works Terraform → sparx AKS cluster). Phase 0 done: tenancy (Organization → Workspace → 8 workspace role presets), audit log, onboarding, black-sidebar shell, every route from navigation.md as a designed empty state, agency overview. No provider integrations yet.
+- `packages/ui/` — `@rocketease/ui`: shared source-only package (icons: `Mark`, `PlatformIcon`). Import as `@rocketease/ui/icons`; both apps list it in `transpilePackages`.
 - Both apps build as standalone containers (`Dockerfile` per app, build context = repo root). Never add Vercel/SWA configs.
 - `docs/IMPLEMENTATION_PLAN.md` — **the build order.** Milestones 0–7 with feature tables, requirement IDs, dependencies, gates, and pending decisions. Check it before starting work; update it when scope/order changes.
 - `docs/originals/` — 16 canonical spec documents (product, requirements, design, architecture, data/content model, users, permissions, navigation, pages, flows, integrations, analytics, onboarding, roadmap) plus `landing.md`, a ~1,500-line landing-page spec. Start at `docs/originals/README.md` for the index and shared vocabulary.
@@ -40,7 +40,7 @@ pnpm typecheck               # tsc --noEmit in every workspace
 Platform app (run from `apps/platform`; copy `.env.example` → `.env` first):
 
 ```bash
-docker compose up -d          # root — Postgres 17 on localhost:5050 (mis/mis, db make_it_social)
+docker compose up -d          # root — Postgres 17 on localhost:5050 (rke/rke, db rocketease)
 pnpm db:generate              # drizzle-kit: write a migration from db/schema/*.ts
 pnpm db:migrate               # apply migrations
 pnpm auth:generate            # regenerate db/schema/auth.ts after changing Better Auth plugins
@@ -50,7 +50,7 @@ pnpm auth:generate            # regenerate db/schema/auth.ts after changing Bett
 pnpm dev                      # http://localhost:5001 (web app: pnpm dev in apps/web → :5000)
 ```
 
-No tests exist yet.
+Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playwright e2e in `apps/platform/e2e`. Gotcha: `next build` and `next dev` share `apps/platform/.next` — after a production build, delete `.next` before starting `pnpm dev` or the webpack cache is corrupt (ENOENT `*.pack.gz`) and the stack dies.
 
 ## Platform conventions (apps/platform)
 
@@ -73,7 +73,7 @@ No tests exist yet.
 
 ## Silica UI conventions (apps/web)
 
-- Theme is declared in `apps/web/app/globals.css` via `@plugin "@wizeworks/silicaui/theme"`: `mis` (default light, primary = black) and `mis-dark` (island for the results band/footer via `data-theme="mis-dark"`). Change palette through tokens, never hardcoded hex on components.
+- Theme is declared in `apps/web/app/globals.css` via `@plugin "@wizeworks/silicaui/theme"`: `rke` (default light, primary = black) and `rke-dark` (island for the results band/footer via `data-theme="rke-dark"`). Change palette through tokens, never hardcoded hex on components.
 - `@source "../node_modules/@wizeworks/silicaui-react/dist"` in globals.css is required so Tailwind sees the React components' utilities.
 - Silica React components are `"use client"`. From a **server component**, never pass `render={<Link/>}` — use `buttonClasses()` / `badgeClasses()` from `@wizeworks/silicaui-react/server` on a plain `<Link>` instead (see `components/sections/`). Client components (`site-nav.tsx`) can use `render`.
 - When revealing a `.btn` responsively use `hidden sm:inline-block`, not `sm:inline-flex` — the latter drops Silica's vertical centering (documented gotcha in the plugin).
@@ -89,7 +89,7 @@ No tests exist yet.
 
 ## Design constraints (apply to any UI/landing work)
 
-- **Black, white, and structure.** Make It Social is monochrome; only social platforms bring color (logos, channel badges, per-network chart series). No brand accent color.
+- **Black, white, and structure.** RocketEase is monochrome; only social platforms bring color (logos, channel badges, per-network chart series). No brand accent color.
 - Explicitly banned: gradients, eyebrow headings, editorial layouts, giant decorative type, glass/neon, generic SaaS illustration, decorative AI imagery, card grids for everything, over-rounding, heavy shadows.
 - Tokens in `design.md` (app) and `landing.md` §5/§30 (landing): `--black: #0a0a0a`, gray-50…950 neutral scale, semantic `--danger/--warning/--success/--info`, radii 6/10/14/18px, sidebar 256px, content max 1440px (app) / 1280px container (landing).
 - Typography: Inter (Geist Sans fallback). Status must be icon + label, never color alone. WCAG 2.2 AA; motion 150–350ms and meaningful only.

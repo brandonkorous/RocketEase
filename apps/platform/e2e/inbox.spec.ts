@@ -1,17 +1,38 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { clickUntilUrl, gotoReady, loadState, pageAs, waitForHydration } from "./helpers";
 
 /** Connect the demo network to the workspace through the real consent + selection flow. */
 async function connectDemoNetwork(page: Page, workspaceId: string) {
   await gotoReady(page, `/app/${workspaceId}/accounts`);
-  const connect = page.getByRole("link", { name: /connect demo/i });
   const connected = page.getByText("Demo Brand", { exact: false }).first();
+  // The entry point is a MENU, not a link: components/accounts/connect-menu.tsx renders a
+  // "Connect account" trigger whose items navigate on click.
+  const trigger = page.getByRole("button", { name: /connect account/i });
   // The page streams; wait until it shows either an existing connection or the connect entry point.
-  await expect(connected.or(connect).first()).toBeVisible({ timeout: 60_000 });
+  await expect(connected.or(trigger).first()).toBeVisible({ timeout: 60_000 });
   if (await connected.isVisible().catch(() => false)) return;
-  await clickUntilUrl(page, connect, /\/connect\/mock\/authorize/);
+  await pickDemoNetwork(page, trigger);
   await clickUntilUrl(page, page.getByRole("button", { name: "Allow" }), /\/accounts\/select\//);
   await clickUntilUrl(page, page.getByRole("button", { name: /add selected accounts/i }), /\/accounts\?connected=1/);
+}
+
+/**
+ * Opening the menu and choosing the network are retried AS A PAIR. A trigger click that
+ * lands before hydration opens nothing, and a menu that did open can be closed again by a
+ * re-render — either way the item is unmounted, so retrying the item click on its own would
+ * just wait out its timeout against an element that no longer exists.
+ */
+async function pickDemoNetwork(page: Page, trigger: Locator) {
+  const authorize = /\/connect\/mock\/authorize/;
+  for (let i = 0; i < 4; i++) {
+    await waitForHydration(page);
+    await trigger.click({ timeout: 60_000 }).catch(() => undefined);
+    const item = page.getByRole("menuitem", { name: /demo network/i });
+    if (!(await item.isVisible({ timeout: 10_000 }).catch(() => false))) continue;
+    await item.click({ timeout: 30_000 }).catch(() => undefined);
+    if (await page.waitForURL(authorize, { timeout: 30_000 }).then(() => true).catch(() => false)) return;
+  }
+  await page.waitForURL(authorize, { timeout: 60_000 });
 }
 
 /** Dev-mode reloads (Fast Refresh) can wipe the form; re-open the tools and re-fill before each attempt. */

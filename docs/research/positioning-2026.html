@@ -1,0 +1,155 @@
+<title>The Honest Social OS</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#fbfbfa;--ink:#101010;--ink2:#4a4a47;--mute:#83837e;--line:#dcdcd7;--panel:#f1f1ee;--good:#1f7a3d;--warn:#a86a00;--crit:#b3261e;--goodbg:#e6f3ea;--warnbg:#fbf0dc;--critbg:#fae4e2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111112;--ink:#f2f2ef;--ink2:#b9b9b3;--mute:#7e7e78;--line:#2c2c2e;--panel:#1a1a1c;--good:#6dcf8c;--warn:#e9b45a;--crit:#f08a82;--goodbg:#15281c;--warnbg:#2e2412;--critbg:#331a18}}
+:root[data-theme="dark"]{--bg:#111112;--ink:#f2f2ef;--ink2:#b9b9b3;--mute:#7e7e78;--line:#2c2c2e;--panel:#1a1a1c;--good:#6dcf8c;--warn:#e9b45a;--crit:#f08a82;--goodbg:#15281c;--warnbg:#2e2412;--critbg:#331a18}
+body{background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;font-size:16px}
+.wrap{max-width:1040px;margin:0 auto;padding:56px 24px 96px}
+h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;text-wrap:balance;line-height:1.1;letter-spacing:-.01em}
+h1{font-size:clamp(40px,6vw,64px);font-weight:700;margin:12px 0 20px}
+h2{font-size:28px;font-weight:700;margin:0 0 14px}
+h3{font-size:18px;font-weight:600;margin:0 0 6px}
+.kicker{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.lede{font-size:20px;color:var(--ink2);max-width:62ch}
+p{max-width:68ch;margin:0 0 14px}
+section{border-top:1px solid var(--line);padding:40px 0;display:grid;grid-template-columns:200px 1fr;gap:32px}
+section>header{position:sticky;top:24px;align-self:start}
+@media (max-width:760px){section{grid-template-columns:1fr;gap:12px}section>header{position:static}}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0 16px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+th{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:500}
+.tbl{overflow-x:auto}
+.pill{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.p-good{background:var(--goodbg);color:var(--good)}.p-warn{background:var(--warnbg);color:var(--warn)}.p-crit{background:var(--critbg);color:var(--crit)}.p-mute{background:var(--panel);color:var(--ink2)}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.card{background:var(--panel);padding:18px 20px;border-left:3px solid var(--ink)}
+.card .kicker{margin-bottom:6px;display:block}
+.card p{font-size:14px;color:var(--ink2);margin:6px 0 0}
+ol.moves{list-style:none;padding:0;margin:0;display:grid;gap:10px;counter-reset:m}
+ol.moves li{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:start;padding:14px 0;border-bottom:1px solid var(--line)}
+ol.moves li::before{counter-increment:m;content:counter(m,decimal-leading-zero);font-family:"IBM Plex Mono",monospace;font-size:22px;color:var(--mute);line-height:1}
+ol.moves strong{display:block;font-weight:600}
+ol.moves span.d{font-size:14px;color:var(--ink2);display:block;margin-top:2px}
+.meta{display:flex;flex-direction:column;gap:4px;align-items:flex-end;min-width:110px}
+.thesis{background:var(--ink);color:var(--bg);padding:28px 32px;margin:24px 0 8px;font-family:"IBM Plex Sans Condensed",sans-serif;font-size:26px;font-weight:600;line-height:1.25;text-wrap:balance}
+.note{font-size:14px;color:var(--ink2);border:1px solid var(--line);padding:14px 16px}
+ul{padding-left:20px}li{margin:4px 0}
+a{color:inherit}
+.src{font-size:13px;color:var(--ink2);columns:2;column-gap:32px}
+@media (max-width:760px){.src{columns:1}}
+.src li{break-inside:avoid}
+</style>
+
+<div class="wrap">
+  <div class="kicker">Make It Social · competitive positioning · 28 Aug 2026</div>
+  <h1>The Honest Social OS</h1>
+  <p class="lede">Every incumbent charges per seat, retries ambiguous publishes into duplicates, hides platform limits until they fail, and renders a missing metric as zero. We already built the opposite of all four. The gap to close is making that visible — and adding the handful of surfaces buyers expect before they'll look.</p>
+
+  <div class="thesis">Position: the social platform that never lies to you — about what posted, what it cost, what a number means, or what a network can't do — priced so your clients and reviewers are free.</div>
+
+  <section>
+    <header><div class="kicker">01</div><h2>Where the market is soft</h2></header>
+    <div>
+      <p>Four independent scans (incumbents, challengers, platform/API trends, and our own code) converge on the same openings. Ranked by how often buyers complain.</p>
+      <div class="tbl"><table>
+        <tr><th>Pain</th><th>Who suffers</th><th>Evidence</th><th>Our state</th></tr>
+        <tr><td>Per-seat pricing that taxes agencies and client reviewers</td><td>Sprout $79–399/seat, Hootsuite $99–399/seat, Agorapulse charges every user full rate; Zoho/SocialBee cap at 5 users even at $450</td><td>#1 complaint on G2/Trustpilot for Sprout; 10-seat Sprout ≈ $35.9k/yr</td><td><span class="pill p-warn">Undecided</span> no billing yet — free to choose</td></tr>
+        <tr><td>Mid-market vacated</td><td>Sprinklr killed self-serve 30 Apr 2026 ($50k+ entry); Hootsuite left the budget slot</td><td>Wide band $150–500 flat, multi-workspace, unlimited seats is open</td><td><span class="pill p-good">Fits</span> Org → Workspace tenancy built for this</td></tr>
+        <tr><td>"Failed but it actually posted" / duplicates</td><td>All tools on Meta/LinkedIn; Emplifi duplicate posts persist after tickets; Adobe Express outages</td><td>Incumbents retry on ambiguous errors; nobody markets reconciliation</td><td><span class="pill p-good">Built</span> reconcile-before-retry enforced by queue policy</td></tr>
+        <tr><td>Platform limits blamed on the tool</td><td>IG Story stickers, licensed-music Reels, TikTok 5-post unaudited cap, LinkedIn partner gating</td><td>Users discover limits as failures</td><td><span class="pill p-good">Built</span> per-channel capability model with reason strings</td></tr>
+        <tr><td>Analytics you can't trust or keep</td><td>Agorapulse 1-month retention on low tiers; sentiment paywalled at $399; 90% believe social drives revenue, ~35% can prove it</td><td>Attribution is an add-on, a GA proxy, or absent</td><td><span class="pill p-good">Built</span> metric contracts w/ version, "missing ≠ zero", paid/site split</td></tr>
+        <tr><td>Approvals + analytics never in one product</td><td>Planable owns approvals but sells analytics/inbox per workspace; Metricool owns analytics, has no approval queue or media library</td><td>10-client Planable lands ~$600–800/mo</td><td><span class="pill p-good">Built</span> policy approvals, client-approver links, reports, DAM</td></tr>
+        <tr><td>Renewal shocks &amp; billing friction</td><td>Later Trustpilot ~1.3/5 (&gt;80% one-star, billing); Hootsuite renewals "almost doubled"</td><td>Rating split G2 vs Trustpilot is itself the signal</td><td><span class="pill p-mute">Policy</span> publish pricing, no auto-uplift</td></tr>
+        <tr><td>AI over-promise backlash</td><td>Ocoya/Taplio reputational damage; 78% say AI makes ads feel less authentic; ~80% of marketers heavily edit AI output</td><td>"AI writes your month" is losing; agent-first APIs (MCP) are rising</td><td><span class="pill p-crit">Absent</span> no AI, no public API/MCP</td></tr>
+      </table></div>
+    </div>
+  </section>
+
+  <section>
+    <header><div class="kicker">02</div><h2>What we already own</h2></header>
+    <div>
+      <p>Verified in code. None of these are marketed by any competitor because none of them do them. They are the story — today they're invisible because they live in worker code and schema.</p>
+      <div class="grid">
+        <div class="card"><span class="kicker">Publish truth</span><h3>Reconcile before retry</h3><p><code>publish.execute</code> is <code>retryLimit: 0</code>; the worker calls <code>findPublication</code> on ambiguous errors. Idempotency keys per variant. Nightly reconcile.</p></div>
+        <div class="card"><span class="kicker">Capability truth</span><h3>Per-channel limits with reasons</h3><p>Disabled controls explain themselves ("Pinterest: no comments API"). Versioned validation derived from what the account actually granted.</p></div>
+        <div class="card"><span class="kicker">Metric truth</span><h3>Contracts, not numbers</h3><p>24 metrics with formula, provider mapping, freshness, caveats and <code>DEFINITIONS_VERSION</code> stamped into every export and shared report.</p></div>
+        <div class="card"><span class="kicker">Attribution truth</span><h3>No double-counting, no fake zeros</h3><p>Paid <code>utm_medium</code> → ad platform; everything else → site source. Every unavailable metric carries its reason.</p></div>
+        <div class="card"><span class="kicker">Spend safety</span><h3>Step-up before money moves</h3><p>Re-auth, budget caps, currency checks, explicit confirmation and audit before any boost. Automations can't pause ads or answer reviews without a person.</p></div>
+        <div class="card"><span class="kicker">Agency surface</span><h3>White-label reports that expire</h3><p>Branded documents, signed revocable <code>/r/:token</code> links with passcode, rate limit, audited views; double-opt-in external recipients; SSO + SCIM.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <header><div class="kicker">03</div><h2>The moves</h2></header>
+    <div>
+      <p>Ordered by leverage ÷ effort. "Market" means the code exists and needs a surface, copy, and a landing-page claim. Sizes are rough build estimates on the current codebase.</p>
+      <ol class="moves">
+        <li><div><strong>Flat per-workspace pricing, unlimited seats, free client reviewers</strong><span class="d">Attack the #1 complaint and the agency margin leak (15–30% lost to approval friction) in one packaging decision. Client-approver role already exists with object-scoped links. Undercuts Planable's per-workspace add-on stacking and Sprout's per-seat.</span></div><div class="meta"><span class="pill p-good">Decision</span><span class="pill p-mute">M8 billing</span></div></li>
+        <li><div><strong>"Publish receipts" — surface reconciliation as a feature</strong><span class="d">Every post shows a timeline: validated → sent → confirmed-by-provider (with remote id) or reconciled-after-timeout. Landing claim: "Never a duplicate, never a phantom failure." Data is already in <code>post_variant</code> + audit; needs UI + copy.</span></div><div class="meta"><span class="pill p-good">Market</span><span class="pill p-mute">~1 wk</span></div></li>
+        <li><div><strong>Capability contract as a public page + in-app "why not"</strong><span class="d">Ship a public, per-network "what we can and can't do, and why" page generated from <code>packages/providers</code> capability data. Turns the incumbents' silent failures into our transparency story.</span></div><div class="meta"><span class="pill p-good">Market</span><span class="pill p-mute">~3 days</span></div></li>
+        <li><div><strong>Metric-continuity layer for Meta's reach → "viewers" swap</strong><span class="d">Meta retires Post/Page Reach and Video/Story Impressions in 2026. Dual-track old/new, annotate the break on every chart, keep history honest. The registry (<code>DEFINITIONS_VERSION</code>, revisions in <code>metric_fact</code>) is built for exactly this; nobody else is set up to handle it cleanly.</span></div><div class="meta"><span class="pill p-warn">Build</span><span class="pill p-mute">~1 wk</span></div></li>
+        <li><div><strong>Rights &amp; authorisation clocks</strong><span class="d">Extend <code>rightsExpiresAt</code> to Spark Ad codes (7/30/60/365 d), Partnership Ads grants, and paid-usage licences (30/60/90 d). Block or warn when a boost would run past expiry. Small schema + composer/promote check.</span></div><div class="meta"><span class="pill p-warn">Build</span><span class="pill p-mute">~1 wk</span></div></li>
+        <li><div><strong>Per-item publish cost &amp; quota preview</strong><span class="d">X: $0.015/post, $0.20 for posts with links; YouTube: 1,600 units/Short ≈ 6/day. Show cost/quota impact in the composer before queuing, with a daily quota gauge on Connected accounts. No tool surfaces this.</span></div><div class="meta"><span class="pill p-warn">Build</span><span class="pill p-mute">~1 wk</span></div></li>
+        <li><div><strong>AI disclosure per destination</strong><span class="d">One "contains synthetic media" flag in the composer → YouTube AI attribute, TikTok label, Meta path; recorded in audit. EU AI Act Art. 50 machine-readable marking applies from 2 Aug 2026. Compliance angle that fits our audit-first architecture.</span></div><div class="meta"><span class="pill p-warn">Build</span><span class="pill p-mute">~1 wk</span></div></li>
+        <li><div><strong>Public API + MCP server</strong><span class="d">The drafting layer is moving to agents (Blotato, Postiz, Metricool Advanced). Expose create-draft / submit-for-approval / schedule / report as an API and MCP tools — with approval gates intact. Positions us as the trusted publishing layer under any AI. Server actions already exist; needs API keys + routes.</span></div><div class="meta"><span class="pill p-warn">Build</span><span class="pill p-mute">~2 wk</span></div></li>
+        <li><div><strong>AI that drafts, never publishes</strong><span class="d">Caption variants per network, repurpose long → short, reply drafts in the inbox grounded in brand voice from <code>workspace.settings</code> — always landing as drafts in the existing approval flow. Adoption data says this is what actually gets used (ideation 60%, captions 46%); autonomy (~16%) is not. Marketing line: "AI drafts. A person presses send."</span></div><div class="meta"><span class="pill p-crit">Gap</span><span class="pill p-mute">~2–3 wk</span></div></li>
+        <li><div><strong>Evergreen recycling + hashtag sets + CSV import</strong><span class="d">Table stakes on every challenger (SocialBee, Publer). Cheap to add on the existing template/lineage and bulk-reschedule code. Not a differentiator; their absence is a disqualifier in comparisons.</span></div><div class="meta"><span class="pill p-crit">Gap</span><span class="pill p-mute">~2 wk</span></div></li>
+        <li><div><strong>Review management via Google Business Profile</strong><span class="d">Meta declares <code>reviews: true</code> but no adapter fetches them. Vista Social bundles GBP/Yelp/Trustpilot reviews and wins SMB with it. Fix the over-declaration; add a GBP adapter. Fits the inbox's existing <code>review</code> kind and the human-only reply gate.</span></div><div class="meta"><span class="pill p-crit">Gap</span><span class="pill p-mute">~2 wk</span></div></li>
+        <li><div><strong>Per-client cost attribution &amp; margin report (agency)</strong><span class="d">Agencies mark up 40–60% and bill by hand. A per-workspace usage/spend/time roll-up on the agency overview, exportable to invoicing, is unclaimed by any social-native tool. Depends on billing model.</span></div><div class="meta"><span class="pill p-mute">Later</span><span class="pill p-mute">post-M8</span></div></li>
+      </ol>
+      <p style="margin-top:18px"><strong>Don't chase:</strong> broad social listening (bifurcated $29 vs $20k market, no coherent middle and heavy data cost), employee advocacy, link-in-bio, a native mobile app before PWA. All are checkbox features where incumbents are entrenched and none reinforces the honesty positioning.</p>
+    </div>
+  </section>
+
+  <section>
+    <header><div class="kicker">04</div><h2>Positioning copy</h2></header>
+    <div>
+      <p>Spec-compliant: no invented proof, no benchmarks. Claims below are about our behaviour, which we can guarantee.</p>
+      <ul>
+        <li><strong>Never a duplicate, never a phantom failure.</strong> We confirm with the network before we ever retry.</li>
+        <li><strong>Every number has a definition.</strong> Formula, source, freshness and caveats travel with every report and export.</li>
+        <li><strong>Missing is never zero.</strong> When a metric can't be reported, you see why.</li>
+        <li><strong>We tell you what a network can't do — before you hit publish.</strong></li>
+        <li><strong>Nobody pays to say yes.</strong> Unlimited seats. Clients and reviewers are always free.</li>
+        <li><strong>AI drafts. A person presses send.</strong> Nothing publishes, spends, or answers a customer without a human.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <header><div class="kicker">05</div><h2>Caveats</h2></header>
+    <div>
+      <div class="note">
+        <p><strong>Everything above the pricing decision is unproven live.</strong> All six real provider adapters (Meta, LinkedIn, TikTok, YouTube, Pinterest, X), GA4 and Shopify are code-complete but have only ever run against the in-repo mock. The reliability story is only credible once credentials exist and a beta publishes real posts. That remains the blocking item.</p>
+        <p>One over-declaration to fix now: Meta capabilities say <code>reviews: true</code> but nothing ingests reviews. Our whole pitch is honesty; the capability table must be exactly right.</p>
+        <p style="margin:0">Market stats quoted here come from vendor blogs and survey posts (Sociality.io, Social Media Examiner, Eclincher, second-hand Harris Poll). Directional only — none should appear in product or landing copy without primary verification, per <code>docs/originals</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <header><div class="kicker">Sources</div></header>
+    <div><ul class="src">
+      <li><a href="https://sproutsocial.com/pricing/">Sprout Social pricing</a> · <a href="https://checkthat.ai/brands/sprout-social/reviews">Sprout reviews analysis</a></li>
+      <li><a href="https://www.hootsuite.com/plans">Hootsuite plans</a> · <a href="https://www.hootsuite.com/newsroom/press-releases/hootsuite-rebuilds-for-ai-era-introducing-wisdom">Hootsuite Wisdom / Social OS</a></li>
+      <li><a href="https://chatarmin.com/en/blog/sprinklr-pricing">Sprinklr pricing &amp; self-serve sunset</a></li>
+      <li><a href="https://www.agorapulse.com/pricing/">Agorapulse pricing</a> · <a href="https://support.agorapulse.com/en/articles/8762696-pricing-per-user-explained">per-user model</a></li>
+      <li><a href="https://postplanify.com/later-reviews">Later G2 vs Trustpilot split</a></li>
+      <li><a href="https://planable.io/pricing/">Planable pricing</a> · <a href="https://metricool.com/pricing/">Metricool pricing</a> · <a href="https://vistasocial.com/pricing/">Vista Social pricing</a></li>
+      <li><a href="https://socialbee.com/pricing/">SocialBee</a> · <a href="https://www.sendible.com/pricing">Sendible</a> · <a href="https://contentstudio.io/pricing">ContentStudio</a> · <a href="https://www.zoho.com/social/pricing.html">Zoho Social</a></li>
+      <li><a href="https://github.com/gitroomhq/postiz-app">Postiz</a> · <a href="https://mixpost.app/pricing">Mixpost</a> · <a href="https://www.blotato.com/blog/ai-agents-social-media">Blotato agent-first</a></li>
+      <li><a href="https://www.kitchn.io/blog/meta-marketing-api-q2-2026-update">Meta API Q2 2026 (reach → viewers)</a> · <a href="https://developers.facebook.com/blog/post/2025/10/08/introducing-graph-api-v24-and-marketing-api-v24/">Graph API v24</a></li>
+      <li><a href="https://developers.tiktok.com/docs/en/content-posting-api-get-started">TikTok Content Posting audit</a> · <a href="https://ads.tiktok.com/help/article/spark-ads">Spark Ads auth windows</a></li>
+      <li><a href="https://postproxy.dev/blog/x-api-pricing-2026/">X API pay-per-use 2026</a> · <a href="https://www.getphyllo.com/post/youtube-api-limits-how-to-calculate-api-usage-cost-and-fix-exceeded-api-quota">YouTube quota</a></li>
+      <li><a href="https://learn.microsoft.com/en-us/linkedin/marketing/community-management/community-management-overview?view=li-lms-2026-06">LinkedIn Community Management API</a></li>
+      <li><a href="https://manychat.com/blog/instagram-dm-automation-rules/">Instagram DM automation rules</a></li>
+      <li><a href="https://influencermarketinghub.com/ai-disclosure-rules/">AI disclosure rules by platform</a> · <a href="https://digital-strategy.ec.europa.eu/en/policies/dsa-impact-platforms">EU DSA ad repositories</a></li>
+      <li><a href="https://www.eclincher.com/articles/the-roi-executive-attribution-pillar-solving-the-cmo-reporting-gap">CMO attribution gap</a> · <a href="https://sproutsocial.com/insights/social-media-marketing-roi-statistics/">Sprout ROI stats</a></li>
+      <li><a href="https://sociality.io/blog/ai-in-social-media-marketing-report/">Sociality.io AI usage report</a> · <a href="https://aisociety.socialmediaexaminer.com/2026-ai-report/">Social Media Examiner 2026 AI report</a></li>
+      <li><a href="https://www.conbersa.ai/learn/agency-retainer-benchmarks-social">Agency approval-friction margin</a> · <a href="https://www.enrichlabs.ai/blog/white-label-social-media-management-complete-guide-2026">White-label agency economics</a></li>
+      <li><a href="https://www.digitalapplied.com/blog/ugc-rights-licensing-framework-2026-brand-creator-guide">UGC rights windows 2026</a></li>
+    </ul></div>
+  </section>
+</div>

@@ -149,7 +149,7 @@ Notes
 
 ## Milestone 8 — Stand out (from `docs/research/`, started 2026-08-28)
 
-Positioning: **the honest social OS** — never a duplicate or phantom failure, every number has a definition, missing is never zero, platform limits shown before publish, AI drafts but a person presses send. Pricing (flat per workspace, unlimited seats, free client reviewers) is a product decision recorded in `docs/research/positioning-2026.html`; billing lands after it.
+Positioning: **the honest social OS** — never a duplicate or phantom failure, every number has a definition, missing is never zero, platform limits shown before publish, AI drafts but a person presses send. **Pricing decision (user, 2026-08-28):** flat price per workspace per month, unlimited seats, client reviewers free; AI metered in credits (1 credit = 1,000 output tokens, input at 1/5) above a per-workspace monthly allowance, hard cap so no surprise bills; amounts live in Stripe price objects, never in the repo.
 
 | # | Item | Status |
 |---|---|---|
@@ -163,7 +163,15 @@ Positioning: **the honest social OS** — never a duplicate or phantom failure, 
 | 8.8 | AI that drafts, never publishes — caption variants, repurposing, inbox reply drafts grounded in brand voice; always lands as a draft | ✅ |
 | 8.9 | Table stakes — evergreen recycling, hashtag sets, CSV import | ✅ |
 | 8.10 | Review management — Google Business Profile adapter feeding the inbox `review` kind (human-only reply gate) | ✅ |
-| 8.11 | Agency per-client cost & margin roll-up | after billing |
+| 8.11 | Agency per-client cost & margin roll-up | ⏳ after 9.1–9.2 |
+
+## Milestone 9 — Monetise & generate (started 2026-08-28)
+
+| # | Item | Status |
+|---|---|---|
+| 9.1 | AI usage ledger + credits (`ai_usage`, monthly allowance, hard cap, usage meter) | ⏳ |
+| 9.2 | Stripe billing — per-workspace subscription, Customer Portal, AI overage via Billing Meters, webhooks, Settings → Billing, entitlements + 7-day grace | ⏳ |
+| 9.3 | Post & ad generator — brief → concepts per network + ad copy sets against network specs → draft in Create; env-gated image generation | ⏳ |
 
 ---
 

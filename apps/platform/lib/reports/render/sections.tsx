@@ -64,7 +64,7 @@ export function Trend({ doc }: { doc: Doc }) {
     <section>
       <h2>{doc.trendMetric} over time</h2>
       <p className="small muted">Daily totals per network in {doc.meta.timezone}. Networks are shown separately because their definitions differ.</p>
-      <TrendChart points={doc.trend} />
+      <TrendChart points={doc.trend} metric={doc.trendMetricKey} />
       <Legend networks={networks} />
     </section>
   );

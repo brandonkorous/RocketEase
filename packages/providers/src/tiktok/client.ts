@@ -29,7 +29,11 @@ export function capsFor(cred: Credential): Capabilities {
     firstComment: "Not exposed by the Content Posting API.",
     messages: "TikTok does not expose direct messages to third-party apps.",
     mentions: "TikTok has no API for mentions of an account.",
+    reviews: "TikTok has no reviews.",
+    altText: "TikTok has no alt-text field.",
+    ads: "TikTok Ads is a separate Marketing API product this adapter does not integrate.",
     webhooks: "TikTok webhooks report publish status and authorization changes only; comments are polled.",
+    publishing: "Until TikTok approves the app for the Content Posting API, an unaudited app can only post with SELF_ONLY privacy to private accounts.",
   };
   if (!has(SCOPES.comments)) reasons.comments = "Reading comments needs the Business Account comment.list scope.";
   if (!has(SCOPES.reply)) reasons.reply = "Replying to comments needs the Business Account comment.list.manage scope.";
@@ -40,7 +44,7 @@ export function capsFor(cred: Credential): Capabilities {
     limits: { textMaxChars: 2200, imagesMax: 35, videoMaxSeconds: 600, hashtagsMax: 30, mentions: true, firstComment: false, links: "none", altText: false, videoMaxBytes: 4 * 1024 * 1024 * 1024 },
     inbox: { comments: has(SCOPES.comments), mentions: false, messages: false, reviews: false, reply: has(SCOPES.reply) },
     insights: { organic: true, audience: has(SCOPES.insights) },
-    ads: { import: true, manage: false },
+    ads: { import: false, manage: false },
     ingestion: { webhooks: true, polling: true },
     reasons,
     checkedAt: now(),

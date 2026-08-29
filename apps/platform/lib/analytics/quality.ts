@@ -7,6 +7,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import type { QualityKind } from "@/db/schema/quality";
 import { METRICS } from "./metrics";
+import { allBreaks, PROVIDER_NETWORKS } from "./breaks";
 
 export type Finding = { kind: QualityKind; subject: string; severity: "info" | "warning" | "error"; message: string; details?: Record<string, unknown> };
 
@@ -81,7 +82,34 @@ export async function checkReconciliation(workspaceId: string): Promise<Finding[
   return list.map((r) => ({ kind: "reconciliation", subject: `${r.channel_id}:${r.metric}`, severity: "warning", message: `${metricName(r.metric)}: post totals exceed the channel total on ${r.days} day(s)`, details: { channelId: r.channel_id, metric: r.metric, days: r.days, worstGap: r.worst, tolerance: RECONCILE_TOLERANCE } }));
 }
 
+/**
+ * A stored series that spans one of the registry's definition breaks. Info only:
+ * nothing is wrong with the data, but the two halves measure different things.
+ */
+export async function checkDefinitionBreaks(workspaceId: string): Promise<Finding[]> {
+  const out: Finding[] = [];
+  for (const p of allBreaks()) {
+    const networks = PROVIDER_NETWORKS[p.entry.provider] ?? [];
+    if (!networks.length) continue;
+    const [r] = await rows<{ before_n: number; after_n: number }>(sql`
+      select count(*) filter (where f.day < ${p.entry.effectiveFrom})::int as before_n,
+             count(*) filter (where f.day >= ${p.entry.effectiveFrom})::int as after_n
+      from metric_fact f join channel c on c.id = f.channel_id
+      where f.workspace_id = ${workspaceId} and f.metric = ${p.metric}
+        and c.network in (${sql.join(networks.map((n) => sql`${n}`), sql`, `)})`);
+    if (!r || !Number(r.before_n) || !Number(r.after_n)) continue;
+    out.push({
+      kind: "definition_break",
+      subject: `${p.metric}:${p.entry.provider}:${p.entry.effectiveFrom}`,
+      severity: "info",
+      message: `${p.metricName}: this workspace has facts either side of the ${p.label.replace("Definition changed — ", "")} definition change on ${p.entry.effectiveFrom}`,
+      details: { metric: p.metric, provider: p.entry.provider, effectiveFrom: p.entry.effectiveFrom, before: Number(r.before_n), after: Number(r.after_n), note: p.entry.note },
+    });
+  }
+  return out;
+}
+
 export async function collectFindings(workspaceId: string): Promise<Finding[]> {
-  const parts = await Promise.all([checkFreshness(workspaceId), checkDuplicates(workspaceId), checkImplausible(workspaceId), checkRevisions(workspaceId), checkReconciliation(workspaceId)]);
+  const parts = await Promise.all([checkFreshness(workspaceId), checkDuplicates(workspaceId), checkImplausible(workspaceId), checkRevisions(workspaceId), checkReconciliation(workspaceId), checkDefinitionBreaks(workspaceId)]);
   return parts.flat();
 }

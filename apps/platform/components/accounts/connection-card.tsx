@@ -2,9 +2,14 @@
 
 import { Avatar, Badge, Button } from "@wizeworks/silicaui-react";
 import { buttonClasses } from "@wizeworks/silicaui-react/server";
+import type { Capabilities } from "@make-it-social/providers";
+import { channelCapabilityItems } from "@/lib/capabilities";
+import { CapabilityList } from "@/components/shared/why-not";
+import type { ChannelQuota } from "@/lib/channel-quota";
 import { NetMark } from "../library-screen";
+import { QuotaGauge } from "./quota-gauge";
 
-export type ChannelRow = { id: string; network: string; kind: string; name: string; handle: string | null; avatarUrl: string | null; status: string; healthMessage: string | null; lastSyncAt: string | null; formats: string[]; inbox: boolean; insights: boolean };
+export type ChannelRow = { id: string; network: string; kind: string; name: string; handle: string | null; avatarUrl: string | null; status: string; healthMessage: string | null; lastSyncAt: string | null; formats: string[]; capabilities: Capabilities; quota: ChannelQuota | null };
 export type ConnectionRow = { id: string; provider: string; providerName: string; providerUserName: string | null; status: string; expiresAt: string | null; scopes: string[]; channels: ChannelRow[] };
 
 const STATUS: Record<string, { label: string; color: "success" | "warning" | "error" | "neutral" | "info" }> = {
@@ -42,10 +47,13 @@ function ChannelLine({ ch, canManage, pending, onResync, onDisconnect }: { ch: C
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2"><NetMark network={ch.network} /><span className="font-semibold">{ch.name}</span>{ch.handle && <span className="text-sm text-secondary/70">{ch.handle}</span>}<Badge size="xs" variant="soft" color={st.color}>{st.label}</Badge></div>
         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-secondary">
-          <span>{ch.formats.length ? `Publishes: ${ch.formats.join(", ")}` : "Read-only"}</span>{ch.inbox && <span>· Inbox</span>}{ch.insights && <span>· Insights</span>}
+          <span>{ch.formats.length ? `Publishes: ${ch.formats.join(", ")}` : "Read-only"}</span>
           <span className="text-secondary/70">· {ch.lastSyncAt ? `Checked ${new Date(ch.lastSyncAt).toLocaleString()}` : "Not checked yet"}</span>
         </div>
+        {/* What this network allows, with the reason attached to anything it doesn't (CAPABILITY_CATALOG). */}
+        <CapabilityList items={channelCapabilityItems(ch.capabilities)} className="mt-2" />
         {ch.healthMessage && <p className="mt-1 text-sm text-secondary">{ch.healthMessage}</p>}
+        {ch.quota && <QuotaGauge quota={ch.quota} />}
       </div>
       {canManage && ch.status !== "disconnected" && (
         <div className="flex items-center gap-1">

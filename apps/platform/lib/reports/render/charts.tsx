@@ -6,6 +6,8 @@
 import React from "react"; // see index.tsx: the worker uses the classic JSX runtime
 import { NETWORK_COLOR } from "@/components/analytics/charts";
 import type { SeriesPoint } from "@/lib/analytics/queries";
+import { seriesBreakMarkers, splitAtBreaks, type BreakMarker } from "@/lib/analytics/breaks";
+import type { DisplayMetric } from "@/lib/analytics/metrics";
 
 const color = (n: string) => NETWORK_COLOR[n] ?? "#525252";
 const short = (v: number) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(v >= 10_000 ? 0 : 1)}K` : String(Math.round(v)));
@@ -35,8 +37,14 @@ export function Legend({ networks }: { networks: string[] }) {
   );
 }
 
-/** One line per network across the period. */
-export function TrendChart({ points }: { points: SeriesPoint[] }) {
+/** Day runs that sit wholly on one side of every definition break, with their global offsets. */
+function segmentsOf(days: string[], markers: BreakMarker[]) {
+  let start = 0;
+  return splitAtBreaks(days, markers).map((run) => { const s = start; start += run.length; return { start: s, run }; });
+}
+
+/** One line per network across the period, cut wherever a provider redefined the metric. */
+export function TrendChart({ points, metric = "engagement" }: { points: SeriesPoint[]; metric?: DisplayMetric }) {
   const { days, networks, byNet } = grouped(points);
   if (days.length === 0) return <p className="muted small">No daily facts were stored for this period.</p>;
   const [W, H, padL, padB] = [880, 220, 42, 24];
@@ -44,6 +52,8 @@ export function TrendChart({ points }: { points: SeriesPoint[] }) {
   const x = (i: number) => padL + (days.length > 1 ? (i / (days.length - 1)) * (W - padL - 10) : 0);
   const y = (v: number) => 10 + (1 - v / max) * (H - padB - 10);
   const every = Math.max(1, Math.ceil(days.length / 8));
+  const markers = seriesBreakMarkers(metric, days);
+  const segments = segmentsOf(days, markers);
   return (
     <div className="chartwrap">
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Trend by network">
@@ -54,11 +64,23 @@ export function TrendChart({ points }: { points: SeriesPoint[] }) {
           </g>
         ))}
         {days.map((d, i) => (i % every === 0 ? <text key={d} x={x(i)} y={H - 6} textAnchor="middle" fill={LABEL} fontSize="10">{dayLabel(d)}</text> : null))}
-        {networks.map((n) => {
-          const m = byNet.get(n)!;
-          const path = days.map((d, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(m.get(d) ?? 0).toFixed(1)}`).join(" ");
-          return <path key={n} d={path} fill="none" stroke={color(n)} strokeWidth="2" strokeLinejoin="round" />;
+        {markers.map((m) => {
+          const mx = (x(m.index - 1) + x(m.index)) / 2;
+          return (
+            <g key={`${m.metric}-${m.day}`}>
+              <title>{m.tooltip}</title>
+              <line x1={mx} x2={mx} y1={8} y2={H - 20} stroke="#0a0a0a" strokeWidth="1" strokeDasharray="3 3" />
+              <text x={mx + 4} y={16} fill={LABEL} fontSize="10">{m.label}</text>
+            </g>
+          );
         })}
+        {networks.map((n) => (
+          <g key={n}>
+            {segments.map((seg) => (
+              <path key={seg.start} d={seg.run.map((d, j) => `${j === 0 ? "M" : "L"}${x(seg.start + j).toFixed(1)},${y(byNet.get(n)!.get(d) ?? 0).toFixed(1)}`).join(" ")} fill="none" stroke={color(n)} strokeWidth="2" strokeLinejoin="round" />
+            ))}
+          </g>
+        ))}
       </svg>
     </div>
   );

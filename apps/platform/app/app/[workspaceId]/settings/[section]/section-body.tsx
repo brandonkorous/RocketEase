@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ApprovalPolicies } from "@/components/approval-policies";
 import { SecurityPanel } from "@/components/security-panel";
 import { AutomationsSettings } from "@/components/settings/automations";
+import { BrandVoiceSettings } from "@/components/settings/brand-voice-settings";
 import { InboxSettings } from "@/components/settings/inbox-settings";
 import { NotificationSettings } from "@/components/settings/notification-settings";
 import { SsoSettings } from "@/components/settings/sso-settings";
@@ -33,6 +34,8 @@ export function SectionBody({ section, label, ctx, data }: Props) {
           <ApprovalPolicies workspaceId={workspace.id} policies={data.policies} channels={data.channels} canEdit={canEdit} />
         </>
       );
+    case "brand":
+      return <BrandVoiceSettings workspaceId={workspace.id} initial={data.brandVoice} canEdit={canEdit} aiEnabled={data.aiEnabled} />;
     case "inbox":
       return <InboxSettings workspaceId={workspace.id} minutes={data.inbox.minutes} replies={data.inbox.replies} canEdit={canEdit} canHandle={hasCapability(workspace, "conversations.handle")} />;
     case "automations":

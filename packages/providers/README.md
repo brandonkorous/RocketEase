@@ -2,6 +2,8 @@
 
 Adapter contract for social networks (`src/types.ts`, `inbox-types.ts`, `insights-types.ts`) plus one adapter per provider. Capabilities are declared **per channel** from what the account actually granted; the UI and workers never assume parity between networks. Anything a provider does not offer is declared `false` with a `reasons` entry rather than implemented speculatively.
 
+`CAPABILITY_CATALOG` (`src/catalog.ts`) is the static, credential-free view of all of it: it calls the same `*_CAPS` factories with a synthetic full-grant credential (plus the default-scope grant, so anything needing an extra permission is listed as *conditional* rather than promised) and feeds the public `/capabilities` page in the platform. `catalog.test.ts` fails the build if any `false` inbox / ads / ingestion capability has no `reasons` entry, so the page can never claim more than the adapters declare.
+
 ```
 pnpm --filter @make-it-social/providers test        # vitest (fixtures are hand-written from the official webhook/API references)
 pnpm --filter @make-it-social/providers typecheck
@@ -65,13 +67,13 @@ Threading matches each network's own model: YouTube threads on the top-level com
 ### LinkedIn
 - Scopes: `openid profile email` (identity), `w_member_social` (post as member), `r_organization_social` + `w_organization_social` (read/write Page posts and comments), `rw_organization_admin` + `r_organization_admin` (Page admin, ACLs, analytics).
 - Prerequisite: the **Community Management API** product, which is partner-gated (application through the LinkedIn Marketing Developer Platform). Without it `organizationAcls`, `posts`, `socialActions` and the statistics endpoints return 403. Refresh tokens require the "programmatic refresh token" feature on the app.
-- Unsupported and declared as such: direct messages (no third-party messaging API), reviews (none on LinkedIn), webhooks (none for Page comments/mentions — polling only), member-profile comments/insights (`r_member_social` is restricted; analytics exist only for organizations), daily per-post statistics (per-share statistics are lifetime totals).
+- Unsupported and declared as such: ads (the LinkedIn Marketing API is a separate partner-gated product this adapter does not integrate, so `ads.import`/`ads.manage` are both false), direct messages (no third-party messaging API), reviews (none on LinkedIn), webhooks (none for Page comments/mentions — polling only), member-profile comments/insights (`r_member_social` is restricted; analytics exist only for organizations), daily per-post statistics (per-share statistics are lifetime totals).
 - Rate limits: HTTP 429 with an application-level daily quota; `Retry-After` is honoured when present, otherwise the adapter reports one hour.
 
 ### TikTok
 - Login Kit scopes requested: `user.info.basic`, `user.info.profile`, `user.info.stats`, `video.list`, `video.publish`, `video.upload`. `video.publish` requires Content Posting API approval; unaudited apps can only post with `SELF_ONLY` privacy to private accounts.
 - Comments and daily insights come from the **Business Account API** (`business-api.tiktok.com/open_api/v1.3/business/*`) which requires a TikTok **Business Account** and the app to be approved for `comment.list`, `comment.list.manage` and `video.insights`. Capabilities are derived from the granted scopes: without them `inbox.comments`, `inbox.reply` and `insights.audience` are `false` with reasons. The Business API is not verified live; token compatibility between the Login Kit token and the Business Account endpoints must be confirmed during TikTok app review.
-- Unsupported and declared as such: direct messages and mentions (no API), first comment, clickable links, alt text. Webhooks exist for `post.publish.*` and `authorization.removed` only; comments are polled.
+- Unsupported and declared as such: ads (the TikTok Marketing API is a separate product this adapter does not integrate), direct messages and mentions (no API), first comment, clickable links, alt text. Webhooks exist for `post.publish.*` and `authorization.removed` only; comments are polled.
 - Rate limits: `rate_limit_exceeded` / HTTP 429; `Retry-After` honoured, default 60 s.
 
 ### YouTube

@@ -31,7 +31,8 @@ export { mockInbox, mockInsights, mockAds };
 
 const now = () => new Date().toISOString();
 
-const CAPS: Capabilities = {
+/** Exported for the capability catalog (catalog.ts) — the demo network is listed as a development-only entry. */
+export const CAPS: Capabilities = {
   formats: ["text", "image", "carousel", "video"],
   scheduling: "internal",
   limits: { textMaxChars: 2200, imagesMax: 10, videoMaxSeconds: 90, hashtagsMax: 30, mentions: true, firstComment: true, links: "inline", altText: true },
@@ -39,6 +40,7 @@ const CAPS: Capabilities = {
   insights: { organic: true, audience: true },
   ads: { import: true, manage: true },
   ingestion: { webhooks: true, polling: true },
+  reasons: { reviews: "The demo network has no reviews." },
   checkedAt: now(),
 };
 

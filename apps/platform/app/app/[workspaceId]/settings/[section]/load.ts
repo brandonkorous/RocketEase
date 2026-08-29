@@ -9,6 +9,8 @@ import { workspace, workspaceMembership } from "@/db/schema/app";
 import { approvalPolicy } from "@/db/schema/approvals";
 import { channel } from "@/db/schema/connections";
 import { inboxSettings, savedReply } from "@/db/schema/engagement";
+import { aiConfigured } from "@/lib/ai/client";
+import { EMPTY_BRAND_VOICE, readBrandVoice, type BrandVoice } from "@/lib/ai/brand-voice";
 import { automationsData, EMPTY_AUTOMATIONS, type AutomationsData } from "@/lib/automations/queries";
 import { ssoSectionData, EMPTY_SSO, type SsoSectionData } from "@/lib/sso/queries";
 import { readGoals, readTracking, type GoalKey, type TrackingSettings } from "@/lib/actions/settings/catalog";
@@ -32,9 +34,11 @@ export type SectionData = {
   prefs: Record<string, boolean>;
   automations: AutomationsData;
   sso: SsoSectionData;
+  brandVoice: BrandVoice;
+  aiEnabled: boolean;
 };
 
-const EMPTY: SectionData = { policies: [], channels: [], sessions: [], inbox: { minutes: 60, replies: [] }, tracking: readTracking({}), sources: [], sourceKinds: { ga4: false, shopify: false }, goals: [], prefs: {}, automations: EMPTY_AUTOMATIONS, sso: EMPTY_SSO };
+const EMPTY: SectionData = { policies: [], channels: [], sessions: [], inbox: { minutes: 60, replies: [] }, tracking: readTracking({}), sources: [], sourceKinds: { ga4: false, shopify: false }, goals: [], prefs: {}, automations: EMPTY_AUTOMATIONS, sso: EMPTY_SSO, brandVoice: EMPTY_BRAND_VOICE, aiEnabled: false };
 
 /** Conversion sources as the settings list renders them (freshness in the workspace timezone). */
 async function trackingSourceRows(workspaceId: string, tz: string): Promise<SectionData["sources"]> {
@@ -80,6 +84,11 @@ export async function loadSection(section: string, ctx: WorkspaceContext): Promi
   if (section === "tracking") {
     data.sources = await trackingSourceRows(workspaceId, ctx.workspace.timezone);
     data.sourceKinds = { ga4: trackingKindEnabled("ga4"), shopify: trackingKindEnabled("shopify") };
+  }
+  if (section === "brand") {
+    const [ws] = await db.select({ settings: workspace.settings }).from(workspace).where(eq(workspace.id, workspaceId));
+    data.brandVoice = readBrandVoice(ws?.settings ?? {});
+    data.aiEnabled = aiConfigured();
   }
   if (section === "automations") {
     data.automations = await automationsData(workspaceId, ctx.workspace.timezone);

@@ -1,6 +1,7 @@
 import type { ReportFilters } from "@/db/schema/analytics";
 import { DEFINITIONS_VERSION, METRICS, type DisplayMetric } from "./metrics";
 import { comparisonPeriod } from "./periods";
+import { definitionChangeNotes } from "./breaks";
 import { freshness, revisedFactsInPeriod, seriesByNetwork, topPosts, totals, type Totals } from "./queries";
 import { derived } from "./derive";
 import { conversionState, type ConversionState } from "@/lib/tracking/conversions";
@@ -52,6 +53,10 @@ export async function buildCsv(input: { workspaceId: string; workspaceName: stri
   lines.push(`# source_freshness,${fresh.latestAt?.toISOString() ?? "none"},degraded_sources,${fresh.staleChannels.length}`);
   // Materially changed report: facts in this period were revised since the previous run (analytics.md "Data quality").
   if (revised.count > 0) lines.push(`# revisions_since_last_run,${revised.count},from,${revised.from},to,${revised.to}`);
+  // A provider redefined a metric inside this range: the two halves are different measurements.
+  const changes = definitionChangeNotes(filters.from, filters.to, [...TOTAL_KEYS, "video_views", "viewers"]);
+  lines.push(`# definition_changes_in_this_range,${changes.length}`);
+  for (const c of changes) lines.push(`# definition_change,${esc(c)}`);
   lines.push("");
   lines.push(row(["section", "metric", "definition", "formula", "unit", "current", "previous", "change_abs"]));
   for (const k of TOTAL_KEYS) {

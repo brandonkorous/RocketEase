@@ -39,7 +39,7 @@ export async function loadComposer(ctx: WorkspaceContext, sp: CreateSearch, base
   const variants = await db.select().from(postVariant).where(eq(postVariant.contentItemId, item.id));
   const assets = await loadAssets(workspaceId);
 
-  const channelRows: ComposerChannel[] = channels.map((c) => ({ id: c.id, network: c.network, kind: c.kind, name: c.name, handle: c.handle, avatarUrl: c.avatarUrl, status: c.status, formats: c.capabilities.formats, textMax: c.capabilities.limits.textMaxChars ?? null, firstComment: Boolean(c.capabilities.limits.firstComment), links: c.capabilities.limits.links ?? "inline" }));
+  const channelRows: ComposerChannel[] = channels.map((c) => ({ id: c.id, provider: c.provider, network: c.network, kind: c.kind, name: c.name, handle: c.handle, avatarUrl: c.avatarUrl, status: c.status, formats: c.capabilities.formats, textMax: c.capabilities.limits.textMaxChars ?? null, firstComment: Boolean(c.capabilities.limits.firstComment), links: c.capabilities.limits.links ?? "inline" }));
   const initial: ComposerItem = {
     id: item.id, title: item.title, status: item.status, approvalState: item.approvalState,
     sharedText: item.sharedText || (sp.text ?? ""),

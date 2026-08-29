@@ -3,6 +3,18 @@ export * from "./inbox-types";
 export * from "./insights-types";
 export * from "./ads-types";
 export { validateAgainstCapabilities } from "./validate";
+export {
+  CAPABILITY_CATALOG,
+  CAPABILITY_PATHS,
+  PUBLIC_CAPABILITY_CATALOG,
+  capabilitySupported,
+  catalogEntry,
+  extraNotes,
+  reasonFor,
+  type CapabilityPath,
+  type CatalogEntry,
+} from "./catalog";
+export { PROVIDER_COST_NOTES, estimatePublishCost, isFreeToPublish, type CapWindow, type CostVariant, type CostWindow, type PublishCost } from "./cost";
 export { httpJson, categoryFromStatus } from "./http";
 export { missingScopes, probe, retryAfterSeconds } from "./health";
 /** Shared Google OAuth pieces — the YouTube adapter and the GA4 tracking source use the same Google client. */

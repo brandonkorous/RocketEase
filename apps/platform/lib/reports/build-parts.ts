@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { inboxSettings } from "@/db/schema/engagement";
 import type { ReportFilters } from "@/db/schema/analytics";
 import { DEFINITIONS_VERSION, METRICS, formatMetric, type DisplayMetric } from "@/lib/analytics/metrics";
+import { definitionChangeNotes } from "@/lib/analytics/breaks";
 import type { Freshness, Totals } from "@/lib/analytics/queries";
 import { inboxStats } from "@/lib/engagement/queries";
 import { paidAttribution } from "@/lib/campaigns/attribution";
@@ -15,7 +16,7 @@ import { listRecommendations } from "@/lib/recommendations/store";
 import { formatInZone } from "@/lib/time";
 import type { InboxRow, InsightRow, PaidSection, ReportAppendix } from "./document";
 
-const APPENDIX_KEYS: DisplayMetric[] = ["reach", "impressions", "engagement", "engagement_rate", "link_clicks", "followers", "follower_gain", "spend", "conversions", "roas"];
+const APPENDIX_KEYS: DisplayMetric[] = ["reach", "viewers", "impressions", "engagement", "engagement_rate", "link_clicks", "followers", "follower_gain", "spend", "conversions", "roas"];
 
 /** Service metrics from the shared inbox (analytics.md "Service"). */
 export async function inboxSection(workspaceId: string): Promise<InboxRow[] | null> {
@@ -80,6 +81,7 @@ export function buildAppendix(input: AppendixInput): ReportAppendix {
     freshnessLabel: fresh.latestAt ? formatInZone(fresh.latestAt, tz) : "No successful sync recorded",
     staleSources: fresh.staleChannels.map((c) => `${c.name} (${c.network})${c.lastError ? ` — ${c.lastError}` : ""}`),
     caveats,
+    definitionChanges: definitionChangeNotes(input.filters.from, input.filters.to, APPENDIX_KEYS),
     revisionNote: revised.count > 0 ? `${revised.count} stored fact${revised.count === 1 ? "" : "s"} between ${revised.from} and ${revised.to} were revised by the provider in the last 24 hours; earlier copies of this report may differ.` : null,
   };
 }

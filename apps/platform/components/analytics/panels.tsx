@@ -90,13 +90,32 @@ function SourceAttribution({ data }: { data: AnalyticsData }) {
   );
 }
 
+const TREND_OPTIONS: AnalyticsData["trendMetric"][] = ["engagement", "reach", "impressions"];
+
 export function TrendPanel({ data }: { data: AnalyticsData }) {
+  const router = useRouter();
   const networks = [...new Set(data.trend.map((p) => p.network))];
+  const base = `${workspacePath(data.workspaceId, "analytics")}?${filtersToQuery(data.filters)}`;
   return (
-    <Panel title="Cross-channel engagement trend" info="engagement">
-      <Legend networks={networks} />
-      <div className="mt-2"><LineChart points={data.trend} /></div>
-    </Panel>
+    <section className="flex flex-col rounded-box border border-base-300 p-4" aria-label="Cross-channel trend">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="flex items-center text-sm font-semibold">Cross-channel trend<MetricInfo m={METRICS[data.trendMetric]} freshness={null} /></h2>
+        <select className="select select-xs w-auto" value={data.trendMetric} onChange={(e) => router.push(`${base}&trend=${e.target.value}`)} aria-label="Trend metric">
+          {TREND_OPTIONS.map((k) => (<option key={k} value={k}>{METRICS[k].name}</option>))}
+        </select>
+      </div>
+      <div className="mt-3"><Legend networks={networks} /></div>
+      <div className="mt-2"><LineChart points={data.trend} metric={data.trendMetric} /></div>
+      {data.definitionChanges.length > 0 && (
+        <div className="mt-2 rounded-field border border-base-300 p-2">
+          <p className="text-xs font-medium">Definition changes in this range</p>
+          <ul className="mt-1 flex flex-col gap-1 text-xs text-secondary/80">
+            {data.definitionChanges.map((c, i) => (<li key={i}>{c}</li>))}
+          </ul>
+          <p className="mt-1 text-xs text-secondary/70">The line is cut at the change: values either side are different measurements and are never joined.</p>
+        </div>
+      )}
+    </section>
   );
 }
 

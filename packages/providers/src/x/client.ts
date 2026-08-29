@@ -40,6 +40,7 @@ export function capsFor(cred: Credential): Capabilities {
   const dm = has(SCOPES.dmRead);
   const reasons: Record<string, string> = {
     reviews: "X has no reviews.",
+    mentions: "The mentions timeline is not part of X's free access tier; the inbox needs at least the paid tier.",
     firstComment: "A follow-up post is published as a reply in the thread rather than a separate first-comment field.",
     textMaxChars: "280 characters is the standard account limit; X Premium raises it but no API reports an account's own ceiling.",
     webhooks: "Real-time delivery on X is the Account Activity API, a separately gated product; mentions and DMs are polled here.",

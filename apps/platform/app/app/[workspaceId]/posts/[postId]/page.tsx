@@ -9,6 +9,7 @@ import { PostActions } from "@/components/post-actions";
 import { PostComments } from "@/components/post-comments";
 import { Destinations } from "@/components/post-detail/destinations";
 import { Performance } from "@/components/post-detail/performance";
+import { PublishReceipts } from "@/components/post-detail/publish-receipt";
 import { Reuse } from "@/components/post-detail/reuse";
 import { Activity, Versions } from "@/components/post-detail/side-panels";
 import { statusOf } from "@/components/post-detail/status";
@@ -23,7 +24,7 @@ import { hasCapability, requireWorkspace } from "@/lib/session";
 import { formatInZone, utcToZonedInput } from "@/lib/time";
 import { workspacePath } from "@/lib/nav";
 import { ApprovalBanner } from "./banners";
-import { loadComments, loadContent } from "./load";
+import { loadComments, loadContent, loadReceipts } from "./load";
 
 export const metadata: Metadata = { title: "Post" };
 
@@ -47,6 +48,7 @@ export default async function PostPage({ params }: { params: Promise<{ workspace
     db.select({ a: auditEvent, by: user.name }).from(auditEvent).leftJoin(user, eq(user.id, auditEvent.actorUserId)).where(and(eq(auditEvent.workspaceId, workspaceId), inArray(auditEvent.targetId, [item.id, ...variantIds]))).orderBy(desc(auditEvent.createdAt)).limit(30),
   ]);
 
+  const receipts = await loadReceipts(item, variants, jobs);
   const st = statusOf(item.status);
   const canPublish = hasCapability(ctx.workspace, "content.publish") || ctx.workspace.role === "creator";
   const editable = !["publishing", "published", "partially_published"].includes(item.status);
@@ -76,7 +78,8 @@ export default async function PostPage({ params }: { params: Promise<{ workspace
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="flex flex-col gap-6">
-          <Destinations item={item} variants={variants} jobs={jobs} tz={tz} />
+          <Destinations item={item} variants={variants} tz={tz} />
+          <PublishReceipts receipts={receipts} tz={tz} />
           <Performance perf={perf} tz={tz} />
           <section className="rounded-box border border-base-300 p-5" aria-labelledby="content-h">
             <h2 id="content-h" className="text-base font-semibold">Content</h2>

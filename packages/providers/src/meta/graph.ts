@@ -47,7 +47,11 @@ export const IG_CAPS = (): Capabilities => ({
   insights: { organic: true, audience: true },
   ads: { import: true, manage: false },
   ingestion: { webhooks: true, polling: true },
-  reasons: { links: "Instagram captions don't render clickable links.", ads: "Boosting Instagram media needs an Instagram actor on the ad account; manage it from Meta Ads Manager for now." },
+  reasons: {
+    links: "Instagram captions don't render clickable links.",
+    reviews: "Instagram has no reviews.",
+    ads: "Boosting Instagram media needs an Instagram actor on the ad account; manage it from Meta Ads Manager for now.",
+  },
   checkedAt: now(),
 });
 

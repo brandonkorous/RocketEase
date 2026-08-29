@@ -1,4 +1,6 @@
 import type { SeriesPoint } from "@/lib/analytics/queries";
+import { seriesBreakMarkers, splitAtBreaks, type BreakMarker } from "@/lib/analytics/breaks";
+import type { DisplayMetric } from "@/lib/analytics/metrics";
 
 /** Brand colors are allowed only for network marks; charts use them to identify networks. */
 export const NETWORK_COLOR: Record<string, string> = { instagram: "#e1306c", facebook: "#1877f2", linkedin: "#0a66c2", tiktok: "#111111", x: "#111111", youtube: "#ff0000", pinterest: "#bd081c", mock: "#1d4ed8" };
@@ -21,8 +23,35 @@ export function Legend({ networks, labels }: { networks: string[]; labels?: Reco
   );
 }
 
+/** Day runs that sit wholly on one side of every definition break, with their global offsets. */
+function segmentsOf(days: string[], markers: BreakMarker[]) {
+  let start = 0;
+  return splitAtBreaks(days, markers).map((run) => { const s = start; start += run.length; return { start: s, run }; });
+}
+
+/**
+ * Vertical rule where a provider changed what the metric counts. The series is
+ * split either side of it — old and new definitions are never one line.
+ */
+function BreakMarkers({ markers, xOf, height }: { markers: BreakMarker[]; xOf: (i: number) => number; height: number }) {
+  return (
+    <>
+      {markers.map((m) => {
+        const x = (xOf(m.index - 1) + xOf(m.index)) / 2;
+        return (
+          <g key={`${m.metric}-${m.day}`}>
+            <title>{m.tooltip}</title>
+            <line x1={x} x2={x} y1={6} y2={height - 20} className="stroke-base-content/40" strokeWidth="1" strokeDasharray="3 3" />
+            <text x={x + 3} y={14} className="fill-secondary" fontSize="9">{m.label}</text>
+          </g>
+        );
+      })}
+    </>
+  );
+}
+
 /** Multi-line trend, one line per network. Pure SVG, responsive via viewBox. */
-export function LineChart({ points, height = 180 }: { points: SeriesPoint[]; height?: number }) {
+export function LineChart({ points, metric = "engagement", height = 180 }: { points: SeriesPoint[]; metric?: DisplayMetric; height?: number }) {
   const { days, networks, byNet } = groupByNetwork(points);
   const W = 640;
   const H = height;
@@ -34,14 +63,23 @@ export function LineChart({ points, height = 180 }: { points: SeriesPoint[]; hei
   if (days.length === 0) return <p className="py-10 text-center text-sm text-secondary/70">No data in this period.</p>;
   const ticks = [0, 0.25, 0.5, 0.75, 1];
   const labelEvery = Math.max(1, Math.ceil(days.length / 7));
+  const markers = seriesBreakMarkers(metric, days);
+  const segments = segmentsOf(days, markers);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label="Trend by network">
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={markers.length ? "Trend by network, split at a metric definition change" : "Trend by network"}>
       {ticks.map((t) => (<g key={t}><line x1={padL} x2={W - 8} y1={y(max * t)} y2={y(max * t)} className="stroke-base-300" strokeWidth="1" /><text x={padL - 6} y={y(max * t) + 3} textAnchor="end" className="fill-secondary" fontSize="9">{short(max * t)}</text></g>))}
       {days.map((d, i) => (i % labelEvery === 0 ? <text key={d} x={x(i)} y={H - 6} textAnchor="middle" className="fill-secondary" fontSize="9">{dayLabel(d)}</text> : null))}
+      <BreakMarkers markers={markers} xOf={x} height={H} />
       {networks.map((n) => {
         const m = byNet.get(n)!;
-        const d = days.map((day, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(m.get(day) ?? 0).toFixed(1)}`).join(" ");
-        return (<g key={n}><path d={d} fill="none" stroke={color(n)} strokeWidth="2" strokeLinejoin="round" />{days.map((day, i) => (<circle key={day} cx={x(i)} cy={y(m.get(day) ?? 0)} r="2.5" fill={color(n)} />))}</g>);
+        return (
+          <g key={n}>
+            {segments.map((seg) => (
+              <path key={seg.start} d={seg.run.map((day, j) => `${j === 0 ? "M" : "L"}${x(seg.start + j).toFixed(1)},${y(m.get(day) ?? 0).toFixed(1)}`).join(" ")} fill="none" stroke={color(n)} strokeWidth="2" strokeLinejoin="round" />
+            ))}
+            {days.map((day, i) => (<circle key={day} cx={x(i)} cy={y(m.get(day) ?? 0)} r="2.5" fill={color(n)} />))}
+          </g>
+        );
       })}
     </svg>
   );

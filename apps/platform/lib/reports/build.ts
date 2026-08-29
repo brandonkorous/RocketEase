@@ -110,6 +110,7 @@ export async function buildReportDocument({ workspace: ws, filters, title }: Bui
     scorecard: scorecardRows(cur, prev, paid, hasData, Boolean(cmp), conversions),
     trend,
     trendMetric: METRICS.engagement.name,
+    trendMetricKey: "engagement",
     mix: mix.map((m) => ({ name: m.name, network: m.network, value: m.value, share: mixTotal ? `${((m.value / mixTotal) * 100).toFixed(1)}%` : "—" })),
     mixTotal,
     topPosts: postRows(top, tz),

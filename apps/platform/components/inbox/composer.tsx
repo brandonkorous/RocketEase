@@ -3,19 +3,27 @@
 import { useState } from "react";
 import { Button, Textarea } from "@wizeworks/silicaui-react";
 import type { ConversationDetailData } from "@/lib/engagement/detail";
+import { draftReply, recordDraftUsed } from "@/lib/actions/ai";
 import { addInternalNote, saveSavedReply, sendReply } from "@/lib/actions/inbox";
 import { useActionFeedback } from "@/lib/use-action-feedback";
+import { AiDraftButton } from "../ai/ai-draft-button";
 import { TextPopover } from "./text-popover";
 
 type Mode = "reply" | "note";
 
-function SavedReplies({ d, onPick, onSave, text }: { d: ConversationDetailData; onPick: (body: string) => void; onSave: (title: string) => void; text: string }) {
+function SavedReplies({ d, workspaceId, onPick, onSave, text }: { d: ConversationDetailData; workspaceId: string; onPick: (body: string) => void; onSave: (title: string) => void; text: string }) {
   return (
     <div className="flex items-center gap-1">
       <select className="select select-xs w-auto max-w-45" value="" onChange={(e) => { const r = d.savedReplies.find((x) => x.id === e.target.value); if (r) onPick(r.body); }} aria-label="Insert saved reply">
         <option value="">Saved replies{d.savedReplies.length ? ` (${d.savedReplies.length})` : ""}</option>
         {d.savedReplies.map((r) => (<option key={r.id} value={r.id}>{r.title}</option>))}
       </select>
+      <AiDraftButton
+        load={() => draftReply({ workspaceId, conversationId: d.id })}
+        onUse={(body) => onPick(body)}
+        onUsed={() => { void recordDraftUsed(workspaceId, "reply"); }}
+        title="Reply suggestions to edit"
+      />
       {text.trim().length > 0 && <TextPopover trigger={<Button size="xs" variant="ghost" color="neutral">Save as reply</Button>} title="Name this saved reply" placeholder="e.g. Shipping times" initial={text.slice(0, 40)} maxLength={80} onSubmit={onSave} />}
     </div>
   );
@@ -41,7 +49,7 @@ export function ReplyComposer({ d, workspaceId, canHandle }: { d: ConversationDe
       <div className={`px-4 pb-3 pt-2 ${mode === "note" ? "bg-warning/10" : ""}`}>
         <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder={mode === "reply" ? "Type your message..." : "Internal note — only your team sees this"} className="w-full text-sm" aria-label={mode === "reply" ? "Reply" : "Internal note"} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !over) mode === "reply" ? send(false) : run(() => addInternalNote(workspaceId, d.id, text), clear); }} />
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          {mode === "reply" ? <SavedReplies d={d} text={text} onPick={(b) => setText((t) => (t ? `${t}\n${b}` : b))} onSave={saveAsReply} /> : <span className="text-xs text-secondary">Notes never reach the customer.</span>}
+          {mode === "reply" ? <SavedReplies d={d} workspaceId={workspaceId} text={text} onPick={(b) => setText((t) => (t ? `${t}\n${b}` : b))} onSave={saveAsReply} /> : <span className="text-xs text-secondary">Notes never reach the customer.</span>}
           <div className="flex items-center gap-2">
             <span className={`text-xs ${over ? "font-medium text-error" : "text-secondary/70"}`}>{text.length} / {d.textMax.toLocaleString()}</span>
             {mode === "reply" ? (

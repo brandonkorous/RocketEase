@@ -3,6 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { AppPage, PageEmpty, PageHeader } from "@/components/page-frame";
 import { AccountsPanel, type ConnectionRow } from "@/components/accounts-panel";
 import { QueryToast } from "@/components/query-toast";
+import { channelQuotas } from "@/lib/channel-quota";
 import { db } from "@/db";
 import { channel, providerConnection } from "@/db/schema/connections";
 import { providers } from "@/lib/providers";
@@ -29,6 +30,7 @@ export default async function AccountsPage({ params, searchParams }: { params: P
   const conns = await db.select().from(providerConnection).where(eq(providerConnection.workspaceId, workspaceId)).orderBy(desc(providerConnection.createdAt));
   const chans = await db.select().from(channel).where(eq(channel.workspaceId, workspaceId)).orderBy(channel.name);
   const reg = providers();
+  const quotas = await channelQuotas(workspaceId, ctx.workspace.timezone, chans);
 
   const rows: ConnectionRow[] = conns
     .filter((c) => c.status !== "selecting")
@@ -53,8 +55,8 @@ export default async function AccountsPage({ params, searchParams }: { params: P
           healthMessage: ch.health.message ?? null,
           lastSyncAt: ch.lastSyncAt?.toISOString() ?? null,
           formats: ch.capabilities.formats,
-          inbox: ch.capabilities.inbox.comments || ch.capabilities.inbox.messages,
-          insights: ch.capabilities.insights.organic,
+          capabilities: ch.capabilities,
+          quota: quotas.find((q) => q.channelId === ch.id) ?? null,
         })),
     }))
     .filter((c) => c.channels.length > 0 || c.status !== "disconnected");

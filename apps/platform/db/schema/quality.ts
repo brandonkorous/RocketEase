@@ -8,7 +8,8 @@ import { index, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm
 import { organization } from "./auth";
 import { workspace } from "./app";
 
-export const QUALITY_KINDS = ["freshness", "duplicate", "implausible", "revised", "reconciliation"] as const;
+// `definition_break` is informational: a provider changed what a metric counts mid-series.
+export const QUALITY_KINDS = ["freshness", "duplicate", "implausible", "revised", "reconciliation", "definition_break"] as const;
 export type QualityKind = (typeof QUALITY_KINDS)[number];
 
 export const dataQualityIssue = pgTable(

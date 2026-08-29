@@ -9,9 +9,13 @@ import { campaign } from "@/db/schema/campaigns";
 import { paidAttribution, type PaidAttribution } from "@/lib/campaigns/attribution";
 import { comparisonPeriod, delta, parseAnalyticsFilters, periodLabel, type AnalyticsFilters } from "./periods";
 import { openQuality, type QualitySummary } from "./quality-store";
+import { definitionChangeNotes } from "./breaks";
 import { conversionState, type ConversionState } from "@/lib/tracking/conversions";
 import { conversionProvenance, trackingUnavailable, type ConversionProvenance } from "@/lib/tracking/availability";
 import { channelMix, followersByNetwork, freshness, seriesByNetwork, topPosts, totals, type ChannelMix, type SeriesPoint, type TopPost, type Totals } from "./queries";
+
+/** Metrics the trend chart can plot; each is a channel-grain sum. */
+export type TrendMetric = "engagement" | "reach" | "impressions";
 
 export type ScoreCard = { contract: MetricContract; value: number | null; previous: number | null; delta: ReturnType<typeof delta>; unavailable: string | null };
 export type AnalyticsData = {
@@ -33,6 +37,9 @@ export type AnalyticsData = {
   conversionsRefreshedLabel: string | null;
   campaigns: { id: string; name: string }[];
   trend: SeriesPoint[];
+  trendMetric: TrendMetric;
+  /** Provider definition changes that fall inside this period (breaks.ts); charts split at them. */
+  definitionChanges: string[];
   followers: SeriesPoint[];
   followersTotal: number | null;
   followersPrev: number | null;
@@ -58,6 +65,7 @@ export async function loadAnalyticsData(workspaceId: string, sp: Record<string, 
   const filters = parseAnalyticsFilters(sp, tz);
   const cmp = comparisonPeriod(filters);
   const topBy = (["engagement", "reach", "link_clicks"].includes(String(sp.top)) ? String(sp.top) : "engagement") as AnalyticsData["topBy"];
+  const trendMetric = (["engagement", "reach", "impressions"].includes(String(sp.trend)) ? String(sp.trend) : "engagement") as TrendMetric;
   const [channels, cur, prev, organic, paid, attribution, campaigns, trend, followers, mix, top, fresh, quality, conversions] = await Promise.all([
     db.select({ id: channel.id, name: channel.name, network: channel.network }).from(channel).where(and(eq(channel.workspaceId, workspaceId), inArray(channel.status, ["healthy", "degraded"]))),
     totals(workspaceId, filters, filters),
@@ -66,7 +74,7 @@ export async function loadAnalyticsData(workspaceId: string, sp: Record<string, 
     filters.scope === "organic" ? Promise.resolve<Totals>({}) : totals(workspaceId, { ...filters, scope: "paid" }, filters),
     paidAttribution(workspaceId, tz),
     db.select({ id: campaign.id, name: campaign.name }).from(campaign).where(and(eq(campaign.workspaceId, workspaceId), isNull(campaign.archivedAt))).orderBy(campaign.name),
-    seriesByNetwork(workspaceId, filters, filters, "engagement"),
+    seriesByNetwork(workspaceId, filters, filters, trendMetric),
     followersByNetwork(workspaceId, filters, filters),
     channelMix(workspaceId, filters, filters),
     topPosts(workspaceId, filters, filters, topBy),
@@ -88,7 +96,7 @@ export async function loadAnalyticsData(workspaceId: string, sp: Record<string, 
   });
   return {
     workspaceId, timezone: tz, filters, periodLabel: periodLabel(filters), compareLabel: cmp ? periodLabel(cmp) : null, partial: false,
-    channels, scorecard, organic, paid, paidAttribution: paid.spend == null ? null : attribution, conversions, conversionProvenance: conversionProvenance(conversions), conversionsRefreshedLabel: conversions.lastSyncAt ? formatInZone(conversions.lastSyncAt, tz) : null, campaigns, trend, followers, followersTotal: cur.followers ?? null, followersPrev: prev.followers ?? null, mix, top, topBy,
+    channels, scorecard, organic, paid, paidAttribution: paid.spend == null ? null : attribution, conversions, conversionProvenance: conversionProvenance(conversions), conversionsRefreshedLabel: conversions.lastSyncAt ? formatInZone(conversions.lastSyncAt, tz) : null, campaigns, trend, trendMetric, definitionChanges: definitionChangeNotes(filters.from, filters.to, [trendMetric]), followers, followersTotal: cur.followers ?? null, followersPrev: prev.followers ?? null, mix, top, topBy,
     refreshedLabel: fresh.latestAt ? formatInZone(fresh.latestAt, tz) : null, stale: fresh.staleChannels.map((s) => ({ name: s.name, network: s.network, lastError: s.lastError })), quality,
     canExport: hasCapability(workspace, "reports.export"), hasData, isDev: process.env.NODE_ENV !== "production",
   };

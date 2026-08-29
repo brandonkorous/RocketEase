@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Checkbox } from "@wizeworks/silicaui-react";
+import { Checkbox } from "@wizeworks/silicaui-react";
 import { workspacePath } from "@/lib/nav";
 import { NetMark } from "../net-mark";
 import { BulkBar } from "./bulk-bar";
-import { DAY_NAMES, STATUS_COLOR, fmtDay, hourLabel, type CalendarData, type CalendarPost, type Nav } from "./types";
+import { ReceiptChipView } from "./receipt-chip";
+import { DAY_NAMES, fmtDay, hourLabel, type CalendarData, type CalendarPost, type Nav } from "./types";
 
 type DragProps = { draggable?: boolean; onDragStart?: () => void; onDragEnd?: () => void };
 type ViewProps = { data: CalendarData; days: string[]; byDay: Map<string, CalendarPost[]>; dragging: boolean; dragProps: (p: CalendarPost) => DragProps; onDrop: (day: string, hour?: number) => void; nav: Nav };
@@ -66,7 +67,7 @@ export function ListView({ data }: { data: CalendarData }) {
             <span className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-base-200">{p.thumbUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={p.thumbUrl} alt="" className="h-full w-full object-cover" />}</span>
             <NetMark network={p.network} />
             <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{p.title}</span><span className="block truncate text-xs text-secondary/70">{p.text || "No text"}</span></span>
-            <Badge size="xs" variant="soft" color={STATUS_COLOR[p.status] ?? "neutral"} className="capitalize">{p.status}</Badge>
+            <ReceiptChipView chip={p.receipt} />
             <span className="w-35 text-right text-xs text-secondary/70">{p.localDay ? `${fmtDay(p.localDay, { month: "short", day: "numeric" })} ${p.localTime}` : "—"}</span>
           </Link>
         </li>
@@ -81,6 +82,7 @@ function PostChip({ post, workspaceId, compact, ...drag }: { post: CalendarPost;
     <Link href={workspacePath(workspaceId, `posts/${post.itemId}`)} {...drag} className={`mb-1 flex items-center gap-1.5 rounded-md border bg-base-100 px-1.5 py-1 text-xs hover:border-base-content ${border} ${post.status === "published" ? "opacity-80" : ""} ${drag.draggable ? "cursor-grab" : ""}`} title={`${post.channelName}: ${post.text}`}>
       <NetMark network={post.network} size={12} />
       <span className="font-semibold">{post.localTime}</span>
+      <ReceiptChipView chip={post.receipt} compact />
       {!compact && post.thumbUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={post.thumbUrl} alt="" className="ml-auto h-6 w-6 rounded object-cover" />}
       {compact && <span className="truncate text-secondary">{post.title}</span>}
     </Link>

@@ -5,12 +5,13 @@ import type { ReportDocument, RollupDocument } from "../document";
 const PIXEL = "data:image/png;base64,iVBORw0KGgo=";
 
 const appendix: ReportDocument["appendix"] = {
-  definitionsVersion: "2026.08.1",
+  definitionsVersion: "2026.08.2",
   metrics: [{ name: "Reach", definition: "Accounts that saw your content.", formula: "Σ per-network daily reach", unit: "count", sources: "insights API", freshness: "Expected within 24 h", caveat: "Reach is unique within a network and a day only." }],
   sources: ["insights API"],
   freshnessLabel: "Aug 27, 2026, 6:00 AM",
   staleSources: ["Demo Page (mock) — token expired"],
   caveats: ["Totals across networks are additive, not deduplicated."],
+  definitionChanges: ["Reach (Meta), 2026-06-15: Post and Page reach (unique impressions) → Post and Page reach (unique media viewers). Not comparable across that date."],
   revisionNote: "3 stored facts were revised in the last 24 hours.",
 };
 
@@ -28,6 +29,7 @@ const doc: ReportDocument = {
     { day: "2026-08-02", network: "linkedin", value: 65 },
   ],
   trendMetric: "Engagement",
+  trendMetricKey: "engagement",
   mix: [{ name: "Acme IG", network: "instagram", value: 300, share: "74.1%" }, { name: "Acme LI", network: "linkedin", value: 105, share: "25.9%" }],
   mixTotal: 405,
   topPosts: [{ title: "Launch day <script>alert(1)</script>", network: "instagram", channelName: "Acme IG", publishedAt: "Aug 12, 2026", url: "https://example.com/p/1", reach: "4.1K", engagement: "310", clicks: "22" }],
@@ -62,7 +64,9 @@ describe("branded report HTML", () => {
     for (const marker of ["Monthly performance", "Aug 1 – Aug 27", "Jul 5 – Jul 31", "Headline results", "Engagement over time", "Where the engagement came from", "Top posts", "Conversations and response", "Paid activity", "What we suggest next", "Definitions and data sources"]) {
       expect(html).toContain(marker);
     }
-    expect(html).toContain("2026.08.1");
+    expect(html).toContain("2026.08.2");
+    expect(html).toContain("Definition changes in this range");
+    expect(html).toContain("unique media viewers");
     expect(html).toContain("Demo Page (mock)");
     expect(html).toContain("revised in the last 24 hours");
   });

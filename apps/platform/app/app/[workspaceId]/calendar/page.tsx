@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { asset, assetRendition } from "@/db/schema/assets";
 import { contentItem, postVariant } from "@/db/schema/content";
 import { channel } from "@/db/schema/connections";
+import { buildReceipt, receiptChip } from "@/lib/publishing/receipt";
 import { hasCapability, requireWorkspace } from "@/lib/session";
 import { presignGet } from "@/lib/storage";
 import { dayKey, utcToZonedInput, zonedToUtc } from "@/lib/time";
@@ -104,6 +105,7 @@ export default async function CalendarPage({ params, searchParams }: { params: P
       thumbUrl: await thumbUrlFor((r.v.assetIdsOverride ?? r.item.sharedAssetIds)[0]),
       format: r.v.format,
       error: r.v.lastError?.message ?? null,
+      receipt: receiptChip(buildReceipt({ variant: r.v, channel: { name: r.ch.name, network: r.ch.network } })),
     })),
   );
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Checkbox, Input, Radio, Textarea } from "@wizeworks/silicaui-react";
 import { NetMark } from "../library-screen";
 import { BestTimes } from "./best-times";
+import { CostPreview } from "./cost-preview";
 import type { Approval, ComposerChannel, Method, Reviewer } from "./types";
 import type { ComposerState } from "./use-composer";
 
@@ -37,6 +38,7 @@ export function DestinationPanel({ s, channels, approval, reviewers, timezone }:
       </div>
       {s.method === "review" && <ReviewDetails s={s} reviewers={reviewers} />}
       {s.method === "schedule" && <ScheduleDetails s={s} timezone={timezone} />}
+      <CostPreview s={s} channels={channels} />
       <UtmSection s={s} />
       {blocking > 0 && <p className="p-4 text-xs text-error">{blocking} issue{blocking === 1 ? "" : "s"} must be fixed before scheduling.</p>}
     </aside>

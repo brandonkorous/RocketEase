@@ -5,6 +5,7 @@
  * (analytics.md "Metric contract": missing is not zero).
  */
 import type { SeriesPoint } from "@/lib/analytics/queries";
+import type { DisplayMetric } from "@/lib/analytics/metrics";
 
 export type ReportBrand = {
   agencyName: string;
@@ -41,6 +42,8 @@ export type ReportAppendix = {
   freshnessLabel: string;
   staleSources: string[];
   caveats: string[];
+  /** Provider definition changes inside the reported range (lib/analytics/breaks.ts). */
+  definitionChanges: string[];
   revisionNote: string | null;
 };
 
@@ -58,6 +61,8 @@ export type ReportDocument = {
   scorecard: ScoreRow[];
   trend: SeriesPoint[];
   trendMetric: string;
+  /** Registry key behind trendMetric, so the chart can split at that metric’s breaks. */
+  trendMetricKey: DisplayMetric;
   mix: MixRow[];
   mixTotal: number;
   topPosts: PostRow[];

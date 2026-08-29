@@ -44,7 +44,8 @@ export function AnalyticsFilterBar({ data }: { data: AnalyticsData }) {
         <span className="flex items-center gap-2">
           {data.refreshedLabel ? `Data refreshed ${data.refreshedLabel}` : "No insights ingested yet"}
           {data.stale.length > 0 && <span className="text-warning" title={data.stale.map((s) => `${s.name}: ${s.lastError ?? "no recent sync"}`).join("\n")}>· {data.stale.length} source{data.stale.length > 1 ? "s" : ""} degraded</span>}
-          {data.quality.open > 0 && <span className="text-warning" title={data.quality.issues.map((i) => `${i.severity}: ${i.message}`).join("\n")}>· {data.quality.open} data quality issue{data.quality.open > 1 ? "s" : ""}</span>}
+          {/* Info-level findings (e.g. a definition break) are notes, not problems: they never colour the header. */}
+          {data.quality.open > 0 && <span className={data.quality.issues.some((i) => i.severity !== "info") ? "text-warning" : undefined} title={data.quality.issues.map((i) => `${i.severity}: ${i.message}`).join("\n")}>· {data.quality.open} data quality note{data.quality.open > 1 ? "s" : ""}</span>}
           <Button size="xs" variant="ghost" color="neutral" loading={pending} onClick={() => run(() => refreshInsightsNow(data.workspaceId))}>Refresh</Button>
         </span>
       </div>

@@ -8,7 +8,8 @@ import { getSessionCookie } from "better-auth/cookies";
  */
 // "/r" is the public client-report surface: signed, expiring share tokens carry their own proof (lib/reports/access.ts).
 // "/api/scim" carries its own per-organization bearer token (lib/scim/auth.ts), never a session cookie.
-const PUBLIC = ["/login", "/signup", "/api/auth", "/api/health", "/api/webhooks", "/api/connect/mock/authorize", "/invite", "/r/", "/api/scim"];
+// "/capabilities" is the public capability contract (app/(public)/capabilities): no tenant data, readable signed out.
+const PUBLIC = ["/login", "/signup", "/api/auth", "/api/health", "/api/webhooks", "/api/connect/mock/authorize", "/invite", "/r/", "/api/scim", "/capabilities"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

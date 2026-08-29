@@ -28,12 +28,13 @@ export const ORG_CAPS = (): Capabilities => ({
   limits: { textMaxChars: 3000, imagesMax: 20, videoMaxSeconds: 600, mentions: true, firstComment: true, links: "inline", altText: true, videoMaxBytes: 5 * 1024 * 1024 * 1024 },
   inbox: { comments: true, mentions: true, messages: false, reviews: false, reply: true },
   insights: { organic: true, audience: true },
-  ads: { import: true, manage: false },
+  ads: { import: false, manage: false },
   ingestion: { webhooks: false, polling: true },
   reasons: {
     messages: "LinkedIn does not expose Page or member messaging to third-party apps.",
     reviews: "LinkedIn Pages have no reviews.",
     webhooks: "LinkedIn offers no webhooks for Page comments or mentions; items are polled.",
+    ads: "The LinkedIn Marketing (Ads) API is a separate partner-gated product this adapter does not integrate.",
   },
   checkedAt: now(),
 });
@@ -44,9 +45,13 @@ export const MEMBER_CAPS = (): Capabilities => ({
   insights: { organic: false, audience: false },
   ads: { import: false, manage: false },
   reasons: {
+    ...ORG_CAPS().reasons,
     comments: "Reading comments on a member's own posts requires the restricted r_member_social permission.",
+    mentions: "LinkedIn reports mention notifications for organization Pages only.",
+    reply: "Replying needs comment access on member posts, which is the same restricted r_member_social permission.",
     messages: "LinkedIn does not expose member messaging to third-party apps.",
     insights: "LinkedIn provides analytics for organization Pages only, not member profiles.",
+    audience: "LinkedIn provides follower analytics for organization Pages only, not member profiles.",
   },
 });
 

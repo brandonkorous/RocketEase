@@ -95,6 +95,13 @@ export function Appendix({ appendix }: { appendix: ReportAppendix }) {
           ))}
         </tbody>
       </table>
+      {appendix.definitionChanges.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 24 }}>Definition changes in this range</h3>
+          <ul className="plain small">{appendix.definitionChanges.map((c, i) => (<li key={i}>{c}</li>))}</ul>
+          <p className="note">Charts are cut at these dates: figures either side measure different things and are never joined into one series.</p>
+        </>
+      )}
       <h3 style={{ marginTop: 24 }}>Caveats</h3>
       <ul className="plain small">
         {appendix.caveats.map((c, i) => (<li key={i}>{c}</li>))}

@@ -4,6 +4,7 @@ import { Tooltip } from "@wizeworks/silicaui-react";
 import type { MetricContract } from "@/lib/analytics/metrics";
 import { DEFINITIONS_VERSION, formatMetric } from "@/lib/analytics/metrics";
 import type { ScoreCard } from "@/lib/analytics/screen";
+import { breakLabel } from "@/lib/analytics/breaks";
 
 /** Every metric carries its contract (ANA-002): definition, formula, freshness, caveats. */
 export function MetricInfo({ m, freshness }: { m: MetricContract; freshness: string | null }) {
@@ -15,6 +16,7 @@ export function MetricInfo({ m, freshness }: { m: MetricContract; freshness: str
       <p className="text-secondary">Sources: {Object.values(m.providers).join(", ") || "none connected"}</p>
       <p className="text-secondary">Freshness: expected within {m.freshnessHours}h · last update {freshness ?? "never"}</p>
       {m.caveat && <p className="mt-1 text-warning">{m.caveat}</p>}
+      {m.breaks?.map((b) => (<p key={b.effectiveFrom + b.provider} className="mt-1 text-secondary">{breakLabel(b)} on {b.effectiveFrom}: {b.previous.name} → {b.next.name}. Series are split here, never joined.</p>))}
       <p className="mt-1 text-secondary/70">Definitions v{DEFINITIONS_VERSION}</p>
     </div>
   );

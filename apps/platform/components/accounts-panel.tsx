@@ -19,7 +19,10 @@ export function AccountsPanel({ workspaceId, connections, providers, canManage }
     <div className="mt-8 flex flex-col gap-10">
       {connections.length > 0 && (
         <section aria-labelledby="connected-heading" className="flex flex-col gap-6">
-          <h2 id="connected-heading" className="text-base font-semibold">Connected</h2>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="connected-heading" className="text-base font-semibold">Connected</h2>
+            <CapabilitiesLink />
+          </div>
           {connections.map((conn) => (<ConnectionCard key={conn.id} conn={conn} workspaceId={workspaceId} canManage={canManage} pending={pending} onResync={(ch) => run(() => resyncChannel(workspaceId, ch.id))} onDisconnect={setConfirm} />))}
         </section>
       )}
@@ -27,6 +30,11 @@ export function AccountsPanel({ workspaceId, connections, providers, canManage }
       <ProviderPicker workspaceId={workspaceId} providers={providers} canManage={canManage} hasConnections={connections.length > 0} />
     </div>
   );
+}
+
+/** The public capability contract (app/(public)/capabilities) — opens outside the app shell. */
+function CapabilitiesLink() {
+  return <a href="/capabilities" target="_blank" rel="noreferrer" className="text-sm font-medium text-secondary underline underline-offset-2 hover:text-base-content">See what each network supports</a>;
 }
 
 function DisconnectDialog({ ch, pending, onCancel, onConfirm }: { ch: ChannelRow; pending: boolean; onCancel: () => void; onConfirm: () => void }) {
@@ -48,6 +56,7 @@ function ProviderPicker({ workspaceId, providers, canManage, hasConnections }: {
     <section aria-labelledby="add-heading">
       <h2 id="add-heading" className="text-base font-semibold">{hasConnections ? "Add another network" : "Connect a network"}</h2>
       <p className="mt-1 text-sm text-secondary">You choose exactly which pages or accounts join this workspace after signing in with the network.</p>
+      <p className="mt-1 text-sm"><CapabilitiesLink /></p>
       <ul className="mt-4 grid gap-4 md:grid-cols-2">
         {providers.map((p) => (
           <li key={p.key} className="flex flex-col rounded-box border border-base-300 p-5">

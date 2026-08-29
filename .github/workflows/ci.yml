@@ -394,6 +394,14 @@ jobs:
                           GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rocketease_app;
                         ALTER DEFAULT PRIVILEGES IN SCHEMA public
                           GRANT USAGE, SELECT ON SEQUENCES TO rocketease_app;
+                        -- CREATE on the DATABASE, which is narrower than it sounds and is
+                        -- required: pg-boss issues CREATE SCHEMA IF NOT EXISTS at startup, and
+                        -- Postgres checks that privilege BEFORE the existence check — so it
+                        -- fails with "permission denied for database" even though the schema
+                        -- below already created it. Verified by reproducing both halves.
+                        -- It permits creating NEW schemas; it does NOT grant CREATE on `public`,
+                        -- so the app still cannot add, alter or drop anything drizzle owns.
+                        GRANT CREATE ON DATABASE rocketease TO rocketease_app;
                         -- pg-boss manages its own schema at runtime; see the note
                         -- on this step. Owning it is what makes that possible.
                         CREATE SCHEMA IF NOT EXISTS pgboss AUTHORIZATION rocketease_app;

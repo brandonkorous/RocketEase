@@ -8,11 +8,18 @@ WORKDIR /repo
 FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/platform/package.json apps/platform/
+# @rocketease/providers is a workspace dependency of the platform (and the worker),
+# so its manifest must be here for the filtered install to resolve the link.
 COPY packages/ui/package.json packages/ui/
+COPY packages/providers/package.json packages/providers/
 RUN pnpm install --frozen-lockfile --filter @rocketease/platform...
 
 FROM deps AS runner
 COPY packages/ui packages/ui
+# Source-only, like @rocketease/ui: package.json exports point straight at src/*.ts
+# and it is listed in transpilePackages, so there is nothing to build — but without
+# the sources the Next build fails on "Can't resolve @rocketease/providers/client".
+COPY packages/providers packages/providers
 COPY apps/platform apps/platform
 ENV NODE_ENV=production RKE_PROCESS=worker
 RUN addgroup -S app && adduser -S app -G app && chown -R app:app /repo

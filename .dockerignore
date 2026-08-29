@@ -1,0 +1,45 @@
+# Build context is the repo ROOT (see apps/*/Dockerfile), so this governs every image.
+#
+# node_modules is the load-bearing entry. The Dockerfiles run a filtered
+# `pnpm install` and then `COPY apps/platform apps/platform`, which would copy a
+# developer's host node_modules straight over the ones just installed — on Windows
+# that lands broken symlinks and the build dies with
+#   Cannot find module '/repo/apps/platform/node_modules/next/dist/bin/next'
+# CI never hit it because its checkout has no node_modules, so the image built one
+# way on a laptop and another way in CI. That difference is exactly what makes a
+# Dockerfile impossible to verify before pushing.
+node_modules
+**/node_modules
+
+# Host build output. Copying it in would ship a stale .next and defeat the
+# build stage entirely.
+.next
+**/.next
+out
+**/out
+dist
+**/dist
+.turbo
+
+# Never bake secrets into an image. .env.example is documentation and harmless,
+# but nothing in the build reads it, so it stays out too.
+**/.env
+**/.env.*
+
+# Test and tooling output.
+coverage
+playwright-report
+**/e2e/.results
+**/e2e/.state
+*.log
+
+# Not needed to build, and .git is large.
+.git
+.github
+.vscode
+.idea
+docs
+images
+deploy
+*.md
+!apps/*/README.md

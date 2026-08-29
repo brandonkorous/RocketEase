@@ -135,6 +135,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
     strategy:
+      # One broken image must not cancel the others: the first images run failed on
+      # platform and cancelled web and worker, hiding whether they were fine.
+      fail-fast: false
       matrix:
         include:
           - { name: web, file: apps/web/Dockerfile }

@@ -147,6 +147,26 @@ Notes
 
 ---
 
+## Milestone 8 — Stand out (from `docs/research/`, started 2026-08-28)
+
+Positioning: **the honest social OS** — never a duplicate or phantom failure, every number has a definition, missing is never zero, platform limits shown before publish, AI drafts but a person presses send. Pricing (flat per workspace, unlimited seats, free client reviewers) is a product decision recorded in `docs/research/positioning-2026.html`; billing lands after it.
+
+| # | Item | Status |
+|---|---|---|
+| 8.1 | Publish receipts — per-variant timeline (validated → sent → confirmed/reconciled, remote id, cost) on post detail + calendar | ⏳ |
+| 8.2 | Capability contract — public `/capabilities` page generated from `packages/providers`, in-app "why not" everywhere a control is disabled; fix Meta `reviews` over-declaration | ⏳ (Meta fix ✅) |
+| 8.3 | Metric continuity — Meta reach → "viewers" retirement: dual-track definitions, break annotations on charts/exports | ⏳ |
+| 8.4 | Rights & authorisation clocks — UGC licence windows, Spark codes, Partnership Ads grants; block/warn on publish or boost past expiry | ⏳ |
+| 8.5 | Publish cost & quota preview — per-network cost/quota in the composer before queuing; quota gauge on Connected accounts | ⏳ |
+| 8.6 | AI disclosure per destination — one synthetic-media flag → YouTube/TikTok/Meta declarations, audited (EU AI Act Art. 50, 2 Aug 2026) | ⏳ |
+| 8.7 | Public API + MCP server — API keys, draft/approve/schedule/report endpoints with approval gates intact | ⏳ |
+| 8.8 | AI that drafts, never publishes — caption variants, repurposing, inbox reply drafts grounded in brand voice; always lands as a draft | ⏳ |
+| 8.9 | Table stakes — evergreen recycling, hashtag sets, CSV import | ⏳ |
+| 8.10 | Review management — Google Business Profile adapter feeding the inbox `review` kind (human-only reply gate) | ⏳ |
+| 8.11 | Agency per-client cost & margin roll-up | after billing |
+
+---
+
 ## Continuous tracks (every milestone)
 
 Accessibility review (WCAG 2.2 AA), threat model updates, privacy/retention, performance budgets (P75 nav < 2.5s), i18n-ready strings, connector maintenance, docs/ADRs.

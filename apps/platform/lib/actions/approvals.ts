@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { workspaceMembership, type WorkspaceRole } from "@/db/schema/app";
 import { approvalDecision, approvalRequest, comment } from "@/db/schema/approvals";
 import { contentItem, contentVersion, postVariant, type VersionSnapshot } from "@/db/schema/content";
-import { canDecide, matchPolicy } from "@/lib/approvals";
+import { canDecide, matchPolicy, submitForApprovalCore } from "@/lib/approvals";
 import { audit } from "@/lib/audit";
 import { track } from "@/lib/telemetry";
 import { AuthorizationError } from "@/lib/authz";
@@ -50,40 +50,11 @@ export async function requestApproval(input: z.infer<typeof requestSchema>): Pro
   const { workspaceId, itemId, assigneeUserId, note, scheduleOnApprove } = parsed.data;
   return guard(async () => {
     const ctx = await requireCapability(workspaceId, "content.edit");
-    const item = await db.query.contentItem.findFirst({ where: (c, { and, eq, isNull }) => and(eq(c.id, itemId), eq(c.workspaceId, workspaceId), isNull(c.deletedAt)) });
-    if (!item) return fail("Post not found.");
-    const variants = await db.select().from(postVariant).where(eq(postVariant.contentItemId, item.id));
-    if (!variants.length) return fail("Choose at least one channel first.");
-    for (const v of variants) {
-      const val = await validateVariant(item, v);
-      const err = val.issues.find((i) => i.severity === "error");
-      if (err) return fail(`Fix validation first: ${err.message}`);
-    }
-    const policy = await matchPolicy({ workspaceId, itemId, authorRole: ctx.workspace.role, campaignId: item.campaignId });
-    if (assigneeUserId) {
-      const m = await db.query.workspaceMembership.findFirst({ where: (x, { and, eq }) => and(eq(x.workspaceId, workspaceId), eq(x.userId, assigneeUserId)) });
-      if (!m) return fail("That reviewer isn't a member of this workspace.");
-    }
-
-    const requestId = await db.transaction(async (tx) => {
-      await tx.update(approvalRequest).set({ state: "superseded", updatedAt: new Date() }).where(and(eq(approvalRequest.contentItemId, item.id), eq(approvalRequest.state, "pending")));
-      const [{ max }] = await tx.select({ max: sql<number>`coalesce(max(${contentVersion.number}), 0)` }).from(contentVersion).where(eq(contentVersion.contentItemId, item.id));
-      const snapshot: VersionSnapshot = { title: item.title, sharedText: item.sharedText, sharedAssetIds: item.sharedAssetIds, link: item.link, variants: variants.map((v) => ({ channelId: v.channelId, format: v.format, textOverride: v.textOverride, assetIdsOverride: v.assetIdsOverride, firstComment: v.firstComment, linkOverride: v.linkOverride, settings: v.settings, scheduledAt: v.scheduledAt?.toISOString() ?? null })) };
-      const [ver] = await tx.insert(contentVersion).values({ contentItemId: item.id, number: Number(max) + 1, snapshot, reason: "approval_request", createdByUserId: ctx.session.user.id }).returning({ id: contentVersion.id });
-      const dueAt = new Date(Date.now() + (policy?.dueHours ?? 24) * 3_600_000);
-      const [req] = await tx
-        .insert(approvalRequest)
-        .values({ organizationId: item.organizationId, workspaceId, contentItemId: item.id, versionId: ver.id, policyId: policy?.id ?? null, requestedByUserId: ctx.session.user.id, assigneeUserId: assigneeUserId ?? null, approverRoles: policy?.approverRoles ?? ["owner", "admin", "manager"], separationOfDuty: policy?.separationOfDuty ?? true, dueAt, scheduleOnApprove: scheduleOnApprove ?? null, note: note ?? null })
-        .returning({ id: approvalRequest.id });
-      await tx.update(contentItem).set({ approvalState: "pending", status: "in_review", currentVersionId: ver.id, updatedAt: new Date() }).where(eq(contentItem.id, item.id));
-      return req.id;
-    });
-
-    await audit({ action: "approval.request", actorUserId: ctx.session.user.id, organizationId: item.organizationId, workspaceId, targetType: "approval_request", targetId: requestId, summary: { after: { itemId: item.id, assigneeUserId, policy: policy?.name } } });
-    await track("approval_requested", { userId: ctx.session.user.id, organizationId: item.organizationId, workspaceId, surface: "action:requestApproval", props: { hasPolicy: Boolean(policy) } });
-    await notify({ workspaceId, organizationId: item.organizationId, userId: assigneeUserId ?? null, kind: "approval.requested", title: `Review requested: ${item.title}`, body: note ?? `${ctx.session.user.name} asked for approval.`, href: workspacePath(workspaceId, `approvals?request=${requestId}`), email: true });
+    const actor = { userId: ctx.session.user.id, userName: ctx.session.user.name, organizationId: ctx.workspace.organizationId, workspaceId, role: ctx.workspace.role };
+    const r = await submitForApprovalCore(actor, { itemId, assigneeUserId, note, scheduleOnApprove }, "action:requestApproval");
+    if (r.error) return fail(r.error);
     revalidatePath(workspacePath(workspaceId, "approvals"));
-    return { ok: "Sent for review.", requestId };
+    return { ok: "Sent for review.", requestId: r.requestId };
   });
 }
 

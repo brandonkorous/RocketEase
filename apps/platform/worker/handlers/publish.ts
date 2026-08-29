@@ -3,6 +3,7 @@ import { ProviderError, type PublishResult } from "@make-it-social/providers";
 import { db } from "@/db";
 import { postVariant, publishJob, type VariantError } from "@/db/schema/content";
 import { mediaForAssets, resolveVariant, validateVariant } from "@/lib/content";
+import { toDisclosureInput } from "@/lib/disclosure";
 import type { JobPayloads } from "@/lib/jobs/queues";
 import { getAdapter, loadCredential, toDescriptor } from "@/lib/providers";
 import type { HandlerContext } from "./index";
@@ -57,13 +58,14 @@ async function tryPublish(conn: Parameters<typeof loadCredential>[0], ch: Parame
     const cred = await loadCredential(conn);
     const { media } = await mediaForAssets(r.assetIds, { forPublish: true });
     try {
-      const result = await adapter.publish(cred, descriptor, { idempotencyKey: v.idempotencyKey, format: v.format, text: r.text, media, link: r.link, firstComment: r.firstComment, settings: v.settings });
+      const result = await adapter.publish(cred, descriptor, { idempotencyKey: v.idempotencyKey, format: v.format, text: r.text, media, link: r.link, firstComment: r.firstComment, settings: v.settings, disclosure: toDisclosureInput(item.syntheticMedia) });
       return { result, failure: null, retryable: false };
     } catch (e) {
       if (!(e instanceof ProviderError && e.ambiguous)) throw e;
       await db.update(publishJob).set({ state: "reconciling" }).where(eq(publishJob.id, jobId));
       l.warn("ambiguous publish result; reconciling");
       const result = await adapter.findPublication(cred, descriptor, v.idempotencyKey);
+      if (result) await db.update(publishJob).set({ reconciled: true }).where(eq(publishJob.id, jobId));
       return result ? { result, failure: null, retryable: false } : { result: null, failure: err(e.category, e.message, e.providerCode, true), retryable: e.retryable };
     }
   } catch (e) {

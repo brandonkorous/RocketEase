@@ -3,6 +3,7 @@
  * Confirm scopes/limits during Meta app review (integrations.md "Compliance").
  */
 import type { AuthorizeParams, ChannelDescriptor, ChannelKind, Credential, HealthReport, ProviderAdapter, ProviderConfig, PublishRequest, ValidationIssue } from "../types";
+import { applyDisclosure } from "../disclosure";
 import { ProviderError } from "../types";
 import { form, httpJson } from "../http";
 import { probe } from "../health";
@@ -90,7 +91,9 @@ export function createMetaProvider(cfg: ProviderConfig): ProviderAdapter {
     async publish(cred, channel, req: PublishRequest) {
       const errors = provider.validate(channel, req).filter((i) => i.severity === "error");
       if (errors.length) throw new ProviderError(errors[0].message, { category: "validation", providerCode: errors[0].code });
-      return channel.kind === "facebook_page" ? publishToPage(cfg, cred, channel, req) : publishToInstagram(cfg, cred, channel, req);
+      const { request, emitted: disclosure } = applyDisclosure(channel, req);
+      const result = channel.kind === "facebook_page" ? await publishToPage(cfg, cred, channel, request) : await publishToInstagram(cfg, cred, channel, request);
+      return { ...result, disclosure };
     },
 
     findPublication: (cred, channel, key) => findPublication(cfg, cred, channel, key),

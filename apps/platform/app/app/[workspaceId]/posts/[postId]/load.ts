@@ -3,11 +3,12 @@ import { db } from "@/db";
 import { comment } from "@/db/schema/approvals";
 import { asset, assetRendition } from "@/db/schema/assets";
 import { user } from "@/db/schema/auth";
-import { contentVersion, remotePublication, type ContentItem, type PostVariant, type PublishJobRow } from "@/db/schema/content";
+import { contentVersion, type ContentItem, type PostVariant } from "@/db/schema/content";
 import type { CommentRow } from "@/components/post-comments";
-import { buildReceipt, type PublishReceipt } from "@/lib/publishing/receipt";
 import { presignGet } from "@/lib/storage";
 import { formatInZone } from "@/lib/time";
+
+export { loadReceipts } from "@/lib/publishing/receipt-load";
 
 /** Comment thread with author names and the version each comment was left on. */
 export async function loadComments(itemId: string, viewerId: string, tz: string): Promise<CommentRow[]> {
@@ -41,25 +42,4 @@ export async function loadContent(item: ContentItem, variants: PostVariant[]): P
   };
   const thumbs = await Promise.all(item.sharedAssetIds.map(async (id) => ({ id, url: await urlFor(id), alt: assets.find((a) => a.id === id)?.altText ?? "" })));
   return { thumbs };
-}
-
-/** Publish receipts for every destination: variant state + jobs + what the nightly reconcile saw. */
-export async function loadReceipts(item: ContentItem, rows: { v: PostVariant; ch: { name: string; network: string } }[], jobs: PublishJobRow[]): Promise<PublishReceipt[]> {
-  const ids = rows.map((r) => r.v.id);
-  const [pubs, approval] = await Promise.all([
-    ids.length ? db.select().from(remotePublication).where(inArray(remotePublication.variantId, ids)) : Promise.resolve([]),
-    db.query.approvalRequest.findFirst({
-      where: (r, { and, eq }) => and(eq(r.contentItemId, item.id), eq(r.state, "approved")),
-      orderBy: (r, { desc }) => desc(r.decidedAt),
-    }),
-  ]);
-  return rows.map(({ v, ch }) =>
-    buildReceipt({
-      variant: v,
-      channel: ch,
-      jobs: jobs.filter((j) => j.variantId === v.id),
-      approvedAt: item.approvalState === "approved" ? (approval?.decidedAt ?? null) : null,
-      publication: pubs.find((p) => p.variantId === v.id) ?? null,
-    }),
-  );
 }

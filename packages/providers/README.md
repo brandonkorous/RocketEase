@@ -56,6 +56,25 @@ These three are split out of the table above because their shapes differ sharply
 
 Threading matches each network's own model: YouTube threads on the top-level comment id, X on `conversation_id` for posts and `dm_conversation_id` for DMs.
 
+### Google Business Profile
+
+Reviews only. A channel is one **location**, and it publishes nothing — see the `formats: []` reason in `google-business/client.ts`. Three hosts are involved and they are not the same API version:
+
+| Contract method | Google Business Profile (location) |
+| --- | --- |
+| `authorizationUrl` / `exchangeCode` / `refresh` / `revoke` | the shared Google OAuth helpers (`youtube/client.ts`), `access_type=offline&prompt=consent`; refresh tokens do not rotate |
+| `listChannels` | `GET https://mybusinessaccountmanagement.googleapis.com/v1/accounts` then, per account, `GET https://mybusinessbusinessinformation.googleapis.com/v1/{account}/locations?readMask=…` (**`readMask` is required**) |
+| `healthCheck` | `GET /v1/accounts?pageSize=1` |
+| `publish` / `findPublication` / `publicationStatus` | refuse / `null` / `unknown` — `validate` always returns `publishing_unsupported` |
+| `fetchInbox` | `GET https://mybusiness.googleapis.com/v4/{location}/reviews?pageSize=50&orderBy=updateTime desc`; cursor = `nextPageToken` |
+| `reply` | `PUT https://mybusiness.googleapis.com/v4/{location}/reviews/{reviewId}/reply` with `{ comment }` (create **or replace** — a review has exactly one owner answer) |
+| `findReply` | `GET /v4/{location}/reviews/{reviewId}` and compare `reviewReply.comment` + `updateTime` against the attempt |
+| `verifyWebhook` / `parseWebhook` | **absent** — polling only |
+
+Channel `remoteId` is the **account-scoped** name `accounts/{a}/locations/{l}`: v4 parents reviews on the account, while the v1 Business Information API returns a bare `locations/{l}`, so the account prefix is carried on the channel rather than re-resolved on every call.
+
+Threading: the review **is** the thread. `starRating` (`ONE`…`FIVE`) maps to `InboxItem.rating` 1–5; `STAR_RATING_UNSPECIFIED` maps to `undefined`, never 0. Google gives the owner's answer no id, so it is ingested as the synthetic `{reviewId}:reply` — stable, which is what makes ingestion idempotent, and also why an *edited* reply is not re-imported.
+
 ## Scopes and app review
 
 ### Meta
@@ -108,6 +127,15 @@ Threading matches each network's own model: YouTube threads on the top-level com
 - Thread caveat: X has no idempotency key. If a continuation post fails after the root published, the error is raised as `ambiguous` with the root already live — the platform must reconcile, never resend from the top.
 - **Not supported, declared with reasons:** webhooks (real-time delivery is the **Account Activity API**, a separately gated product — mentions and DMs are polled), reviews, ads import, first comment as a distinct field (a follow-up is just a reply in the thread), and bookmark counts for other people's interactions.
 - Available but not imported: `user_profile_clicks` (no canonical metric). Note also that `organic_metrics`/`non_public_metrics` are user-context only, cover the account's **own** posts, and X retains them for **30 days**; older posts fall back to `public_metrics`, which the adapter does automatically. X publishes no daily time series for organic posts, so per-post numbers are lifetime-to-date recorded on the fetch day.
+
+### Google Business Profile
+- Products: **Account Management API v1** (`accounts.list`), **Business Information API v1** (`accounts.locations.list`) and the **v4 Business Profile API** for reviews. Reviews were never migrated to a v1 API; `mybusiness.googleapis.com/v4` is still the only way to read or answer one. All three must be enabled on the Google Cloud project.
+- Scope: `https://www.googleapis.com/auth/business.manage` — the single scope for the whole product, so there is no scope-conditional capability here.
+- **Access is approved per project.** Google requires an application through the [Business Profile API request form](https://support.google.com/business/contact/api_default); its stated bar is a verified Business Profile active for 60+ days and a website for the business. An unapproved project has a quota of **0 QPM** and every call fails; an approved one shows 300 QPM in the Cloud console. Credentials alone are not enough to make this adapter work.
+- Reply limits: one owner answer per review, `comment` capped at **4096 bytes** (the adapter measures bytes, not characters, and rejects before calling Google). `PUT …/reply` replaces the existing answer; `DELETE …/reply` removes it and is not wired up (the platform has no "delete my reply" action).
+- **Not supported, declared with reasons:** publishing of any kind (local posts are a separate surface, out of scope for this pass), comments, mentions, messages (Google Business Messages was shut down), insights (location performance is the separate Performance API), ads, and webhooks — Google's review notifications are delivered to a Pub/Sub topic that has to be provisioned per project, so the inbox is polled like YouTube's.
+- Caveat worth knowing: a reviewer can edit or delete a review. An edit keeps the review id, so once ingested the original text stands in the inbox; a deleted review simply stops appearing in the list.
+- Automations never answer a review: `apps/platform/lib/automations/capabilities.ts` requires a human for `conversationKind === "review"` whatever the rule says.
 
 ## Error taxonomy
 

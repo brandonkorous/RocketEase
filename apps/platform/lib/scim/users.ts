@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, count, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { scimIdentity } from "@/db/schema/app";
+import { scimIdentity } from "@/db/schema/scim";
 import { user } from "@/db/schema/auth";
 import { SCIM_SCHEMA, scimBaseUrl } from "./constants";
 import { stringTerm, boolTerm, type ScimFilterTerm } from "./filter";

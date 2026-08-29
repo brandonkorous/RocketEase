@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { asset, tag, type AssetKind } from "@/db/schema/assets";
+import { RIGHTS_SCOPES, asset, tag, type AssetKind } from "@/db/schema/assets";
 import { audit } from "@/lib/audit";
 import { AuthorizationError } from "@/lib/authz";
 import { emit } from "@/lib/jobs/outbox";
@@ -86,6 +86,7 @@ const metaSchema = z.object({
   tags: z.string().optional(),
   rightsNote: z.string().trim().max(500).optional(),
   rightsExpiresAt: z.string().optional(),
+  rightsScope: z.enum(RIGHTS_SCOPES).optional(),
 });
 
 export async function updateAsset(_prev: ActionState, formData: FormData): Promise<ActionState> {

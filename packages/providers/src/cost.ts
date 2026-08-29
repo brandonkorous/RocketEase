@@ -52,6 +52,7 @@ export const PROVIDER_COST_NOTES: Record<ProviderKey, string> = {
   meta: "Instagram allows 50 published posts per 24 hours per account and about 200 API calls an hour. Facebook Pages have no per-post charge and no published-post limit we can source.",
   linkedin: "LinkedIn charges nothing per post and publishes no per-post limit we can source.",
   pinterest: "Pinterest API v5 is free; there is no per-post charge and no published-post limit we can source.",
+  google_business: "The Business Profile API is free. Nothing is published to a location from here, so there is no publish cost; the review quota is 300 requests a minute once Google approves the project.",
   mock: "The demo network is local only. Nothing is billed and nothing is capped.",
 };
 

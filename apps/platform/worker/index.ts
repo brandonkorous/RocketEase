@@ -17,7 +17,7 @@ import { enqueueInsightsIngests } from "@/lib/analytics/schedule";
 import { enqueueAdsSyncs } from "@/lib/campaigns/schedule";
 import { enqueueTrackingSyncs } from "@/lib/tracking/schedule";
 import { enqueueDueReports } from "./handlers/report-run";
-import { scheduleNightly, scheduleAutomationSweep } from "./ticks";
+import { scheduleNightly, scheduleAutomationSweep, scheduleRecycling } from "./ticks";
 
 async function main() {
   const boss = await getBoss();
@@ -55,6 +55,7 @@ async function main() {
   // Nightly maintenance (5.7 data quality, M7 reliability): cron-scheduled singletons.
   await scheduleNightly(boss);
   await scheduleAutomationSweep(boss);
+  await scheduleRecycling(boss);
 
   type HandlerName = keyof typeof handlers;
   for (const [name, handler] of Object.entries(handlers) as [HandlerName, (typeof handlers)[HandlerName]][]) {

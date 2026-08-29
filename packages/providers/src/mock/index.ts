@@ -23,6 +23,7 @@ import type {
 import { ProviderError } from "../types";
 import type { InboxItem } from "../inbox-types";
 import { validateAgainstCapabilities } from "../validate";
+import { applyDisclosure } from "../disclosure";
 import { fetchInbox, findReply, mockInbox, reply } from "./inbox";
 import { fetchInsights, mockInsights } from "./insights";
 import { fetchPaidInsights, fetchPaidObjects, findPromotion, listAdAccounts, mockAds, promote, setPaidObjectStatus } from "./ads";
@@ -36,11 +37,12 @@ export const CAPS: Capabilities = {
   formats: ["text", "image", "carousel", "video"],
   scheduling: "internal",
   limits: { textMaxChars: 2200, imagesMax: 10, videoMaxSeconds: 90, hashtagsMax: 30, mentions: true, firstComment: true, links: "inline", altText: true },
-  inbox: { comments: true, mentions: true, messages: true, reviews: false, reply: true },
+  inbox: { comments: true, mentions: true, messages: true, reviews: true, reply: true },
   insights: { organic: true, audience: true },
   ads: { import: true, manage: true },
   ingestion: { webhooks: true, polling: true },
-  reasons: { reviews: "The demo network has no reviews." },
+  disclosure: "caption",
+  reasons: { disclosure: "The demo network has no AI-content field; the label goes in the post text." },
   checkedAt: now(),
 };
 
@@ -153,8 +155,9 @@ export const mockProvider: ProviderAdapter = {
     return issues;
   },
 
-  async publish(cred, channel, req: PublishRequest): Promise<PublishResult> {
+  async publish(cred, channel, request: PublishRequest): Promise<PublishResult> {
     assertToken(cred);
+    const { request: req, emitted: disclosure } = applyDisclosure(channel, request);
     const issues = mockProvider.validate(channel, req).filter((i) => i.severity === "error");
     if (issues.length) throw new ProviderError(issues[0].message, { category: "validation", providerCode: issues[0].code });
     if (store().behaviour.rateLimited) throw new ProviderError("Rate limited", { category: "rate_limit", retryAfterSeconds: 30 });
@@ -163,7 +166,7 @@ export const mockProvider: ProviderAdapter = {
     if (existing) return existing; // idempotent
 
     const remoteId = `mockpost_${Math.random().toString(36).slice(2)}`;
-    const result = { remoteId, url: `https://demo.invalid/${channel.handle ?? channel.remoteId}/${remoteId}`, publishedAt: now() };
+    const result = { remoteId, url: `https://demo.invalid/${channel.handle ?? channel.remoteId}/${remoteId}`, publishedAt: now(), disclosure };
     store().posts.set(remoteId, { ...result, channelId: channel.remoteId, idempotencyKey: req.idempotencyKey, text: req.text });
 
     if (store().behaviour.ambiguousPublish) {

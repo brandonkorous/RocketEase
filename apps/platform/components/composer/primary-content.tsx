@@ -6,6 +6,8 @@ import { Input, Label, Switch, Textarea } from "@wizeworks/silicaui-react";
 import { workspacePath } from "@/lib/nav";
 import { NetMark } from "../library-screen";
 import { ChannelOverride } from "./channel-override";
+import { HashtagSets } from "./hashtag-sets";
+import { DisclosureSection } from "./disclosure";
 import type { ComposerChannel } from "./types";
 import type { ComposerState } from "./use-composer";
 import { NETWORK_LABEL } from "./types";
@@ -25,11 +27,12 @@ export function PrimaryContent({ s, channels, workspaceId, onPickMedia }: Props)
       </div>
       <div className="px-5 pb-5">
         {shared ? (
-          <SharedFields s={s} onPickMedia={onPickMedia} />
+          <SharedFields s={s} workspaceId={workspaceId} onPickMedia={onPickMedia} />
         ) : (
           <ChannelOverride channel={channels.find((c) => c.id === tab)!} shared={s.text} value={s.overrides[tab] ?? { textOverride: null, firstComment: "", linkOverride: null }} onChange={(v) => s.setOverrides((o) => ({ ...o, [tab]: v }))} issues={s.validation[tab] ?? []} />
         )}
       </div>
+      <DisclosureSection s={s} channels={channels} />
       <div className="border-t border-base-300">
         <button type="button" className="flex w-full items-center justify-between px-5 py-4 text-sm font-semibold" onClick={() => setAdvanced((v) => !v)} aria-expanded={advanced}>Advanced options <span className="text-secondary/70">{advanced ? "▴" : "▾"}</span></button>
         {advanced && (
@@ -77,7 +80,7 @@ function OverrideTabs({ s, tab, setTab }: { s: ComposerState; tab: string; setTa
   );
 }
 
-function SharedFields({ s, onPickMedia }: { s: ComposerState; onPickMedia: () => void }) {
+function SharedFields({ s, workspaceId, onPickMedia }: { s: ComposerState; workspaceId: string; onPickMedia: () => void }) {
   const textMax = Math.min(...s.selectedChannels.map((c) => c.textMax ?? Infinity), 63_206);
   const fc = s.overrides.__shared?.firstComment ?? "";
   return (
@@ -89,6 +92,14 @@ function SharedFields({ s, onPickMedia }: { s: ComposerState; onPickMedia: () =>
           <div className="flex items-center gap-2">
             <button type="button" className="rounded p-1 hover:bg-base-200" title="Add media" onClick={onPickMedia} aria-label="Add media">🖼</button>
             <button type="button" className="rounded p-1 hover:bg-base-200" title="Insert hashtag" onClick={() => s.setText((t) => (t.endsWith(" ") || t === "" ? t + "#" : t + " #"))} aria-label="Insert hashtag">#</button>
+            <HashtagSets
+              workspaceId={workspaceId}
+              channels={s.selectedChannels.map((c) => ({ id: c.id, name: c.name, hashtagsMax: c.hashtagsMax }))}
+              text={s.text}
+              firstComment={fc}
+              firstCommentAvailable={s.selectedChannels.some((c) => c.firstComment)}
+              onInsert={(target, next) => (target === "text" ? s.setText(() => next) : setSharedFirstComment(s, next))}
+            />
           </div>
           <span className={s.text.length > textMax ? "font-semibold text-error" : ""}>{s.text.length.toLocaleString()} / {Number.isFinite(textMax) ? textMax.toLocaleString() : "∞"}</span>
         </div>
@@ -106,6 +117,11 @@ function SharedFields({ s, onPickMedia }: { s: ComposerState; onPickMedia: () =>
       )}
     </>
   );
+}
+
+/** The shared first comment lives under the `__shared` override key. */
+function setSharedFirstComment(s: ComposerState, value: string) {
+  s.setOverrides((o) => ({ ...o, __shared: { ...(o.__shared ?? { textOverride: null, linkOverride: null, firstComment: "" }), firstComment: value } }));
 }
 
 function MediaStrip({ s, onPickMedia }: { s: ComposerState; onPickMedia: () => void }) {

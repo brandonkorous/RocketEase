@@ -47,8 +47,10 @@ export const IG_CAPS = (): Capabilities => ({
   insights: { organic: true, audience: true },
   ads: { import: true, manage: false },
   ingestion: { webhooks: true, polling: true },
+  disclosure: "api",
   reasons: {
     links: "Instagram captions don't render clickable links.",
+    disclosure: "Instagram media creation accepts is_ai_generated, so the network draws its own “AI info” label.",
     reviews: "Instagram has no reviews.",
     ads: "Boosting Instagram media needs an Instagram actor on the ad account; manage it from Meta Ads Manager for now.",
   },
@@ -64,6 +66,10 @@ export const FB_CAPS = (): Capabilities => ({
   insights: { organic: true, audience: true },
   ads: { import: true, manage: true },
   ingestion: { webhooks: true, polling: true },
-  reasons: { reviews: "Facebook Page recommendations aren't imported yet." },
+  disclosure: "caption",
+  reasons: {
+    reviews: "Facebook Page recommendations aren't imported yet.",
+    disclosure: "Facebook Page publishing exposes no AI-content parameter (is_ai_generated is Instagram-only), so the label goes in the post text.",
+  },
   checkedAt: now(),
 });

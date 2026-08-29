@@ -126,7 +126,7 @@ export function ImageIcon({ size = 14, ...rest }: IconProps) {
 
 /* ---------- Platform marks: the only place color appears. ---------- */
 
-export type Platform = "instagram" | "facebook" | "linkedin" | "tiktok" | "x" | "youtube" | "pinterest";
+export type Platform = "instagram" | "facebook" | "linkedin" | "tiktok" | "x" | "youtube" | "pinterest" | "google_business";
 
 export const PLATFORM_NAMES: Record<Platform, string> = {
   instagram: "Instagram",
@@ -136,6 +136,7 @@ export const PLATFORM_NAMES: Record<Platform, string> = {
   x: "X",
   youtube: "YouTube",
   pinterest: "Pinterest",
+  google_business: "Google Business Profile",
 };
 
 /**
@@ -225,6 +226,14 @@ export function PlatformIcon({
             d="M12.3 6c-3.3 0-5 2.4-5 4.3 0 1.2.5 2.2 1.4 2.6.2.1.3 0 .4-.2l.1-.6c0-.2 0-.2-.1-.4-.3-.3-.5-.8-.5-1.4 0-1.8 1.4-3.5 3.6-3.5 2 0 3 1.2 3 2.8 0 2.1-.9 3.9-2.3 3.9-.8 0-1.3-.6-1.2-1.4.2-.9.7-1.9.7-2.6 0-.6-.3-1.1-1-1.1-.8 0-1.4.8-1.4 1.9 0 .7.2 1.2.2 1.2l-1 4c-.3 1.2 0 2.6 0 2.8 0 .1.1.1.2 0 .1-.1 1.1-1.4 1.5-2.6l.6-2.1c.3.5 1.1 1 1.9 1 2.5 0 4.3-2.3 4.3-5.4C17.7 8.1 15.5 6 12.3 6Z"
             fill={ink}
           />
+        </svg>
+      );
+    case "google_business":
+      return (
+        <svg {...common}>
+          <path d="M12 10.2v3.7h5.2c-.2 1.3-1.7 3.9-5.2 3.9a5.8 5.8 0 1 1 0-11.6c1.7 0 2.8.7 3.4 1.3l2.3-2.2A9 9 0 0 0 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.8 0-.6-.1-1.1-.2-1.6H12Z" fill={c("#4285F4")} />
+          <path d="M3.9 7.6 7 9.9a5.8 5.8 0 0 1 8.4-2.4l2.3-2.2A9 9 0 0 0 3.9 7.6Z" fill={c("#EA4335")} />
+          <path d="m7 14.1-3.1 2.3A9 9 0 0 0 12 21c2.4 0 4.5-.8 6-2.2l-2.9-2.3a5.8 5.8 0 0 1-8.1-2.4Z" fill={c("#34A853")} />
         </svg>
       );
   }

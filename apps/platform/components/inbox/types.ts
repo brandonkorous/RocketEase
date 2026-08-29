@@ -28,6 +28,7 @@ export const TABS: { key: InboxTab; label: string }[] = [
   { key: "mentions", label: "Mentions" },
   { key: "dms", label: "DMs" },
   { key: "comments", label: "Comments" },
+  { key: "reviews", label: "Reviews" },
 ];
 
 export const STATUS_BADGE: Record<string, { label: string; color: "success" | "warning" | "neutral" | "info" }> = {
@@ -36,4 +37,4 @@ export const STATUS_BADGE: Record<string, { label: string; color: "success" | "w
   resolved: { label: "Resolved", color: "success" },
 };
 
-export const DELIVERY_LABEL: Record<string, string> = { queued: "Sending…", sending: "Sending…", sent: "Sent", ambiguous: "Confirming delivery…", failed: "Failed" };
+export const DELIVERY_LABEL: Record<string, string> = { draft: "Draft — not sent", queued: "Sending…", sending: "Sending…", sent: "Sent", ambiguous: "Confirming delivery…", failed: "Failed" };

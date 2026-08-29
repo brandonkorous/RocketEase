@@ -21,6 +21,10 @@ export const assetKind = pgEnum("asset_kind", ASSET_KINDS);
 export const UPLOAD_STATUSES = ["pending", "processing", "ready", "failed"] as const;
 export const uploadStatus = pgEnum("upload_status", UPLOAD_STATUSES);
 
+export const RIGHTS_SCOPES = ["organic", "paid", "both"] as const;
+/** What a licence covers. Organic rights rarely include paid (trends-2026 §4). */
+export type RightsScope = (typeof RIGHTS_SCOPES)[number];
+
 export const SCAN_STATUSES = ["pending", "clean", "infected", "error"] as const;
 export const scanStatus = pgEnum("scan_status", SCAN_STATUSES);
 
@@ -73,6 +77,8 @@ export const asset = pgTable(
     /** Rights/licensing (LIB-002). Publishing is blocked after expiry. */
     rightsNote: text("rights_note"),
     rightsExpiresAt: timestamp("rights_expires_at", { withTimezone: true }),
+    /** Whether the licence covers organic posting, paid usage, or both. */
+    rightsScope: text("rights_scope").$type<RightsScope>().notNull().default("both"),
     uploadStatus: uploadStatus("upload_status").notNull().default("pending"),
     scanStatus: scanStatus("scan_status").notNull().default("pending"),
     scanNote: text("scan_note"),

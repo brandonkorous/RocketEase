@@ -6,6 +6,7 @@
  * There are no webhooks for comments, so verifyWebhook/parseWebhook are absent.
  */
 import type { AuthorizeParams, ChannelDescriptor, ChannelKind, Credential, HealthReport, ProviderAdapter, ProviderConfig, PublishRequest, ValidationIssue } from "../types";
+import { applyDisclosure } from "../disclosure";
 import { ProviderError } from "../types";
 import { form, httpJson } from "../http";
 import { probe } from "../health";
@@ -102,7 +103,8 @@ export function createYouTubeProvider(cfg: ProviderConfig): ProviderAdapter {
     async publish(cred, channel, req: PublishRequest) {
       const errors = provider.validate(channel, req).filter((i) => i.severity === "error");
       if (errors.length) throw new ProviderError(errors[0].message, { category: "validation", providerCode: errors[0].code });
-      return publish(cred, channel, req);
+      const { request, emitted: disclosure } = applyDisclosure(channel, req);
+      return { ...(await publish(cred, channel, request)), disclosure };
     },
     findPublication: (cred, channel, key) => findPublication(cred, channel, key),
     publicationStatus: (cred, _channel, remoteId) => publicationStatus(cred, remoteId),

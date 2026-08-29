@@ -12,7 +12,7 @@ import { conversationDetail } from "@/lib/engagement/detail";
 import { readBrandVoice, type BrandVoice } from "./brand-voice";
 import type { DraftChannel, ReplyInput } from "./drafts";
 
-const NETWORK_LABEL: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn", tiktok: "TikTok", x: "X (Twitter)", youtube: "YouTube", pinterest: "Pinterest", mock: "Demo network" };
+const NETWORK_LABEL: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn", tiktok: "TikTok", x: "X (Twitter)", youtube: "YouTube", pinterest: "Pinterest", google_business: "Google Business Profile", mock: "Demo network" };
 
 export async function loadBrandVoice(workspaceId: string): Promise<BrandVoice> {
   const [ws] = await db.select({ settings: workspace.settings }).from(workspace).where(eq(workspace.id, workspaceId));

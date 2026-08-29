@@ -25,6 +25,18 @@ export function readTracking(settings: Record<string, unknown>): TrackingSetting
   return { ...DEFAULT_TRACKING, ...Object.fromEntries(Object.entries(t).filter(([, v]) => typeof v === "string")) };
 }
 
+export type RecyclingSettings = { autoSchedule: boolean };
+
+/**
+ * Evergreen recycling defaults to a human gate: a recycled copy is a draft
+ * until someone schedules it. Turning this on lets the worker schedule
+ * directly, but only when the rule's author still holds `content.publish`.
+ */
+export function readRecycling(settings: Record<string, unknown>): RecyclingSettings {
+  const r = (settings.recycling ?? {}) as Partial<RecyclingSettings>;
+  return { autoSchedule: r.autoSchedule === true };
+}
+
 /** Every kind `notify()` emits, with its default email behaviour (onboarding.md reserves email for failures, approvals, security). */
 export const NOTIFICATION_KINDS = [
   { kind: "publish.failed", label: "Publishing failures", desc: "A post failed or only partly published.", email: true },
@@ -34,6 +46,7 @@ export const NOTIFICATION_KINDS = [
   { kind: "inbox.assigned", label: "Inbox assignments", desc: "A conversation was assigned to you.", email: false },
   { kind: "inbox.reply_failed", label: "Reply failures", desc: "A reply you sent could not be delivered.", email: false },
   { kind: "report.ready", label: "Reports ready", desc: "A report you requested finished generating.", email: false },
+  { kind: "rights.expiring", label: "Rights expiring", desc: "A licence or authorisation runs out under a scheduled or promoted post.", email: true },
 ] as const;
 export const NOTIFICATION_KIND_KEYS = NOTIFICATION_KINDS.map((k) => k.kind) as [string, ...string[]];
 

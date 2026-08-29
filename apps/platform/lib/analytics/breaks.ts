@@ -8,13 +8,13 @@ import { METRICS, type DisplayMetric, type MetricBreak, type ProviderKey } from 
 
 export const PROVIDER_LABEL: Record<ProviderKey, string> = {
   mock: "Mock", meta: "Meta", linkedin: "LinkedIn", tiktok: "TikTok", youtube: "YouTube",
-  pinterest: "Pinterest", x: "X", ga4: "Google Analytics", shopify: "Shopify", webhook: "Webhook",
+  pinterest: "Pinterest", x: "X", google_business: "Google Business Profile", ga4: "Google Analytics", shopify: "Shopify", webhook: "Webhook",
 };
 
 /** Networks a provider key covers, for scoping a break to a workspace's channels. */
 export const PROVIDER_NETWORKS: Partial<Record<ProviderKey, string[]>> = {
   meta: ["facebook", "instagram"], linkedin: ["linkedin"], tiktok: ["tiktok"],
-  youtube: ["youtube"], pinterest: ["pinterest"], x: ["x"], mock: ["mock"],
+  youtube: ["youtube"], pinterest: ["pinterest"], x: ["x"], google_business: ["google_business"], mock: ["mock"],
 };
 
 export type BreakPoint = {

@@ -6,14 +6,15 @@
  * them — it must never assume parity between networks.
  */
 
+import type { DisclosureEmission, DisclosureInput, DisclosureSupport } from "./disclosure";
 import type { InboxItem, InboxPage, ReplyLookup, ReplyRequest, ReplyResult } from "./inbox-types";
 import type { InsightsPage, InsightsRequest } from "./insights-types";
 import type { AdAccountDescriptor, PaidInsightsPage, PaidInsightsRequest, PaidObjects, PromotionRequest, PromotionResult } from "./ads-types";
 
-export type ProviderKey = "mock" | "meta" | "linkedin" | "tiktok" | "youtube" | "pinterest" | "x";
+export type ProviderKey = "mock" | "meta" | "linkedin" | "tiktok" | "youtube" | "pinterest" | "x" | "google_business";
 
 /** The social network a channel belongs to (drives platform identity/color in the UI). */
-export type Network = "instagram" | "facebook" | "linkedin" | "tiktok" | "x" | "youtube" | "pinterest" | "mock";
+export type Network = "instagram" | "facebook" | "linkedin" | "tiktok" | "x" | "youtube" | "pinterest" | "google_business" | "mock";
 
 export type ChannelKind =
   | "instagram_business"
@@ -26,6 +27,8 @@ export type ChannelKind =
   | "pinterest_account"
   | "pinterest_board"
   | "x_account"
+  /** A Google Business Profile location: reviews only, nothing is published to it. */
+  | "gbp_location"
   | "mock_profile";
 
 /** Decrypted credential. Only ever lives in memory on the server. */
@@ -62,6 +65,9 @@ export type Capabilities = {
   insights: { organic: boolean; audience: boolean };
   ads: { import: boolean; manage: boolean };
   ingestion: { webhooks: boolean; polling: boolean };
+  /** How synthetic media is disclosed here: a real API field, a caption line, or not at all.
+   *  Optional so capabilities stored before this field still parse; absent reads as "caption". */
+  disclosure?: DisclosureSupport;
   /** Explain-ability: why something is off, and when we last checked. */
   reasons?: Partial<Record<string, string>>;
   checkedAt: string;
@@ -123,6 +129,8 @@ export type PublishRequest = {
   firstComment?: string;
   /** Provider-specific knobs, validated by the adapter. */
   settings?: Record<string, unknown>;
+  /** AI disclosure the author declared; adapters map it to a field or a caption line. */
+  disclosure?: DisclosureInput;
 };
 
 export type ValidationIssue = {
@@ -136,6 +144,8 @@ export type PublishResult = {
   remoteId: string;
   url?: string;
   publishedAt: string;
+  /** How AI disclosure was actually emitted for this publication. */
+  disclosure?: DisclosureEmission;
 };
 
 export type PublicationStatus = { state: "published" | "processing" | "deleted" | "unknown"; url?: string };

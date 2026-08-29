@@ -40,6 +40,10 @@ export type JobPayloads = {
   "automation.apply": { runId: string };
   /** Pull one conversion-tracking source (GA4/Shopify) or recompute a webhook source's facts. */
   "tracking.sync": { sourceId: string; since?: string };
+  /** Hourly evergreen recycling pass; one workspace/rule or all. */
+  "recycle.tick": { workspaceId?: string; ruleId?: string };
+  /** Nightly warning before a rights or authorisation clock lapses under a scheduled/promoted post. */
+  "rights.expiring": Record<string, never>;
 };
 
 export type JobName = keyof JobPayloads;
@@ -69,6 +73,9 @@ export const QUEUES: Record<JobName, Omit<Queue, "name">> = {
   "automation.evaluate": { ...STANDARD, retryLimit: 3, expireInSeconds: 300 },
   "automation.apply": { ...STANDARD, retryLimit: 3, expireInSeconds: 300 },
   "tracking.sync": { policy: "singleton", retryLimit: 3, retryDelay: 60, retryBackoff: true, expireInSeconds: 1800 },
+  // One run per (rule, occurrence) is enforced in the database, so a retry is always safe.
+  "recycle.tick": { policy: "singleton", retryLimit: 2, retryDelay: 120, retryBackoff: true, expireInSeconds: 1800 },
+  "rights.expiring": { policy: "singleton", retryLimit: 1, retryDelay: 300, expireInSeconds: 1800 },
 };
 
 export const JOB_NAMES = Object.keys(QUEUES) as JobName[];

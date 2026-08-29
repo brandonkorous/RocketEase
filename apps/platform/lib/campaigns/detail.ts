@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import type { Campaign } from "@/db/schema/campaigns";
 import { parseAnalyticsFilters, periodLabel, type AnalyticsFilters } from "@/lib/analytics/periods";
+import { campaignClocks, type ClockRow } from "@/lib/rights/campaign";
 import { hasCapability, requireWorkspace } from "@/lib/session";
 import { stepUpChallenge, type StepUpChallenge } from "@/lib/step-up";
 import { utcToZonedInput } from "@/lib/time";
@@ -42,6 +43,8 @@ export type CampaignDetailData = {
   conversations: CampaignConversationRow[] | null; activity: ActivityRow[] | null;
   /** Re-authentication the session needs before confirming paid spend (ads tab only). */
   stepUp: StepUpChallenge | null;
+  /** Rights clocks behind the promoted posts (M8.4). */
+  clocks: ClockRow[];
 };
 
 function header(c: Campaign, owner: { id: string; name: string } | null, tz: string): CampaignHeader {
@@ -78,11 +81,12 @@ export async function loadCampaignDetail(workspaceId: string, campaignId: string
     tab === "activity" || tab === "overview" ? activityTab(c.id, tz) : Promise.resolve(null),
     tab === "ads" ? stepUpChallenge(session.user.id, session.session.id, "paid_spend") : Promise.resolve(null),
   ]);
+  const clocks = tab === "overview" || tab === "ads" ? await campaignClocks(workspaceId, c.id, tz) : [];
   const row = list.find((r) => r.id === c.id);
   const owner = members.find((m) => m.id === c.ownerUserId) ?? null;
   return {
     workspaceId, timezone: tz, tab, campaign: header(c, owner, tz), networks: row?.networks ?? [], contentCount: row?.contentCount ?? 0, members,
     canManage: hasCapability(workspace, "campaigns.manage"), canDraft: hasCapability(workspace, "campaigns.draft"), filters, periodLabel: periodLabel(filters),
-    attribution, perf, budget, content, ads, audience, conversations, activity: activity ? activity.slice(0, tab === "overview" ? 6 : 100) : null, stepUp,
+    attribution, perf, budget, content, ads, audience, conversations, activity: activity ? activity.slice(0, tab === "overview" ? 6 : 100) : null, stepUp, clocks,
   };
 }

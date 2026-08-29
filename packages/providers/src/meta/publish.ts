@@ -44,21 +44,23 @@ export async function publishToInstagram(cfg: ProviderConfig, cred: Credential, 
 async function createContainer(cfg: ProviderConfig, t: string, igId: string, req: PublishRequest): Promise<string> {
   const images = req.media.filter((m) => m.mimeType.startsWith("image/"));
   const video = req.media.find((m) => m.mimeType.startsWith("video/"));
+  // Self-disclosure of AI usage. Only the PARENT container takes it; setting it on a carousel child is an error.
+  const ai = req.disclosure?.synthetic ? { is_ai_generated: "true" } : {};
   if (req.format === "carousel") {
     const children: string[] = [];
     for (const m of req.media) {
       const params = m.mimeType.startsWith("video/") ? { media_type: "VIDEO", video_url: m.url, is_carousel_item: "true" } : { image_url: m.url, is_carousel_item: "true" };
       children.push((await graph<{ id: string }>(`/${igId}/media`, cfg, t, { method: "POST", params })).id);
     }
-    return (await graph<{ id: string }>(`/${igId}/media`, cfg, t, { method: "POST", params: { media_type: "CAROUSEL", children: children.join(","), caption: req.text } })).id;
+    return (await graph<{ id: string }>(`/${igId}/media`, cfg, t, { method: "POST", params: { media_type: "CAROUSEL", children: children.join(","), caption: req.text, ...ai } })).id;
   }
   if (video) {
     const mediaType = req.format === "story" ? "STORIES" : "REELS";
-    const id = (await graph<{ id: string }>(`/${igId}/media`, cfg, t, { method: "POST", params: { media_type: mediaType, video_url: video.url, caption: req.format === "story" ? undefined : req.text } })).id;
+    const id = (await graph<{ id: string }>(`/${igId}/media`, cfg, t, { method: "POST", params: { media_type: mediaType, video_url: video.url, caption: req.format === "story" ? undefined : req.text, ...ai } })).id;
     await waitForContainer(cfg, t, id);
     return id;
   }
-  const params: Record<string, string | undefined> = { image_url: images[0].url, caption: req.text, alt_text: images[0].altText };
+  const params: Record<string, string | undefined> = { image_url: images[0].url, caption: req.text, alt_text: images[0].altText, ...ai };
   if (req.format === "story") params.media_type = "STORIES";
   return (await graph<{ id: string }>(`/${igId}/media`, cfg, t, { method: "POST", params })).id;
 }

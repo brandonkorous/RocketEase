@@ -14,7 +14,7 @@ export function parseFilters(sp: Search): InboxFilters {
   const status = one(sp.status);
   const sort = one(sp.sort);
   return {
-    tab: ["all", "unread", "mentions", "dms", "comments"].includes(tab) ? tab : "all",
+    tab: ["all", "unread", "mentions", "dms", "comments", "reviews"].includes(tab) ? tab : "all",
     status: ["open", "snoozed", "resolved", "all"].includes(status) ? (status as InboxFilters["status"]) : "open",
     channel: one(sp.channel),
     assignee: one(sp.assignee),

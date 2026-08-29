@@ -22,6 +22,7 @@ export function providers(): Map<ProviderKey, ProviderAdapter> {
       youtube: process.env.YOUTUBE_CLIENT_ID ? { clientId: process.env.YOUTUBE_CLIENT_ID, clientSecret: process.env.YOUTUBE_CLIENT_SECRET ?? "" } : undefined,
       pinterest: process.env.PINTEREST_APP_ID ? { clientId: process.env.PINTEREST_APP_ID, clientSecret: process.env.PINTEREST_APP_SECRET ?? "" } : undefined,
       x: process.env.X_CLIENT_ID ? { clientId: process.env.X_CLIENT_ID, clientSecret: process.env.X_CLIENT_SECRET ?? "" } : undefined,
+      google_business: process.env.GOOGLE_BUSINESS_CLIENT_ID ? { clientId: process.env.GOOGLE_BUSINESS_CLIENT_ID, clientSecret: process.env.GOOGLE_BUSINESS_CLIENT_SECRET ?? "" } : undefined,
     });
   }
   return g.__misProviders;

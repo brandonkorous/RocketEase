@@ -22,13 +22,13 @@ export function err(category: string, message: string, providerCode?: string, am
 
 export async function succeed(job: Job, v: Variant, item: Item, ch: { id: string; name: string; network: string }, result: PublishResult, l: HandlerContext["log"]) {
   await db.transaction(async (tx) => {
-    await tx.update(postVariant).set({ status: "published", publishedAt: new Date(result.publishedAt), remoteId: result.remoteId, remoteUrl: result.url ?? null, lastError: null, updatedAt: new Date() }).where(eq(postVariant.id, v.id));
+    await tx.update(postVariant).set({ status: "published", publishedAt: new Date(result.publishedAt), remoteId: result.remoteId, remoteUrl: result.url ?? null, disclosure: result.disclosure ?? null, lastError: null, updatedAt: new Date() }).where(eq(postVariant.id, v.id));
     await tx.insert(remotePublication).values({ variantId: v.id, channelId: ch.id, remoteId: result.remoteId, url: result.url ?? null, publishedAt: new Date(result.publishedAt) }).onConflictDoNothing();
     await tx.update(publishJob).set({ state: "succeeded", finishedAt: new Date() }).where(eq(publishJob.id, job.id));
     await emit(tx, "automation.evaluate", { trigger: "post.published", refId: v.id }, { organizationId: item.organizationId, workspaceId: item.workspaceId, dedupeKey: `automation:published:${v.id}` });
   });
   await summarizeItem(item.id);
-  await audit({ action: "publish.succeeded", organizationId: item.organizationId, workspaceId: item.workspaceId, targetType: "post_variant", targetId: v.id, summary: { after: { remoteId: result.remoteId, channel: ch.name } } });
+  await audit({ action: "publish.succeeded", organizationId: item.organizationId, workspaceId: item.workspaceId, targetType: "post_variant", targetId: v.id, summary: { after: { remoteId: result.remoteId, channel: ch.name, disclosure: result.disclosure?.method ?? "none" } } });
   await track("post_published", { organizationId: item.organizationId, workspaceId: item.workspaceId, surface: "job:publish.execute", props: { network: ch.network, format: v.format, attempt: job.attempt } });
   l.info("published", { remoteId: result.remoteId });
 }

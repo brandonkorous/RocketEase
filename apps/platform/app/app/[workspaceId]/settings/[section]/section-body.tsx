@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { ApprovalPolicies } from "@/components/approval-policies";
 import { SecurityPanel } from "@/components/security-panel";
+import { ApiKeys } from "@/components/settings/api-keys";
 import { AutomationsSettings } from "@/components/settings/automations";
+import { HashtagSetsSettings } from "@/components/settings/hashtag-sets";
+import { RecyclingSettings } from "@/components/settings/recycling";
+import { AiDisclosureSettings } from "@/components/settings/ai-disclosure-settings";
 import { BrandVoiceSettings } from "@/components/settings/brand-voice-settings";
 import { InboxSettings } from "@/components/settings/inbox-settings";
 import { NotificationSettings } from "@/components/settings/notification-settings";
+import { RightsGrants } from "@/components/settings/rights-grants";
 import { SsoSettings } from "@/components/settings/sso-settings";
 import { TrackingSettings } from "@/components/settings/tracking-settings";
 import { GOALS } from "@/lib/actions/settings/catalog";
@@ -35,13 +40,26 @@ export function SectionBody({ section, label, ctx, data }: Props) {
         </>
       );
     case "brand":
-      return <BrandVoiceSettings workspaceId={workspace.id} initial={data.brandVoice} canEdit={canEdit} aiEnabled={data.aiEnabled} />;
+      return (
+        <>
+          <BrandVoiceSettings workspaceId={workspace.id} initial={data.brandVoice} canEdit={canEdit} aiEnabled={data.aiEnabled} />
+          <AiDisclosureSettings workspaceId={workspace.id} initial={data.requireAiDisclosure} canEdit={canEdit} />
+        </>
+      );
     case "inbox":
       return <InboxSettings workspaceId={workspace.id} minutes={data.inbox.minutes} replies={data.inbox.replies} canEdit={canEdit} canHandle={hasCapability(workspace, "conversations.handle")} />;
     case "automations":
       return <AutomationsSettings workspaceId={workspace.id} data={data.automations} canEdit={canEdit} />;
+    case "recycling":
+      return <RecyclingSettings workspaceId={workspace.id} timezone={workspace.timezone} data={data.recycling} canEdit={hasCapability(workspace, "content.create")} canChangeSettings={canEdit} />;
+    case "hashtags":
+      return <HashtagSetsSettings workspaceId={workspace.id} sets={data.hashtagSets} networks={networkOptions(data.channels)} canEdit={hasCapability(workspace, "content.edit")} />;
     case "tracking":
       return <TrackingSettings workspaceId={workspace.id} initial={data.tracking} canEdit={canEdit} sources={data.sources} enabled={data.sourceKinds} />;
+    case "rights":
+      return <RightsGrants workspaceId={workspace.id} grants={data.grants} channels={data.channels} canEdit={hasCapability(workspace, "content.edit")} />;
+    case "api":
+      return <ApiKeys workspaceId={workspace.id} data={data.apiKeys} />;
     case "sso":
       return <SsoSettings workspaceId={workspace.id} data={data.sso} />;
     case "notifications":
@@ -53,6 +71,13 @@ export function SectionBody({ section, label, ctx, data }: Props) {
         </p>
       );
   }
+}
+
+/** One chip per distinct network among the connected channels. */
+function networkOptions(channels: { network: string }[]) {
+  const seen = new Map<string, string>();
+  for (const c of channels) if (!seen.has(c.network)) seen.set(c.network, c.network.charAt(0).toUpperCase() + c.network.slice(1));
+  return [...seen].map(([key, label]) => ({ key, label }));
 }
 
 function General({ ctx, goals, canEdit }: { ctx: WorkspaceContext; goals: string[]; canEdit: boolean }) {

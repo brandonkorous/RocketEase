@@ -1,6 +1,6 @@
 import type { ReceiptChip } from "@/lib/publishing/receipt";
 
-export type CalendarPost = { variantId: string; itemId: string; title: string; text: string; status: string; itemStatus: string; approval: string; channelId: string; channelName: string; network: string; scheduledAt: string | null; localDay: string | null; localTime: string | null; thumbUrl: string | null; format: string; error: string | null; receipt: ReceiptChip };
+export type CalendarPost = { variantId: string; itemId: string; title: string; text: string; status: string; itemStatus: string; approval: string; channelId: string; channelName: string; network: string; scheduledAt: string | null; localDay: string | null; localTime: string | null; thumbUrl: string | null; format: string; error: string | null; recycled: boolean; receipt: ReceiptChip };
 export type CalendarData = {
   workspaceId: string; timezone: string; today: string; anchor: string; view: "week" | "month" | "list"; rangeStart: string; rangeEnd: string;
   posts: CalendarPost[]; unscheduled: { itemId: string; title: string; status: string; text: string; updatedAt: string }[];

@@ -102,7 +102,8 @@ export const conversation = pgTable(
   ],
 );
 
-export const DELIVERY_STATES = ["received", "queued", "sending", "sent", "ambiguous", "failed"] as const;
+/** `draft` is an outbound reply a person still has to send (public API / agents); nothing delivers it. */
+export const DELIVERY_STATES = ["draft", "received", "queued", "sending", "sent", "ambiguous", "failed"] as const;
 export type DeliveryState = (typeof DELIVERY_STATES)[number];
 export const deliveryState = pgEnum("message_delivery_state", DELIVERY_STATES);
 

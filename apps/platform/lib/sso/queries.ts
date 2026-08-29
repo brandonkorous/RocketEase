@@ -1,7 +1,8 @@
 import "server-only";
 import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { auditEvent, scimIdentity, scimToken } from "@/db/schema/app";
+import { auditEvent } from "@/db/schema/app";
+import { scimIdentity, scimToken } from "@/db/schema/scim";
 import { ssoProvider, user } from "@/db/schema/auth";
 import { isOrgAdmin, orgRoleOf } from "@/lib/org-admin";
 import { scimBaseUrl } from "@/lib/scim/constants";

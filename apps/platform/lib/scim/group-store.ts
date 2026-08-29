@@ -1,7 +1,8 @@
 import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { scimIdentity, workspaceMembership, WORKSPACE_ROLES, type WorkspaceRole } from "@/db/schema/app";
+import { scimIdentity } from "@/db/schema/scim";
+import { workspaceMembership, WORKSPACE_ROLES, type WorkspaceRole } from "@/db/schema/app";
 import { audit } from "@/lib/audit";
 import { SCIM_SCHEMA, scimBaseUrl } from "./constants";
 import { stringTerm, type ScimFilterTerm } from "./filter";

@@ -47,7 +47,7 @@ export function sentStep(v: ReceiptVariant, jobs: PublishJobRow[], net: string):
 
 /** Only ever shown when an attempt actually went through reconciliation. */
 export function reconciledStep(v: ReceiptVariant, jobs: PublishJobRow[], net: string): ReceiptStep {
-  const marker = jobs.find((j) => j.lastError?.ambiguous) ?? jobs.find((j) => j.state === "reconciling");
+  const marker = jobs.find((j) => j.reconciled) ?? jobs.find((j) => j.lastError?.ambiguous) ?? jobs.find((j) => j.state === "reconciling");
   const published = v.status === "published";
   return {
     key: "reconciled",

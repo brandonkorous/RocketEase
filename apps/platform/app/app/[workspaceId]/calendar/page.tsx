@@ -105,6 +105,7 @@ export default async function CalendarPage({ params, searchParams }: { params: P
       thumbUrl: await thumbUrlFor((r.v.assetIdsOverride ?? r.item.sharedAssetIds)[0]),
       format: r.v.format,
       error: r.v.lastError?.message ?? null,
+      recycled: Boolean(r.item.recycledFromItemId),
       receipt: receiptChip(buildReceipt({ variant: r.v, channel: { name: r.ch.name, network: r.ch.network } })),
     })),
   );

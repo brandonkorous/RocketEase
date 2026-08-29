@@ -5,6 +5,7 @@
  * can only post to private accounts until TikTok approves video.publish.
  */
 import type { AuthorizeParams, ChannelKind, Credential, HealthReport, ProviderAdapter, ProviderConfig, PublishRequest, ValidationIssue } from "../types";
+import { applyDisclosure } from "../disclosure";
 import { ProviderError } from "../types";
 import { form, httpJson } from "../http";
 import { probe } from "../health";
@@ -85,7 +86,8 @@ export function createTikTokProvider(cfg: ProviderConfig): ProviderAdapter {
     async publish(cred, channel, req: PublishRequest) {
       const errors = provider.validate(channel, req).filter((i) => i.severity === "error");
       if (errors.length) throw new ProviderError(errors[0].message, { category: "validation", providerCode: errors[0].code });
-      return publish(cred, channel, req);
+      const { request, emitted: disclosure } = applyDisclosure(channel, req);
+      return { ...(await publish(cred, channel, request)), disclosure };
     },
     findPublication: (cred, _channel, key) => findPublication(cred, key),
     publicationStatus: (cred, _channel, remoteId) => publicationStatus(cred, remoteId),

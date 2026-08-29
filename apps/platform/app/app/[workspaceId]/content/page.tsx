@@ -81,7 +81,7 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
     return {
       id: a.id, kind: a.kind, fileName: a.fileName, title: a.title, altText: a.altText, caption: a.caption, mimeType: a.mimeType, bytes: a.bytes, width: a.width, height: a.height,
       durationSeconds: a.durationSeconds, uploadStatus: a.uploadStatus, scanStatus: a.scanStatus, scanNote: a.scanNote, processingError: a.processingError, rightsNote: a.rightsNote,
-      rightsExpiresAt: a.rightsExpiresAt?.toISOString() ?? null, folderId: a.folderId, tags: a.tagIds.map((id) => tagById.get(id)).filter((n): n is string => Boolean(n)),
+      rightsExpiresAt: a.rightsExpiresAt?.toISOString() ?? null, rightsScope: a.rightsScope, folderId: a.folderId, tags: a.tagIds.map((id) => tagById.get(id)).filter((n): n is string => Boolean(n)),
       thumbUrl: thumb ? await presignGet(thumb.storageKey) : ready && a.kind === "image" ? await presignGet(a.storageKey) : null,
       previewUrl: preview ? await presignGet(preview.storageKey) : null,
       originalUrl: ready ? await presignGet(a.storageKey, 3600, a.fileName) : null,
@@ -115,6 +115,7 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
     workspaceId,
     timezone: tz,
     canEdit,
+    canPublish: hasCapability(ctx.workspace, "content.publish") || ctx.workspace.role === "creator",
     tabs: { all: total, images: nOf("image"), videos: nOf("video"), drafts: Number(draftsCount[0]?.n ?? 0), templates: 0, copy: 0 },
     collections,
     smart: { expiring: Number(expiringCount[0]?.n ?? 0), review: Number(needsReviewCount[0]?.n ?? 0), unused: Math.max(0, total - usage.size), used: usage.size },

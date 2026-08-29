@@ -13,7 +13,8 @@ type Video = { id: string; title?: string; create_time?: number; share_url?: str
 
 async function initPublish(token: string, req: PublishRequest): Promise<string> {
   const s = (req.settings ?? {}) as Settings;
-  const postInfo = { title: req.text.slice(0, 2200), privacy_level: s.privacy ?? "PUBLIC_TO_EVERYONE", disable_comment: Boolean(s.disableComment), disable_duet: Boolean(s.disableDuet), disable_stitch: Boolean(s.disableStitch) };
+  // is_aigc: Content Posting API self-declaration; TikTok then draws its own "AI-generated" tag.
+  const postInfo = { title: req.text.slice(0, 2200), privacy_level: s.privacy ?? "PUBLIC_TO_EVERYONE", disable_comment: Boolean(s.disableComment), disable_duet: Boolean(s.disableDuet), disable_stitch: Boolean(s.disableStitch), ...(req.disclosure?.synthetic ? { is_aigc: true } : {}) };
   const video = req.media.find((m) => m.mimeType.startsWith("video/"));
   const r = video
     ? await tt<{ data?: { publish_id?: string } }>("/post/publish/video/init/", token, { post_info: postInfo, source_info: { source: "PULL_FROM_URL", video_url: video.url } })

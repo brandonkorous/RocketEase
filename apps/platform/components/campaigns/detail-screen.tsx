@@ -14,6 +14,7 @@ import { useActionFeedback } from "@/lib/use-action-feedback";
 import { NetMark } from "../net-mark";
 import { AdsTab } from "./ads-tab";
 import { CampaignForm } from "./campaign-form";
+import { ClocksStrip } from "./clocks-strip";
 import { ContentTab } from "./content-tab";
 import { OverviewTab } from "./overview-tab";
 import { PerformanceTab } from "./performance-tab";
@@ -81,6 +82,7 @@ export function CampaignDetailScreen({ data }: { data: CampaignDetailData }) {
           {CAMPAIGN_TABS.map((t) => (<Link key={t.key} href={tabHref(t.key)} role="tab" aria-selected={data.tab === t.key} className={`whitespace-nowrap border-b-2 py-2 text-sm ${data.tab === t.key ? "border-base-content font-semibold" : "border-transparent text-secondary hover:text-base-content"}`}>{t.label}</Link>))}
         </div>
       </div>
+      <ClocksStrip clocks={data.clocks} />
       {data.tab === "overview" && <OverviewTab data={data} nav={nav} />}
       {data.tab === "content" && <ContentTab data={data} />}
       {data.tab === "ads" && <AdsTab data={data} nav={nav} />}

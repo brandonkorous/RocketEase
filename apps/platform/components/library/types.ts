@@ -1,14 +1,14 @@
 export type AssetCard = {
   id: string; kind: "image" | "video" | "document"; fileName: string; title: string | null; altText: string | null; caption: string | null; mimeType: string;
   bytes: number | null; width: number | null; height: number | null; durationSeconds: number | null; uploadStatus: string; scanStatus: string; scanNote: string | null;
-  processingError: string | null; rightsNote: string | null; rightsExpiresAt: string | null; folderId: string | null; tags: string[]; thumbUrl: string | null; previewUrl: string | null;
+  processingError: string | null; rightsNote: string | null; rightsExpiresAt: string | null; rightsScope: "organic" | "paid" | "both"; folderId: string | null; tags: string[]; thumbUrl: string | null; previewUrl: string | null;
   originalUrl: string | null; renditions: { kind: string; width: number | null; height: number | null; bytes: number | null }[]; usedIn: Record<string, number>; createdAt: string; uploadedBy: string | null;
 };
 export type CollectionRow = { id: string; name: string; count: number };
 export type RecentRow = { id: string; fileName: string; bytes: number | null; createdAt: string; thumbUrl: string | null };
 export type LibraryQuery = { q: string; tab: string; folder: string; smart: string; sort: string; tag: string };
 export type LibraryData = {
-  workspaceId: string; timezone: string; canEdit: boolean;
+  workspaceId: string; timezone: string; canEdit: boolean; canPublish: boolean;
   tabs: { all: number; images: number; videos: number; drafts: number; templates: number; copy: number };
   collections: CollectionRow[];
   smart: { expiring: number; review: number; unused: number; used: number };

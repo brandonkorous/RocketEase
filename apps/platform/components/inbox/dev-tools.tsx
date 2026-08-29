@@ -20,6 +20,7 @@ export function InboxDevTools({ workspaceId, channels, threadRemoteId, preferred
         <input className="input input-xs w-full max-w-90" value={text} onChange={(e) => setText(e.target.value)} placeholder="Customer message text" aria-label="Simulated message" />
         <Button size="xs" color="primary" loading={pending} onClick={() => run(() => simulateInbound(workspaceId, channelId, { text, kind: "message", threadRemoteId }), () => setText(""))}>{threadRemoteId ? "Customer replies here" : "Simulate new DM"}</Button>
         <Button size="xs" variant="outline" color="neutral" disabled={pending} onClick={() => run(() => simulateInbound(workspaceId, channelId, { text, kind: "comment" }))}>Simulate comment</Button>
+        <Button size="xs" variant="outline" color="neutral" disabled={pending} onClick={() => run(() => simulateInbound(workspaceId, channelId, { text, kind: "review", rating: 2 }))}>Simulate 2-star review</Button>
         <Button size="xs" variant="ghost" color="neutral" disabled={pending} onClick={() => run(() => syncInboxNow(workspaceId))}>Poll now</Button>
       </div>
     </details>

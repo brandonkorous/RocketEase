@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { and, eq, inArray } from "drizzle-orm";
 import type { SessionRow } from "@/components/security-panel";
 import type { PolicyView } from "@/components/approval-policies";
+import type { GrantRow } from "@/components/settings/rights-grants";
 import type { SavedReplyRow } from "@/components/settings/saved-replies";
 import { db } from "@/db";
 import { workspace, workspaceMembership } from "@/db/schema/app";
@@ -11,9 +12,15 @@ import { channel } from "@/db/schema/connections";
 import { inboxSettings, savedReply } from "@/db/schema/engagement";
 import { aiConfigured } from "@/lib/ai/client";
 import { EMPTY_BRAND_VOICE, readBrandVoice, type BrandVoice } from "@/lib/ai/brand-voice";
+import { readRequireAiDisclosure } from "@/lib/disclosure";
 import { automationsData, EMPTY_AUTOMATIONS, type AutomationsData } from "@/lib/automations/queries";
 import { ssoSectionData, EMPTY_SSO, type SsoSectionData } from "@/lib/sso/queries";
-import { readGoals, readTracking, type GoalKey, type TrackingSettings } from "@/lib/actions/settings/catalog";
+import { apiKeysData, EMPTY_API_KEYS, type ApiKeysData } from "@/lib/api/queries";
+import { readGoals, readRecycling, readTracking, type GoalKey, type TrackingSettings } from "@/lib/actions/settings/catalog";
+import { listHashtagSets, type HashtagSetRow } from "@/lib/actions/hashtag-sets";
+import { recyclingData, EMPTY_RECYCLING, type RecyclingData } from "@/lib/recycling/queries";
+import { listGrants } from "@/lib/rights/queries";
+import { grantRows } from "@/lib/rights/view";
 import { conversionState } from "@/lib/tracking/conversions";
 import { trackingKindEnabled } from "@/lib/tracking/sources";
 import { trackingWebhookUrl } from "@/lib/tracking/oauth-state";
@@ -34,11 +41,16 @@ export type SectionData = {
   prefs: Record<string, boolean>;
   automations: AutomationsData;
   sso: SsoSectionData;
+  apiKeys: ApiKeysData;
   brandVoice: BrandVoice;
   aiEnabled: boolean;
+  requireAiDisclosure: boolean;
+  grants: GrantRow[];
+  hashtagSets: HashtagSetRow[];
+  recycling: RecyclingData;
 };
 
-const EMPTY: SectionData = { policies: [], channels: [], sessions: [], inbox: { minutes: 60, replies: [] }, tracking: readTracking({}), sources: [], sourceKinds: { ga4: false, shopify: false }, goals: [], prefs: {}, automations: EMPTY_AUTOMATIONS, sso: EMPTY_SSO, brandVoice: EMPTY_BRAND_VOICE, aiEnabled: false };
+const EMPTY: SectionData = { policies: [], channels: [], sessions: [], inbox: { minutes: 60, replies: [] }, tracking: readTracking({}), sources: [], sourceKinds: { ga4: false, shopify: false }, goals: [], prefs: {}, automations: EMPTY_AUTOMATIONS, sso: EMPTY_SSO, apiKeys: EMPTY_API_KEYS, brandVoice: EMPTY_BRAND_VOICE, aiEnabled: false, requireAiDisclosure: false, grants: [], hashtagSets: [], recycling: EMPTY_RECYCLING };
 
 /** Conversion sources as the settings list renders them (freshness in the workspace timezone). */
 async function trackingSourceRows(workspaceId: string, tz: string): Promise<SectionData["sources"]> {
@@ -65,6 +77,14 @@ export async function loadSection(section: string, ctx: WorkspaceContext): Promi
     data.policies = rows.map((p) => ({ id: p.id, name: p.name, enabled: p.enabled, channelIds: p.rule.channelIds ?? [], authorRoles: p.rule.authorRoles ?? [], approverRoles: p.approverRoles, separationOfDuty: p.separationOfDuty, dueHours: p.dueHours }));
     data.channels = await db.select({ id: channel.id, name: channel.name, network: channel.network }).from(channel).where(and(eq(channel.workspaceId, workspaceId), inArray(channel.status, ["healthy", "degraded", "syncing", "action_required"])));
   }
+  if (section === "rights") {
+    const [grants, channels] = await Promise.all([
+      listGrants(workspaceId),
+      db.select({ id: channel.id, name: channel.name, network: channel.network }).from(channel).where(and(eq(channel.workspaceId, workspaceId), inArray(channel.status, ["healthy", "degraded", "syncing", "action_required"]))),
+    ]);
+    data.channels = channels;
+    data.grants = grantRows(grants, channels, ctx.workspace.timezone);
+  }
   if (section === "security") {
     const list = await auth.api.listSessions({ headers: await headers() });
     data.sessions = list
@@ -89,12 +109,24 @@ export async function loadSection(section: string, ctx: WorkspaceContext): Promi
     const [ws] = await db.select({ settings: workspace.settings }).from(workspace).where(eq(workspace.id, workspaceId));
     data.brandVoice = readBrandVoice(ws?.settings ?? {});
     data.aiEnabled = aiConfigured();
+    data.requireAiDisclosure = readRequireAiDisclosure(ws?.settings ?? {});
   }
   if (section === "automations") {
     data.automations = await automationsData(workspaceId, ctx.workspace.timezone);
   }
+  if (section === "hashtags") {
+    data.hashtagSets = await listHashtagSets(workspaceId);
+    data.channels = await db.select({ id: channel.id, name: channel.name, network: channel.network }).from(channel).where(and(eq(channel.workspaceId, workspaceId), inArray(channel.status, ["healthy", "degraded", "syncing", "action_required"])));
+  }
+  if (section === "recycling") {
+    const [ws] = await db.select({ settings: workspace.settings }).from(workspace).where(eq(workspace.id, workspaceId));
+    data.recycling = await recyclingData(workspaceId, ctx.workspace.timezone, readRecycling(ws?.settings ?? {}).autoSchedule);
+  }
   if (section === "sso") {
     data.sso = await ssoSectionData(ctx);
+  }
+  if (section === "api") {
+    data.apiKeys = await apiKeysData(ctx);
   }
   if (section === "notifications") {
     const [m] = await db.select({ prefs: workspaceMembership.notificationPreferences }).from(workspaceMembership).where(and(eq(workspaceMembership.workspaceId, workspaceId), eq(workspaceMembership.userId, ctx.session.user.id)));

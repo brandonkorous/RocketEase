@@ -7,10 +7,11 @@ import { z } from "zod";
 import type { PublishFormat } from "@make-it-social/providers";
 import { db } from "@/db";
 import { asset } from "@/db/schema/assets";
-import { contentItem, postVariant } from "@/db/schema/content";
+import { SYNTHETIC_FLAGS, contentItem, postVariant, type SyntheticMedia } from "@/db/schema/content";
 import { audit } from "@/lib/audit";
 import { track } from "@/lib/telemetry";
 import { inferFormat, summarizeItem, validateVariant } from "@/lib/content";
+import { createContentItem, ownedAssetIds } from "@/lib/authoring";
 import { requireCapability } from "@/lib/session";
 import { workspacePath } from "@/lib/nav";
 import { fail, guard, type ActionState } from "./shared";
@@ -24,6 +25,7 @@ const draftSchema = z.object({
   workspaceId: z.string().min(1), itemId: z.string().min(1), title: z.string().trim().max(200).optional(), sharedText: z.string().max(10_000).default(""),
   sharedAssetIds: z.array(z.string()).max(35).default([]), link: z.string().trim().url().max(2048).nullable().optional().or(z.literal("")),
   channelIds: z.array(z.string()).max(20).default([]), variants: z.record(z.string(), variantSchema).default({}),
+  syntheticFlag: z.enum(SYNTHETIC_FLAGS).optional(), syntheticNote: z.string().trim().max(280).optional(),
 });
 export type DraftInput = z.input<typeof draftSchema>;
 type Draft = z.output<typeof draftSchema>;
@@ -32,10 +34,9 @@ const EDITABLE = ["draft", "scheduled", "failed", "canceled"] as const;
 export async function createDraft(workspaceId: string): Promise<{ itemId: string } | ActionState> {
   return guard(async () => {
     const ctx = await requireCapability(workspaceId, "content.create");
-    const [row] = await db.insert(contentItem).values({ organizationId: ctx.workspace.organizationId, workspaceId, ownerUserId: ctx.session.user.id, createdByUserId: ctx.session.user.id }).returning({ id: contentItem.id });
-    await audit({ action: "content.create", actorUserId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId, targetType: "content_item", targetId: row.id });
-    await track("draft_created", { userId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId, surface: "action:createDraft" });
-    return { itemId: row.id };
+    const actor = { userId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId };
+    const { item } = await createContentItem(actor, {}, "action:createDraft");
+    return { itemId: item.id };
   });
 }
 
@@ -45,15 +46,16 @@ export async function saveDraft(input: DraftInput) {
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid draft");
   const d = parsed.data;
   return guard(async () => {
-    await requireCapability(d.workspaceId, "content.edit");
+    const ctx = await requireCapability(d.workspaceId, "content.edit");
     const item = await db.query.contentItem.findFirst({ where: (c, { and, eq, isNull }) => and(eq(c.id, d.itemId), eq(c.workspaceId, d.workspaceId), isNull(c.deletedAt)) });
     if (!item) return fail("Draft not found.");
     if (["publishing", "published"].includes(item.status)) return fail("Published posts can't be edited. Duplicate it instead.");
+    const disclosure = nextDisclosure(item.syntheticMedia, d, ctx.session.user.id);
     const sharedAssetIds = await ownedAssetIds(d.workspaceId, d.sharedAssetIds);
     const assetRows = sharedAssetIds.length ? await db.select({ id: asset.id, kind: asset.kind }).from(asset).where(inArray(asset.id, sharedAssetIds)) : [];
     await db.transaction(async (tx) => {
       const approvalState = item.approvalState === "approved" ? "superseded" : item.approvalState;
-      await tx.update(contentItem).set({ title: d.title || item.title, sharedText: d.sharedText, sharedAssetIds, link: d.link ? d.link : null, approvalState, updatedAt: new Date() }).where(eq(contentItem.id, item.id));
+      await tx.update(contentItem).set({ title: d.title || item.title, sharedText: d.sharedText, sharedAssetIds, link: d.link ? d.link : null, approvalState, ...(disclosure ? { syntheticMedia: disclosure } : {}), updatedAt: new Date() }).where(eq(contentItem.id, item.id));
       const stale = d.channelIds.length ? and(eq(postVariant.contentItemId, item.id), notInArray(postVariant.channelId, d.channelIds), inArray(postVariant.status, EDITABLE)) : and(eq(postVariant.contentItemId, item.id), inArray(postVariant.status, EDITABLE));
       await tx.delete(postVariant).where(stale);
       for (const channelId of d.channelIds) await upsertVariant(tx, item, d, channelId, assetRows);
@@ -63,15 +65,25 @@ export async function saveDraft(input: DraftInput) {
     const validation: Record<string, Awaited<ReturnType<typeof validateVariant>>> = {};
     for (const v of variants) validation[v.channelId] = await validateVariant(fresh!, v);
     await summarizeItem(item.id);
+    if (disclosure) await auditDisclosure(ctx, item, disclosure);
     return { ok: "Saved", savedAt: new Date().toISOString(), validation, formats: Object.fromEntries(variants.map((v) => [v.channelId, v.format])) };
   });
 }
 
-async function ownedAssetIds(workspaceId: string, ids: string[]) {
-  if (!ids.length) return [];
-  const rows = await db.select({ id: asset.id }).from(asset).where(and(inArray(asset.id, ids), eq(asset.workspaceId, workspaceId)));
-  const ok = new Set(rows.map((a) => a.id));
-  return ids.filter((id) => ok.has(id));
+/** Only records a change: re-saving the same answer must not re-stamp setBy/setAt or re-audit. */
+function nextDisclosure(current: SyntheticMedia | null, d: Draft, userId: string): SyntheticMedia | null {
+  if (!d.syntheticFlag) return null;
+  const note = d.syntheticNote || undefined;
+  if (current && current.flag === d.syntheticFlag && (current.note ?? undefined) === note) return null;
+  return { flag: d.syntheticFlag, note, setBy: userId, setAt: new Date().toISOString() };
+}
+
+type Ctx = Awaited<ReturnType<typeof requireCapability>>;
+async function auditDisclosure(ctx: Ctx, item: { id: string; organizationId: string; workspaceId: string; syntheticMedia: SyntheticMedia | null }, next: SyntheticMedia) {
+  await audit({
+    action: "content.disclosure_set", actorUserId: ctx.session.user.id, organizationId: item.organizationId, workspaceId: item.workspaceId,
+    targetType: "content_item", targetId: item.id, summary: { before: { flag: item.syntheticMedia?.flag ?? "none" }, after: { flag: next.flag, note: next.note } },
+  });
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];

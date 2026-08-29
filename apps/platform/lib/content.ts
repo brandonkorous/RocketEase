@@ -7,7 +7,11 @@ import { db } from "@/db";
 import { asset, assetRendition } from "@/db/schema/assets";
 import { channel } from "@/db/schema/connections";
 import { contentItem, postVariant, type ContentItem, type PostVariant, type VariantValidation } from "@/db/schema/content";
+import { workspace } from "@/db/schema/app";
+import { disclosureGap, readRequireAiDisclosure, toDisclosureInput } from "./disclosure";
 import { getAdapter, toDescriptor } from "./providers";
+import { grantsForUse, rightsAssets } from "./rights/queries";
+import { rightsProblemsForPublish } from "./rights/rules";
 import { presignGet } from "./storage";
 import { isEnabled } from "./flags";
 
@@ -49,7 +53,6 @@ export async function mediaForAssets(assetIds: string[], opts: { forPublish?: bo
     }
     if (a.uploadStatus !== "ready") problems.push({ severity: "error", code: "asset_not_ready", message: `${a.fileName} is still processing.`, field: "media" });
     if (a.scanStatus !== "clean") problems.push({ severity: "error", code: "asset_unscanned", message: `${a.fileName} hasn't passed the safety scan.`, field: "media" });
-    if (a.rightsExpiresAt && a.rightsExpiresAt < new Date()) problems.push({ severity: "error", code: "asset_rights_expired", message: `Usage rights for ${a.fileName} have expired.`, field: "media" });
     // Providers pull the "web" rendition when it exists (already oriented/compressed), else the original.
     const web = rends.find((r) => r.assetId === a.id && r.kind === "preview" && a.kind === "image");
     const key = opts.forPublish && web ? web.storageKey : a.storageKey;
@@ -66,6 +69,12 @@ export async function mediaForAssets(assetIds: string[], opts: { forPublish?: bo
   return { media, problems };
 }
 
+/** Rights and authorisation clocks must still be live when the post actually goes out (M8.4). */
+async function publishRightsIssues(workspaceId: string, channelId: string, assetIds: string[], scheduledAt: Date | null): Promise<ValidationIssue[]> {
+  const [assets, grants] = await Promise.all([rightsAssets(assetIds), grantsForUse(workspaceId, assetIds, channelId)]);
+  return rightsProblemsForPublish({ channelId }, assets, grants, scheduledAt).map(({ severity, code, message, field }) => ({ severity, code, message, field }));
+}
+
 /** Validate one variant against its channel's live capabilities. Persists the result. */
 export async function validateVariant(item: ContentItem, v: PostVariant): Promise<VariantValidation> {
   const ch = await db.query.channel.findFirst({ where: (c, { eq }) => eq(c.id, v.channelId) });
@@ -78,9 +87,12 @@ export async function validateVariant(item: ContentItem, v: PostVariant): Promis
     const r = resolveVariant(item, v);
     const { media, problems } = await mediaForAssets(r.assetIds);
     issues.push(...problems);
+    issues.push(...(await publishRightsIssues(item.workspaceId, ch.id, r.assetIds, v.scheduledAt)));
     try {
       const adapter = getAdapter(ch.provider);
-      issues.push(...adapter.validate(toDescriptor(ch), { format: v.format, text: r.text, media, link: r.link, firstComment: r.firstComment, settings: v.settings }));
+      issues.push(...adapter.validate(toDescriptor(ch), { format: v.format, text: r.text, media, link: r.link, firstComment: r.firstComment, settings: v.settings, disclosure: toDisclosureInput(item.syntheticMedia) }));
+      const gap = disclosureGap(ch.capabilities, item.syntheticMedia, { required: await requireAiDisclosure(item.workspaceId), channelName: ch.name });
+      if (gap) issues.push({ ...gap, field: "settings" });
     } catch (e) {
       issues.push({ severity: "error", code: "provider_unavailable", message: e instanceof Error ? e.message : "Provider unavailable", field: "settings" });
     }
@@ -90,6 +102,12 @@ export async function validateVariant(item: ContentItem, v: PostVariant): Promis
   const validation: VariantValidation = { issues, rulesetVersion: RULESET_VERSION, checkedAt: new Date().toISOString() };
   await db.update(postVariant).set({ validation, updatedAt: new Date() }).where(eq(postVariant.id, v.id));
   return validation;
+}
+
+/** workspace.settings.requireAiDisclosure, read once per validation pass. */
+async function requireAiDisclosure(workspaceId: string): Promise<boolean> {
+  const [ws] = await db.select({ settings: workspace.settings }).from(workspace).where(eq(workspace.id, workspaceId));
+  return readRequireAiDisclosure(ws?.settings ?? {});
 }
 
 /** Summarize variant states into the item's status (content-model.md "variant state is authoritative"). */

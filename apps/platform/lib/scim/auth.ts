@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { scimToken } from "@/db/schema/app";
+import { scimToken } from "@/db/schema/scim";
 import { ScimError } from "./errors";
 import { bearerFrom, hashScimToken } from "./token";
 

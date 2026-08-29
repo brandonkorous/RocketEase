@@ -8,11 +8,11 @@
  *   remote_publication — what the network says exists
  */
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, boolean } from "drizzle-orm/pg-core";
 import { organization, user } from "./auth";
 import { workspace } from "./app";
 import { channel } from "./connections";
-import type { PublishFormat, ValidationIssue } from "@make-it-social/providers";
+import type { DisclosureEmission, PublishFormat, ValidationIssue } from "@make-it-social/providers";
 
 const id = (name = "id") =>
   text(name)
@@ -35,6 +35,11 @@ export const variantStatus = pgEnum("variant_status", VARIANT_STATUSES);
 export const JOB_STATES = ["queued", "running", "reconciling", "succeeded", "failed", "canceled"] as const;
 export const jobState = pgEnum("publish_job_state", JOB_STATES);
 
+/** AI disclosure the author declared for the whole item (trends-2026.md §3, EU AI Act Art. 50). */
+export const SYNTHETIC_FLAGS = ["none", "assisted", "synthetic_media"] as const;
+export type SyntheticFlag = (typeof SYNTHETIC_FLAGS)[number];
+export type SyntheticMedia = { flag: SyntheticFlag; note?: string; setBy: string | null; setAt: string };
+
 export const contentItem = pgTable(
   "content_item",
   {
@@ -51,16 +56,28 @@ export const contentItem = pgTable(
     sharedAssetIds: jsonb("shared_asset_ids").$type<string[]>().notNull().default([]),
     link: text("link"),
     tagIds: jsonb("tag_ids").$type<string[]>().notNull().default([]),
+    /** null = never declared; the composer writes it the first time an author answers. */
+    syntheticMedia: jsonb("synthetic_media").$type<SyntheticMedia>(),
     /** Earliest scheduled time across variants (for calendar/list summaries). */
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
     currentVersionId: text("current_version_id"),
+    /** Set when an evergreen recycle rule cloned this item from a published one (no FK: self-reference). */
+    recycledFromItemId: text("recycled_from_item_id"),
+    /** CSV import carries `media_urls` here as a note; remote media is never fetched. */
+    importNote: text("import_note"),
+    /** Idempotency-Key from the public API (docs/api.md); null for items created in the UI. */
+    apiIdempotencyKey: text("api_idempotency_key"),
     ownerUserId: text("owner_user_id").references(() => user.id, { onDelete: "set null" }),
     createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: now("created_at"),
     updatedAt: now("updated_at"),
   },
-  (t) => [index("content_item_ws_status_idx").on(t.workspaceId, t.status), index("content_item_ws_sched_idx").on(t.workspaceId, t.scheduledAt)],
+  (t) => [
+    index("content_item_ws_status_idx").on(t.workspaceId, t.status),
+    index("content_item_ws_sched_idx").on(t.workspaceId, t.scheduledAt),
+    uniqueIndex("content_item_ws_api_idem_idx").on(t.workspaceId, t.apiIdempotencyKey),
+  ],
 );
 
 export type VariantValidation = { issues: ValidationIssue[]; rulesetVersion: string; checkedAt: string };
@@ -89,6 +106,8 @@ export const postVariant = pgTable(
     remoteId: text("remote_id"),
     remoteUrl: text("remote_url"),
     lastError: jsonb("last_error").$type<VariantError>(),
+    /** What the adapter actually emitted for AI disclosure on this destination. */
+    disclosure: jsonb("disclosure").$type<DisclosureEmission>(),
     attempts: integer("attempts").notNull().default(0),
     /** Stable across retries; adapters must never create a second remote object for it. */
     idempotencyKey: text("idempotency_key").notNull().default(sql`gen_random_uuid()`),
@@ -135,6 +154,7 @@ export const publishJob = pgTable(
     state: jobState("state").notNull().default("queued"),
     attempt: integer("attempt").notNull().default(1),
     lastError: jsonb("last_error").$type<VariantError>(),
+    reconciled: boolean("reconciled").notNull().default(false),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     createdAt: now("created_at"),

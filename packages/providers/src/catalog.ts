@@ -15,6 +15,7 @@ import { SCOPES as TIKTOK, capsFor as tiktokCaps } from "./tiktok/client";
 import { SCOPES as YOUTUBE, capsFor as youtubeCaps } from "./youtube/client";
 import { SCOPES as PINTEREST, accountCaps, boardCaps } from "./pinterest/client";
 import { SCOPES as X, capsFor as xCaps } from "./x/client";
+import { capsFor as gbpCaps, SCOPES as GBP } from "./google-business/client";
 import { CAPS as MOCK_CAPS } from "./mock";
 
 /** Every capability the contract expresses, addressed by path. */
@@ -24,6 +25,7 @@ export const CAPABILITY_PATHS = [
   "limits.firstComment",
   "limits.links",
   "limits.altText",
+  "disclosure",
   "inbox.comments",
   "inbox.mentions",
   "inbox.messages",
@@ -60,6 +62,7 @@ const REASON_KEYS: Record<CapabilityPath, string[]> = {
   "limits.firstComment": ["firstComment"],
   "limits.links": ["links"],
   "limits.altText": ["altText"],
+  disclosure: ["disclosure"],
   "inbox.comments": ["comments"],
   "inbox.mentions": ["mentions"],
   "inbox.messages": ["messages"],
@@ -80,6 +83,7 @@ export function capabilitySupported(caps: Capabilities, path: CapabilityPath): b
     case "scheduling": return caps.scheduling !== "none";
     case "limits.firstComment": return caps.limits.firstComment === true;
     case "limits.altText": return caps.limits.altText === true;
+    case "disclosure": return (caps.disclosure ?? "caption") !== "none";
     case "limits.links": return caps.limits.links !== undefined && caps.limits.links !== "none";
     case "inbox.comments": return caps.inbox.comments;
     case "inbox.mentions": return caps.inbox.mentions;
@@ -160,6 +164,7 @@ export const CAPABILITY_CATALOG: CatalogEntry[] = [
     capabilities: xCaps(cred(SCOPE_SETS.xAll)),
     withDefaultScopes: xCaps(cred(SCOPE_SETS.xDefault)),
   }),
+  build({ provider: "google_business", network: "google_business", kind: "gbp_location", label: "Google Business Profile location", capabilities: gbpCaps(cred(GBP.manage)) }),
   build({ provider: "mock", network: "mock", kind: "mock_profile", label: "Demo profile", capabilities: MOCK_CAPS, dev: true }),
 ];
 

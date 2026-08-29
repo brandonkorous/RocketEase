@@ -7,6 +7,7 @@ import { deleteAsset, updateAsset, type ActionState } from "@/lib/actions/assets
 import { moveAssets } from "@/lib/actions/folders";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 import { workspacePath } from "@/lib/nav";
+import { daysUntil, remainingLabel } from "@/lib/rights/format";
 import { NetMark } from "../net-mark";
 import { fmtBytes, fmtDate, type AssetCard, type CollectionRow } from "./types";
 
@@ -62,10 +63,7 @@ function EditForm({ a, workspaceId, collections, onClose }: { a: AssetCard; work
       <div className="flex flex-col gap-1.5"><Label htmlFor="d-title">Title</Label><Input id="d-title" name="title" size="sm" defaultValue={a.title ?? ""} /></div>
       <div className="flex flex-col gap-1.5"><Label htmlFor="d-alt">Alt text {a.kind === "image" && <span className="text-secondary/70">(required to publish)</span>}</Label><Textarea id="d-alt" name="altText" rows={2} defaultValue={a.altText ?? ""} placeholder="Describe the image for people who can't see it" /></div>
       <div className="flex flex-col gap-1.5"><Label htmlFor="d-caption">Default caption</Label><Textarea id="d-caption" name="caption" rows={2} defaultValue={a.caption ?? ""} /></div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1.5"><Label htmlFor="d-rights">Rights</Label><Input id="d-rights" name="rightsNote" size="sm" defaultValue={a.rightsNote ?? ""} placeholder="License / source" /></div>
-        <div className="flex flex-col gap-1.5"><Label htmlFor="d-exp">Expires</Label><Input id="d-exp" name="rightsExpiresAt" size="sm" type="date" defaultValue={a.rightsExpiresAt ? a.rightsExpiresAt.slice(0, 10) : ""} /></div>
-      </div>
+      <RightsFields a={a} />
       <div className="grid grid-cols-2 gap-2 pt-1">
         <Button type="submit" color="primary" loading={pending}>Save</Button>
         <Link href={workspacePath(workspaceId, `create?asset=${a.id}`)} className="btn btn-neutral btn-outline">Insert into post</Link>
@@ -75,6 +73,33 @@ function EditForm({ a, workspaceId, collections, onClose }: { a: AssetCard; work
         <Button type="button" variant="outline" color="error" disabled={busy} onClick={() => run(() => deleteAsset(workspaceId, a.id), (r) => { if (r.ok) onClose(); })}>Delete</Button>
       </div>
     </form>
+  );
+}
+
+/** Rights clock (M8.4): what the licence covers and when it runs out. Organic clearance rarely includes paid. */
+function RightsFields({ a }: { a: AssetCard }) {
+  const left = a.rightsExpiresAt ? remainingLabel(new Date(a.rightsExpiresAt)) : null;
+  const expired = Boolean(a.rightsExpiresAt && daysUntil(new Date(a.rightsExpiresAt)) < 0);
+  return (
+    <div className="flex flex-col gap-3 rounded-box border border-base-300 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">Rights</h3>
+        {left && <Badge size="xs" variant="soft" color={expired ? "error" : "warning"}><span aria-hidden="true">{expired ? "!" : "◷"}</span> {left}</Badge>}
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5"><Label htmlFor="d-rights">Licence / source</Label><Input id="d-rights" name="rightsNote" size="sm" defaultValue={a.rightsNote ?? ""} placeholder="License / source" /></div>
+        <div className="flex flex-col gap-1.5"><Label htmlFor="d-exp">Expires</Label><Input id="d-exp" name="rightsExpiresAt" size="sm" type="date" defaultValue={a.rightsExpiresAt ? a.rightsExpiresAt.slice(0, 10) : ""} /></div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="d-scope">Covers</Label>
+        <select id="d-scope" name="rightsScope" className="select select-sm" defaultValue={a.rightsScope}>
+          <option value="both">Organic and paid</option>
+          <option value="organic">Organic only</option>
+          <option value="paid">Paid only</option>
+        </select>
+        <p className="text-xs text-secondary/70">Promoting media cleared for organic use only is blocked. Record the paid licence in Settings → Rights and authorisations.</p>
+      </div>
+    </div>
   );
 }
 

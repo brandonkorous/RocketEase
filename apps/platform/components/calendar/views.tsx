@@ -7,6 +7,7 @@ import { workspacePath } from "@/lib/nav";
 import { NetMark } from "../net-mark";
 import { BulkBar } from "./bulk-bar";
 import { ReceiptChipView } from "./receipt-chip";
+import { RecycledChip } from "./recycled-chip";
 import { DAY_NAMES, fmtDay, hourLabel, type CalendarData, type CalendarPost, type Nav } from "./types";
 
 type DragProps = { draggable?: boolean; onDragStart?: () => void; onDragEnd?: () => void };
@@ -67,6 +68,7 @@ export function ListView({ data }: { data: CalendarData }) {
             <span className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-base-200">{p.thumbUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={p.thumbUrl} alt="" className="h-full w-full object-cover" />}</span>
             <NetMark network={p.network} />
             <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{p.title}</span><span className="block truncate text-xs text-secondary/70">{p.text || "No text"}</span></span>
+            {p.recycled && <RecycledChip />}
             <ReceiptChipView chip={p.receipt} />
             <span className="w-35 text-right text-xs text-secondary/70">{p.localDay ? `${fmtDay(p.localDay, { month: "short", day: "numeric" })} ${p.localTime}` : "—"}</span>
           </Link>
@@ -83,6 +85,7 @@ function PostChip({ post, workspaceId, compact, ...drag }: { post: CalendarPost;
       <NetMark network={post.network} size={12} />
       <span className="font-semibold">{post.localTime}</span>
       <ReceiptChipView chip={post.receipt} compact />
+      {post.recycled && <RecycledChip compact />}
       {!compact && post.thumbUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={post.thumbUrl} alt="" className="ml-auto h-6 w-6 rounded object-cover" />}
       {compact && <span className="truncate text-secondary">{post.title}</span>}
     </Link>

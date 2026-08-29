@@ -73,6 +73,8 @@ export function useComposer(args: { workspaceId: string; timezone: string; item:
   const [time, setTime] = useState(item.scheduledAtLocal?.slice(11, 16) ?? dw.time);
   const [reviewer, setReviewer] = useState("");
   const [reviewNote, setReviewNote] = useState("");
+  const [syntheticFlag, setSyntheticFlag] = useState(item.syntheticFlag);
+  const [syntheticNote, setSyntheticNote] = useState(item.syntheticNote);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const firstRun = useRef(true);
@@ -86,8 +88,9 @@ export function useComposer(args: { workspaceId: string; timezone: string; item:
     () => ({
       workspaceId, itemId: item.id, title: title || undefined, sharedText: text, sharedAssetIds: assetIds, link: effectiveLink || "", channelIds: selected,
       variants: Object.fromEntries(selected.map((id) => { const o = overrides[id]; return [id, customize && o ? { textOverride: o.textOverride, firstComment: o.firstComment || null, linkOverride: o.linkOverride } : { textOverride: null, firstComment: null, linkOverride: null }]; })),
+      syntheticFlag, syntheticNote: syntheticNote || undefined,
     }),
-    [workspaceId, item.id, title, text, assetIds, effectiveLink, selected, overrides, customize],
+    [workspaceId, item.id, title, text, assetIds, effectiveLink, selected, overrides, customize, syntheticFlag, syntheticNote],
   );
 
   const persist = useCallback(async () => {
@@ -112,7 +115,7 @@ export function useComposer(args: { workspaceId: string; timezone: string; item:
     const t = setTimeout(() => void persist(), 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, text, assetIds, effectiveLink, selected, overrides, customize]);
+  }, [title, text, assetIds, effectiveLink, selected, overrides, customize, syntheticFlag, syntheticNote]);
 
   const submit = (m: Method) => {
     setSubmitError(null);
@@ -133,6 +136,7 @@ export function useComposer(args: { workspaceId: string; timezone: string; item:
   return {
     title, setTitle, text, setText, assetIds, setAssetIds, link, setLink, utm, setUtm, selected, toggleChannel, customize, setCustomize, overrides, setOverrides,
     validation, save, method, setMethod, date, setDate, time, setTime, reviewer, setReviewer, reviewNote, setReviewNote, submitError, pending, submit,
+    syntheticFlag, setSyntheticFlag, syntheticNote, setSyntheticNote,
     effectiveLink, selectedChannels, chosenAssets, issues, router, utmFromDefaults: initialLink.fromDefaults && !utmEdited,
   };
 }

@@ -12,6 +12,7 @@ export const NETWORK_LABEL: Record<string, string> = {
   x: "X",
   youtube: "YouTube",
   pinterest: "Pinterest",
+  google_business: "Google Business Profile",
   mock: "Demo network",
 };
 

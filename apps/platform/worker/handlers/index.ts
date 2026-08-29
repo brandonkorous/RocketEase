@@ -18,6 +18,8 @@ import { recommendationsCompute } from "./recommendations-compute";
 import { automationEvaluate } from "./automation-evaluate";
 import { automationApply } from "./automation-apply";
 import { trackingSync } from "./tracking-sync";
+import { recycleTick } from "./recycle-tick";
+import { rightsExpiring } from "./rights-expiring";
 
 export type HandlerContext = { log: Logger; signal: AbortSignal };
 export type Handler<N extends JobName> = (data: JobPayloads[N], ctx: HandlerContext) => Promise<void>;
@@ -45,4 +47,6 @@ export const handlers: { [N in Exclude<JobName, "outbox.relay">]: Handler<N> } =
   "automation.evaluate": automationEvaluate,
   "automation.apply": automationApply,
   "tracking.sync": trackingSync,
+  "rights.expiring": rightsExpiring,
+  "recycle.tick": recycleTick,
 };

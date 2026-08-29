@@ -11,7 +11,8 @@
     "./tiktok": "./src/tiktok/index.ts",
     "./youtube": "./src/youtube/index.ts",
     "./pinterest": "./src/pinterest/index.ts",
-    "./x": "./src/x/index.ts"
+    "./x": "./src/x/index.ts",
+    "./google-business": "./src/google-business/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

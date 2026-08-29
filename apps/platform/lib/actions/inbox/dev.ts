@@ -18,7 +18,7 @@ const PEOPLE = [
  * Dev-only: push a fake inbound item through the real webhook → worker path
  * for a mock channel. Lets the whole inbox loop be exercised locally.
  */
-export async function simulateInbound(workspaceId: string, channelId: string, input: { text: string; kind?: InboxItemKind; threadRemoteId?: string; who?: number }): Promise<ActionState> {
+export async function simulateInbound(workspaceId: string, channelId: string, input: { text: string; kind?: InboxItemKind; threadRemoteId?: string; who?: number; rating?: number }): Promise<ActionState> {
   return guard(async () => {
     if (process.env.NODE_ENV === "production") return fail("Not available in production.");
     await requireCapability(workspaceId, "conversations.handle");
@@ -26,7 +26,7 @@ export async function simulateInbound(workspaceId: string, channelId: string, in
     if (!ch || ch.provider !== "mock") return fail("Pick a demo-network channel.");
     const who = PEOPLE[(input.who ?? Math.floor(Math.random() * PEOPLE.length)) % PEOPLE.length];
     const thread = input.threadRemoteId ?? `${ch.remoteId}-t${Date.now().toString(36)}`;
-    const item: InboxItem = { remoteId: `${thread}-m${randomUUID().slice(0, 8)}`, threadRemoteId: thread, kind: input.kind ?? "message", direction: "inbound", author: who, text: input.text.trim() || "Hi! Quick question about your latest post.", occurredAt: new Date().toISOString() };
+    const item: InboxItem = { remoteId: `${thread}-m${randomUUID().slice(0, 8)}`, threadRemoteId: thread, kind: input.kind ?? "message", direction: "inbound", author: who, text: input.text.trim() || (input.kind === "review" ? "" : "Hi! Quick question about your latest post."), occurredAt: new Date().toISOString(), rating: input.rating };
     const event: WebhookEvent = { eventId: `sim-${item.remoteId}`, channelRemoteId: ch.remoteId, kind: "inbox.item", occurredAt: item.occurredAt, payload: item };
     const [row] = await db.insert(webhookReceipt).values({ provider: "mock", eventId: event.eventId, channelRemoteId: ch.remoteId, payload: event }).returning({ id: webhookReceipt.id });
     await enqueue("webhook.process", { receiptId: row.id });

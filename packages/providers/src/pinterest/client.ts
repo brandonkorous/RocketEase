@@ -29,6 +29,7 @@ const BASE_REASONS: Record<string, string> = {
   webhooks: "Pinterest API v5 publishes no webhooks for organic pins; everything is polled.",
   ads: "The Pinterest Ads API is a separate product this adapter does not integrate.",
   mentions: "Pinterest API v5 has no mentions endpoint.",
+  disclosure: "Pinterest API v5 has no AI-content parameter on pin creation; the label goes in the pin description.",
 };
 
 const LIMIT_BLOCK = {
@@ -64,6 +65,7 @@ export function boardCaps(cred: Credential): Capabilities {
     insights: { organic: true, audience: false },
     ads: { import: false, manage: false },
     ingestion: { webhooks: false, polling: true },
+    disclosure: "caption",
     reasons,
     checkedAt: now(),
   };

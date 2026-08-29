@@ -39,13 +39,15 @@ export async function loadComposer(ctx: WorkspaceContext, sp: CreateSearch, base
   const variants = await db.select().from(postVariant).where(eq(postVariant.contentItemId, item.id));
   const assets = await loadAssets(workspaceId);
 
-  const channelRows: ComposerChannel[] = channels.map((c) => ({ id: c.id, provider: c.provider, network: c.network, kind: c.kind, name: c.name, handle: c.handle, avatarUrl: c.avatarUrl, status: c.status, formats: c.capabilities.formats, textMax: c.capabilities.limits.textMaxChars ?? null, firstComment: Boolean(c.capabilities.limits.firstComment), links: c.capabilities.limits.links ?? "inline" }));
+  const channelRows: ComposerChannel[] = channels.map((c) => ({ id: c.id, provider: c.provider, network: c.network, kind: c.kind, name: c.name, handle: c.handle, avatarUrl: c.avatarUrl, status: c.status, formats: c.capabilities.formats, textMax: c.capabilities.limits.textMaxChars ?? null, hashtagsMax: c.capabilities.limits.hashtagsMax ?? null, firstComment: Boolean(c.capabilities.limits.firstComment), links: c.capabilities.limits.links ?? "inline", disclosure: c.capabilities.disclosure ?? "caption", disclosureReason: c.capabilities.reasons?.disclosure ?? null }));
   const initial: ComposerItem = {
     id: item.id, title: item.title, status: item.status, approvalState: item.approvalState,
     sharedText: item.sharedText || (sp.text ?? ""),
     sharedAssetIds: sp.asset && item.sharedAssetIds.length === 0 && assets.some((a) => a.id === sp.asset) ? [sp.asset] : item.sharedAssetIds,
     link: item.link,
     scheduledAtLocal: item.scheduledAt ? utcToZonedInput(item.scheduledAt, ctx.workspace.timezone) : null,
+    syntheticFlag: item.syntheticMedia?.flag ?? "none",
+    syntheticNote: item.syntheticMedia?.note ?? "",
     channelIds: variants.map((v) => v.channelId),
     variants: Object.fromEntries(variants.map((v) => [v.channelId, { format: v.format, textOverride: v.textOverride, assetIdsOverride: v.assetIdsOverride, firstComment: v.firstComment, linkOverride: v.linkOverride, validation: v.validation?.issues ?? [] }])),
   };

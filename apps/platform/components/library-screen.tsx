@@ -7,6 +7,7 @@ import { Button, Progress, SearchInput } from "@wizeworks/silicaui-react";
 import { workspacePath } from "@/lib/nav";
 import { DetailPanel } from "./library/detail-panel";
 import { AssetGrid } from "./library/grid";
+import { ImportCsvDialog } from "./library/import-csv";
 import { LibIcon } from "./library/icons";
 import { CollectionsRail } from "./library/rail";
 import { fmtBytes, fmtDate, type LibraryData } from "./library/types";
@@ -66,6 +67,7 @@ function Header({ data, nav, onUpload }: { data: LibraryData; nav: Nav; onUpload
         <SearchInput placeholder="Search assets..." defaultValue={data.query.q} onChange={(e) => nav({ q: e.target.value || null })} className="w-60" aria-label="Search assets" />
         <Button variant="outline" color="neutral" iconStart={LibIcon.filter} onClick={() => nav({ smart: data.query.smart ? null : "review" })}>Filters</Button>
         <label className="flex h-10 items-center gap-2 rounded-field border border-base-300 px-3 text-sm"><span className="text-secondary/70">Sort:</span><select value={data.query.sort} onChange={(e) => nav({ sort: e.target.value })} className="bg-transparent font-medium outline-none" aria-label="Sort"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="name">Name</option><option value="size">Size</option></select></label>
+        {data.canEdit && <ImportCsvDialog workspaceId={data.workspaceId} canPublish={data.canPublish} trigger={<Button variant="outline" color="neutral">Import CSV</Button>} />}
         {data.canEdit && <Button color="primary" iconStart={LibIcon.upload} onClick={onUpload}>Upload</Button>}
       </div>
     </div>

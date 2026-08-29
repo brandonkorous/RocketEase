@@ -8,7 +8,7 @@ Audited against `docs/originals/*`, `apps/platform`, `packages/providers`. **Hea
 
 **Publish — built, strongest area.** `worker/handlers/publish.ts` claims the job, re-validates token/capability/version/approval/asset-rights, publishes with a per-variant `idempotencyKey`, and on an ambiguous provider error calls `adapter.findPublication` **before any retry**. Queue policy enforces it: `"publish.execute": { policy: "stately", retryLimit: 0 }` in `lib/jobs/queues.ts` — the worker, not pg-boss, decides retries. Nightly `publication.reconcile` + `connection.refresh`.
 
-**Engage/Inbox — built.** Four kinds (`comment | mention | message | review`, `db/schema/engagement.ts`), three-pane UI, assignment/status/priority/SLA, notes, snooze, saved replies, contacts. Ingestion: webhook (`/api/webhooks/[provider]` → `webhook_receipt` → `webhook.process`) + `inbox.sync` polling; replies are queued `message` rows reconciled via `findReply`. **Gap:** `review` is a first-class kind and Meta declares `reviews: true` (`packages/providers/src/meta/graph.ts`), but no adapter fetches reviews. Over-declared capability.
+**Engage/Inbox — built.** Four kinds (`comment | mention | message | review`, `db/schema/engagement.ts`), three-pane UI, assignment/status/priority/SLA, notes, snooze, saved replies, contacts. Ingestion: webhook (`/api/webhooks/[provider]` → `webhook_receipt` → `webhook.process`) + `inbox.sync` polling; replies are queued `message` rows reconciled via `findReply`. Reviews are ingested from Google Business Profile (M8.10); Meta now declares `reviews: false` with a reason (fixed 2026-08-28).
 
 **Campaigns/Paid — built (mock-verified).** `campaign`/`campaignContent`/`adAccount`/`adCampaign`/`adSet`/`adCreative`/`promotion`, read-only ads import (`worker/handlers/ads-sync.ts`), campaign detail tabs, promote-a-post with currency match, remaining-budget check, explicit confirmation, **step-up re-auth before spend** (`lib/actions/campaigns/promote.ts`). Only Meta + mock have ads adapters.
 
@@ -46,7 +46,7 @@ Audited against `docs/originals/*`, `apps/platform`, `packages/providers`. **Hea
 | Competitor benchmarking | Absent | only self-comparison in cadence rule |
 | Link-in-bio | Absent | — |
 | Employee advocacy | Absent | — |
-| Review management | Partial (declared, not delivered) | `review` kind + Meta `reviews: true`, no ingestion; no GBP/Trustpilot |
+| Review management | Present (Google Business Profile) | `google_business` adapter: v4 reviews list/reply → inbox `review` kind, polling only, human-only reply gate. Meta declares `reviews: false` with a reason; no Trustpilot/Yelp |
 | Media library / DAM | Present | `asset`, renditions, tags, folders, presigned upload, sharp, ClamAV hook; folder UI is a rail; video probing deferred |
 | UGC rights management | Present | `rightsNote` + `rightsExpiresAt`; publish blocked on expiry |
 | First comment | Present | composer → publish → adapter flag |

@@ -27,7 +27,7 @@ export function buildReceipt(input: ReceiptInput): PublishReceipt {
   const v = input.variant;
   const jobs = [...(input.jobs ?? [])].sort((a, b) => a.attempt - b.attempt);
   const net = networkLabel(input.channel.network);
-  const reconciled = Boolean(v.lastError?.ambiguous) || jobs.some((j) => j.state === "reconciling" || j.lastError?.ambiguous);
+  const reconciled = Boolean(v.lastError?.ambiguous) || jobs.some((j) => j.reconciled || j.state === "reconciling" || j.lastError?.ambiguous);
   const outcome = outcomeOf(v, input.publication?.state);
 
   const steps = [

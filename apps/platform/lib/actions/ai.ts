@@ -1,7 +1,6 @@
 "use server";
 
 import { z } from "zod";
-import type { ProductEventName } from "@/db/schema/telemetry";
 import { AI_UNCONFIGURED, aiConfigured, generate } from "@/lib/ai/client";
 import { loadBrandVoice, loadDraftChannels, loadReplyContext } from "@/lib/ai/context";
 import { captionDrafts, repurposeDrafts, replyDrafts, type AiDraftState } from "@/lib/ai/drafts";
@@ -10,7 +9,6 @@ import { track } from "@/lib/telemetry";
 import { guard } from "./content/shared";
 
 /* ai.* isn't in PRODUCT_EVENTS yet (that list lives in db/schema); the column is free text. */
-const ev = (name: "ai.draft.requested" | "ai.draft.used") => name as ProductEventName;
 
 const workspaceId = z.string().min(1);
 const captionSchema = z.object({ workspaceId, text: z.string().trim().min(1).max(5_000), channels: z.array(z.string().min(1)).min(1).max(10) });
@@ -68,12 +66,12 @@ type Ctx = Awaited<ReturnType<typeof requireCapability>>;
 type DraftKind = "caption" | "repurpose" | "reply";
 
 async function requested(ctx: Ctx, ws: string, kind: DraftKind, targets: number) {
-  await track(ev("ai.draft.requested"), { userId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId: ws, surface: `action:ai.${kind}`, props: { kind, targets } });
+  await track("ai.draft.requested", { userId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId: ws, surface: `action:ai.${kind}`, props: { kind, targets } });
 }
 
 /** Called when a person actually inserts a suggestion. No draft content is recorded. */
 export async function recordDraftUsed(ws: string, kind: DraftKind): Promise<{ ok: true }> {
   const ctx = await requireCapability(ws, kind === "reply" ? "conversations.handle" : "content.create");
-  await track(ev("ai.draft.used"), { userId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId: ws, surface: `action:ai.${kind}`, props: { kind } });
+  await track("ai.draft.used", { userId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId: ws, surface: `action:ai.${kind}`, props: { kind } });
   return { ok: true };
 }

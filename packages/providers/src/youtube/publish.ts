@@ -33,6 +33,8 @@ export function videoBody(req: PublishRequest) {
       privacyStatus: scheduled ? "private" : (s.privacy ?? "public"),
       publishAt: s.publishAt,
       selfDeclaredMadeForKids: Boolean(s.madeForKids),
+      // Studio's "altered or synthetic content" attribute; only sent when declared.
+      ...(req.disclosure?.synthetic ? { containsSyntheticMedia: true } : {}),
       embeddable: true,
     },
   };

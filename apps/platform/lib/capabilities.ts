@@ -11,6 +11,7 @@ import type { CapabilityItem } from "@/components/shared/why-not";
 export const CAPABILITY_COLUMNS: { path: CapabilityPath; label: string; group: string }[] = [
   { path: "limits.firstComment", label: "First comment", group: "Publishing" },
   { path: "limits.altText", label: "Alt text", group: "Publishing" },
+  { path: "disclosure", label: "AI disclosure", group: "Publishing" },
   { path: "inbox.comments", label: "Comments", group: "Inbox" },
   { path: "inbox.mentions", label: "Mentions", group: "Inbox" },
   { path: "inbox.messages", label: "Messages", group: "Inbox" },
@@ -40,6 +41,7 @@ const CHANNEL_PATHS: CapabilityPath[] = [
   "insights.audience",
   "limits.firstComment",
   "limits.altText",
+  "disclosure",
   "ads.manage",
   "ingestion.webhooks",
 ];

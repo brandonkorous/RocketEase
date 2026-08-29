@@ -15,7 +15,7 @@ const id = (name = "id") =>
     .default(sql`gen_random_uuid()`);
 const now = (name: string) => timestamp(name, { withTimezone: true }).notNull().defaultNow();
 
-export const PROVIDER_KEYS = ["mock", "meta", "linkedin", "tiktok", "youtube", "pinterest", "x"] as const satisfies readonly ProviderKey[];
+export const PROVIDER_KEYS = ["mock", "meta", "linkedin", "tiktok", "youtube", "pinterest", "x", "google_business"] as const satisfies readonly ProviderKey[];
 export const providerKey = pgEnum("provider_key", PROVIDER_KEYS);
 
 /** integrations.md "Connection states" */

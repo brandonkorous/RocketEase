@@ -76,6 +76,7 @@ export function capsFor(cred: Credential): Capabilities {
     insights: { organic: has(SCOPES.analytics), audience: has(SCOPES.analytics) },
     ads: { import: false, manage: false },
     ingestion: { webhooks: false, polling: true },
+    disclosure: "api",
     reasons,
     checkedAt: now(),
   };

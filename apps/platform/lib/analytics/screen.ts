@@ -4,14 +4,15 @@ import { channel } from "@/db/schema/connections";
 import { requireWorkspace, hasCapability } from "@/lib/session";
 import { formatInZone } from "@/lib/time";
 import { derived } from "./derive";
-import { METRICS, PAID_METRICS, SCORECARD, type DisplayMetric, type MetricContract } from "./metrics";
+import { METRICS, SCORECARD, type DisplayMetric, type MetricContract } from "./metrics";
+import { unavailableReason } from "./metric-values";
 import { campaign } from "@/db/schema/campaigns";
 import { paidAttribution, type PaidAttribution } from "@/lib/campaigns/attribution";
 import { comparisonPeriod, delta, parseAnalyticsFilters, periodLabel, type AnalyticsFilters } from "./periods";
 import { openQuality, type QualitySummary } from "./quality-store";
 import { definitionChangeNotes } from "./breaks";
 import { conversionState, type ConversionState } from "@/lib/tracking/conversions";
-import { conversionProvenance, trackingUnavailable, type ConversionProvenance } from "@/lib/tracking/availability";
+import { conversionProvenance, type ConversionProvenance } from "@/lib/tracking/availability";
 import { channelMix, followersByNetwork, freshness, seriesByNetwork, topPosts, totals, type ChannelMix, type SeriesPoint, type TopPost, type Totals } from "./queries";
 
 /** Metrics the trend chart can plot; each is a channel-grain sum. */
@@ -57,8 +58,6 @@ export type AnalyticsData = {
 /** Engagement falls back to the sum of its parts when a provider reports no total (post-level facts). */
 
 
-const NO_PAID = "No paid data in this period. Connect an ad account from a campaign's Ads tab to import spend and conversions.";
-
 export async function loadAnalyticsData(workspaceId: string, sp: Record<string, string | string[] | undefined>): Promise<AnalyticsData> {
   const { workspace } = await requireWorkspace(workspaceId);
   const tz = workspace.timezone;
@@ -85,9 +84,7 @@ export async function loadAnalyticsData(workspaceId: string, sp: Record<string, 
   const hasData = Object.keys(cur).length > 0;
   const scorecard: ScoreCard[] = SCORECARD.map((key) => {
     const contract = METRICS[key];
-    // Tracking-supplied metrics answer for themselves; everything else falls through to the paid/organic rule.
-    const tracking = trackingUnavailable(key, conversions, paid);
-    const unavailable = tracking !== undefined ? tracking : (contract.unavailable ?? (PAID_METRICS.includes(key) && paid.spend == null ? NO_PAID : hasData ? null : "No insights ingested yet."));
+    const unavailable = unavailableReason(key, { conversions, paid, hasData });
     // ROAS divides paid revenue by paid spend, so it never reads the selected-scope bag.
     const bag = key === "roas" ? paid : cur;
     const value = unavailable ? null : derived(key, bag);

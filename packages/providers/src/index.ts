@@ -4,6 +4,18 @@ export * from "./insights-types";
 export * from "./ads-types";
 export { validateAgainstCapabilities } from "./validate";
 export {
+  DISCLOSURE_LINE,
+  applyDisclosure,
+  disclosureRequired,
+  disclosureSupport,
+  planDisclosure,
+  withDisclosureLine,
+  type DisclosureEmission,
+  type DisclosureInput,
+  type DisclosureMethod,
+  type DisclosureSupport,
+} from "./disclosure";
+export {
   CAPABILITY_CATALOG,
   CAPABILITY_PATHS,
   PUBLIC_CAPABILITY_CATALOG,
@@ -26,6 +38,7 @@ export { createTikTokProvider } from "./tiktok";
 export { createYouTubeProvider } from "./youtube";
 export { createPinterestProvider } from "./pinterest";
 export { createXProvider } from "./x";
+export { createGoogleBusinessProvider } from "./google-business";
 
 import type { ProviderAdapter, ProviderConfig, ProviderKey } from "./types";
 import { mockProvider } from "./mock";
@@ -35,6 +48,7 @@ import { createTikTokProvider } from "./tiktok";
 import { createYouTubeProvider } from "./youtube";
 import { createPinterestProvider } from "./pinterest";
 import { createXProvider } from "./x";
+import { createGoogleBusinessProvider } from "./google-business";
 
 export type ProviderRegistryConfig = Partial<Record<Exclude<ProviderKey, "mock">, ProviderConfig>> & { enableMock?: boolean };
 
@@ -51,5 +65,6 @@ export function createProviderRegistry(cfg: ProviderRegistryConfig): Map<Provide
   if (cfg.youtube?.clientId) m.set("youtube", createYouTubeProvider(cfg.youtube));
   if (cfg.pinterest?.clientId) m.set("pinterest", createPinterestProvider(cfg.pinterest));
   if (cfg.x?.clientId) m.set("x", createXProvider(cfg.x));
+  if (cfg.google_business?.clientId) m.set("google_business", createGoogleBusinessProvider(cfg.google_business));
   return m;
 }

@@ -45,6 +45,7 @@ export function capsFor(cred: Credential): Capabilities {
     textMaxChars: "280 characters is the standard account limit; X Premium raises it but no API reports an account's own ceiling.",
     webhooks: "Real-time delivery on X is the Account Activity API, a separately gated product; mentions and DMs are polled here.",
     ads: "The X Ads API is a separate product this adapter does not integrate.",
+    disclosure: "The X API v2 tweet endpoint has no AI-content field; the label goes in the post text.",
     saves: "X does not report bookmarks for other people's interactions with your posts.",
   };
   if (!dm) reasons.messages = "Reading direct messages needs the dm.read scope, which the account did not grant.";
@@ -68,6 +69,7 @@ export function capsFor(cred: Credential): Capabilities {
     insights: { organic: true, audience: true },
     ads: { import: false, manage: false },
     ingestion: { webhooks: false, polling: true },
+    disclosure: "caption",
     reasons,
     checkedAt: now(),
   };

@@ -5,7 +5,6 @@
  */
 // React is imported explicitly: the worker transpiles these files with the classic JSX runtime.
 import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import type { ReportDocument, RollupDocument } from "../document";
 import { Appendix, InsightsSection, PaidSectionView, ServiceSection } from "./appendix";
 import { RollupBody } from "./rollup";
@@ -14,8 +13,14 @@ import { DocumentFooter, DocumentShell } from "./shell";
 
 const DOCTYPE = "<!doctype html>";
 
-export function renderReportHtml(doc: ReportDocument): string {
-  const markup = renderToStaticMarkup(
+/** Loaded at runtime (Node resolves it): Next refuses a static react-dom/server import inside the app graph, and these documents are files, not pages. */
+async function staticMarkup(el: React.ReactElement): Promise<string> {
+  const mod = (await import(/* webpackIgnore: true */ "react-dom/server")) as typeof import("react-dom/server");
+  return mod.renderToStaticMarkup(el);
+}
+
+export async function renderReportHtml(doc: ReportDocument): Promise<string> {
+  const markup = await staticMarkup(
     <DocumentShell title={`${doc.meta.title} — ${doc.brand.clientName}`}>
       <Cover doc={doc} />
       <Scorecard doc={doc} />
@@ -32,8 +37,8 @@ export function renderReportHtml(doc: ReportDocument): string {
   return `${DOCTYPE}${markup}`;
 }
 
-export function renderRollupHtml(doc: RollupDocument): string {
-  const markup = renderToStaticMarkup(
+export async function renderRollupHtml(doc: RollupDocument): Promise<string> {
+  const markup = await staticMarkup(
     <DocumentShell title={doc.meta.title}>
       <RollupBody doc={doc} />
       <Appendix appendix={doc.appendix} />

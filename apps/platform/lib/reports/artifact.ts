@@ -40,7 +40,7 @@ export async function buildAndStoreArtifact(input: ArtifactInput): Promise<Built
     return { key, bytes: Buffer.byteLength(csv), format: "csv", extension: "csv", contentType: "text/csv", pdfKey: null };
   }
   const doc = await buildReportDocument({ workspace: ws, filters, title: input.name });
-  const html = renderReportHtml(doc);
+  const html = await renderReportHtml(doc);
   const key = `${prefix(ws, runId)}.html`;
   await putObject(key, Buffer.from(html, "utf8"), "text/html; charset=utf-8");
   const pdf = await renderPdf(html);

@@ -28,7 +28,7 @@ export async function generateAgencyRollup(organizationId: string): Promise<Acti
     const filters = { from: shiftDay(to, -(WINDOW_DAYS - 1)), to, compare: "previous" as const, scope: "all" as const };
     const workspaces = await rollupWorkspaces(mine.map((w) => w.id));
     const doc = await buildRollupDocument({ organizationId, organizationName: ctx.organizationName, workspaces, filters, title: "Agency overview", timezone: tz });
-    const html = renderRollupHtml(doc);
+    const html = await renderRollupHtml(doc);
     const key = `org/${organizationId}/rollups/${new Date().toISOString().slice(0, 10)}-${randomBytes(8).toString("hex")}.html`;
     await putObject(key, Buffer.from(html, "utf8"), "text/html; charset=utf-8");
     await audit({ action: "report.agency_rollup", actorUserId: ctx.userId, organizationId, targetType: "organization", targetId: organizationId, summary: { after: { workspaces: workspaces.length, from: filters.from, to: filters.to } } });

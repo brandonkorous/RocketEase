@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeAll } from "vitest";
 import { renderReportHtml, renderRollupHtml } from "./index";
 import type { ReportDocument, RollupDocument } from "../document";
 
@@ -40,7 +40,8 @@ const doc: ReportDocument = {
 };
 
 describe("branded report HTML", () => {
-  const html = renderReportHtml(doc);
+  let html = "";
+  beforeAll(async () => { html = await renderReportHtml(doc); });
 
   it("is a complete, self-contained document", () => {
     expect(html.startsWith("<!doctype html>")).toBe(true);
@@ -100,7 +101,8 @@ describe("agency roll-up HTML", () => {
     ],
     appendix,
   };
-  const html = renderRollupHtml(rollup);
+  let html = "";
+  beforeAll(async () => { html = await renderRollupHtml(rollup); });
 
   it("keeps every client in its own section with no combined total", () => {
     expect(html).toContain("Acme");

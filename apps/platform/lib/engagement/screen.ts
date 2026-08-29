@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { conversation } from "@/db/schema/engagement";
 import type { InboxScreenData } from "@/components/inbox/types";
 import { hasCapability, requireWorkspace } from "@/lib/session";
+import { providers } from "@/lib/providers";
 import { conversationDetail } from "./detail";
 import { inboxAgents, inboxChannels, inboxStats, listConversations, type InboxFilters, type InboxTab } from "./queries";
 
@@ -35,7 +36,12 @@ export async function loadInboxData(workspaceId: string, sp: Search, conversatio
     conversationId ? conversationDetail(workspaceId, conversationId, workspace.timezone) : Promise.resolve(null),
   ]);
   if (detail) await db.update(conversation).set({ unreadCount: 0 }).where(and(eq(conversation.id, detail.id), eq(conversation.workspaceId, workspaceId)));
-  const isDev = process.env.NODE_ENV !== "production";
+  // The demo tools exist exactly when the DEMO NETWORK does — not when NODE_ENV
+  // happens to say "development". Gating on NODE_ENV hid them from every production
+  // build, including the one CI runs, so this panel and the inbox e2e that drives it
+  // could only ever work under next dev. PROVIDERS_ENABLE_MOCK is unset in
+  // production, so the panel stays hidden there exactly as it did before.
+  const demoAvailable = providers().has("mock");
   return {
     workspaceId,
     userId: session.user.id,
@@ -48,6 +54,6 @@ export async function loadInboxData(workspaceId: string, sp: Search, conversatio
     channels,
     detail,
     canHandle: hasCapability(workspace, "conversations.handle"),
-    devChannels: isDev ? channels.filter((c) => c.provider === "mock") : [],
+    devChannels: demoAvailable ? channels.filter((c) => c.provider === "mock") : [],
   };
 }

@@ -11,11 +11,19 @@ async function connectDemoNetwork(page: Page, workspaceId: string) {
   // a locator by that name matches two elements and every click is a strict-mode violation.
   // Scoped to the Demo row because each row's link is labelled exactly "Connect".
   const connect = page.getByRole("listitem").filter({ hasText: "Demo network" }).getByRole("link", { name: /^connect$/i });
-  // The page streams; wait until it shows either an existing connection or the connect entry point.
-  await expect(connected.or(connect).first()).toBeVisible({ timeout: 60_000 });
+  // An attempt that stopped after consent leaves the connection PENDING: the rail then shows
+  // "Connection in progress" and drops Demo network from "Available integrations", so a retry
+  // finds neither of the other two anchors. Resume from the pending row rather than restart.
+  const choose = page.getByRole("link", { name: /choose accounts/i });
+  // The page streams; wait until it shows a connection, a resumable one, or the way in.
+  await expect(connected.or(choose).or(connect).first()).toBeVisible({ timeout: 60_000 });
   if (await connected.isVisible().catch(() => false)) return;
-  await clickUntilUrl(page, connect, /\/connect\/mock\/authorize/);
-  await clickUntilUrl(page, page.getByRole("button", { name: "Allow" }), /\/accounts\/select\//);
+  if (await choose.isVisible().catch(() => false)) {
+    await clickUntilUrl(page, choose, /\/accounts\/select\//);
+  } else {
+    await clickUntilUrl(page, connect, /\/connect\/mock\/authorize/);
+    await clickUntilUrl(page, page.getByRole("button", { name: "Allow" }), /\/accounts\/select\//);
+  }
   await clickUntilUrl(page, page.getByRole("button", { name: /add selected accounts/i }), /\/accounts\?connected=1/);
 }
 

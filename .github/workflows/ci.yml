@@ -65,7 +65,7 @@ jobs:
       NEXT_TELEMETRY_DISABLED: 1
       SMTP_URL: smtp://localhost:5025
       MAIL_FROM: RocketEase <no-reply@rocketease.local>
-      TOKEN_MASTER_KEY: Y2ktb25seS10b2tlbi1tYXN0ZXIta2V5LTMyLWJ5dGVzISE=
+      TOKEN_MASTER_KEY: Y2ktb25seS10b2tlbi1tYXN0ZXIta2V5LTMyYnl0ZXM=
       PROVIDERS_ENABLE_MOCK: 1
       STORAGE_DRIVER: s3
       STORAGE_ENDPOINT: http://localhost:5090

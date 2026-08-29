@@ -23,6 +23,9 @@ export const PRODUCT_EVENTS = [
   "onboarding_step_completed",
   "ai.draft.requested",
   "ai.draft.used",
+  "ai.generate.requested",
+  "ai.generate.used",
+  "ai.image.generated",
 ] as const;
 export type ProductEventName = (typeof PRODUCT_EVENTS)[number];
 

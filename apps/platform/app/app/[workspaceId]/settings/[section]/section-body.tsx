@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { ApprovalPolicies } from "@/components/approval-policies";
 import { SecurityPanel } from "@/components/security-panel";
+import { AiUsageMeter } from "@/components/ai/usage-meter";
 import { ApiKeys } from "@/components/settings/api-keys";
+import { BillingSettings } from "@/components/settings/billing";
 import { AutomationsSettings } from "@/components/settings/automations";
 import { HashtagSetsSettings } from "@/components/settings/hashtag-sets";
 import { RecyclingSettings } from "@/components/settings/recycling";
@@ -44,6 +46,7 @@ export function SectionBody({ section, label, ctx, data }: Props) {
         <>
           <BrandVoiceSettings workspaceId={workspace.id} initial={data.brandVoice} canEdit={canEdit} aiEnabled={data.aiEnabled} />
           <AiDisclosureSettings workspaceId={workspace.id} initial={data.requireAiDisclosure} canEdit={canEdit} />
+          {data.aiEnabled && <AiUsageMeter workspaceId={workspace.id} />}
         </>
       );
     case "inbox":
@@ -60,6 +63,8 @@ export function SectionBody({ section, label, ctx, data }: Props) {
       return <RightsGrants workspaceId={workspace.id} grants={data.grants} channels={data.channels} canEdit={hasCapability(workspace, "content.edit")} />;
     case "api":
       return <ApiKeys workspaceId={workspace.id} data={data.apiKeys} />;
+    case "billing":
+      return <BillingSettings workspaceId={workspace.id} timezone={workspace.timezone} data={data.billing} />;
     case "sso":
       return <SsoSettings workspaceId={workspace.id} data={data.sso} />;
     case "notifications":

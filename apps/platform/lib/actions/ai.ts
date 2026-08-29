@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { AI_UNCONFIGURED, aiConfigured, generate } from "@/lib/ai/client";
+import { AI_UNCONFIGURED, aiConfigured, aiGenerator } from "@/lib/ai/client";
 import { loadBrandVoice, loadDraftChannels, loadReplyContext } from "@/lib/ai/context";
 import { captionDrafts, repurposeDrafts, replyDrafts, type AiDraftState } from "@/lib/ai/drafts";
 import { requireCapability } from "@/lib/session";
@@ -28,7 +28,7 @@ export async function draftCaptionVariants(input: z.input<typeof captionSchema>)
     const [voice, targets] = await Promise.all([loadBrandVoice(ws), loadDraftChannels(ws, channels)]);
     if (!targets.length) return { error: NO_CHANNELS };
     await requested(ctx, ws, "caption", targets.length);
-    return captionDrafts({ channels: targets, text, voice }, generate);
+    return captionDrafts({ channels: targets, text, voice }, metered(ctx, ws, "caption"));
   });
 }
 
@@ -42,7 +42,7 @@ export async function repurpose(input: z.input<typeof repurposeSchema>): Promise
     const [voice, channels] = await Promise.all([loadBrandVoice(ws), loadDraftChannels(ws, targets)]);
     if (!channels.length) return { error: NO_CHANNELS };
     await requested(ctx, ws, "repurpose", channels.length);
-    return repurposeDrafts({ channels, sourceText, voice }, generate);
+    return repurposeDrafts({ channels, sourceText, voice }, metered(ctx, ws, "repurpose"));
   });
 }
 
@@ -58,12 +58,17 @@ export async function draftReply(input: z.input<typeof replySchema>): Promise<Ai
     const context = await loadReplyContext(ws, conversationId, ctx.workspace.timezone, voice);
     if (!context) return { error: "There's nothing in this conversation to reply to yet." };
     await requested(ctx, ws, "reply", 1);
-    return replyDrafts(context, generate);
+    return replyDrafts(context, metered(ctx, ws, "reply"));
   });
 }
 
 type Ctx = Awaited<ReturnType<typeof requireCapability>>;
 type DraftKind = "caption" | "repurpose" | "reply";
+
+/* Every completion is billed to this workspace and person, and refused at the
+   monthly credit cap (lib/ai/usage). Draft kinds are AI usage kinds. */
+const metered = (ctx: Ctx, ws: string, kind: DraftKind) =>
+  aiGenerator({ organizationId: ctx.workspace.organizationId, workspaceId: ws, userId: ctx.session.user.id, kind });
 
 async function requested(ctx: Ctx, ws: string, kind: DraftKind, targets: number) {
   await track("ai.draft.requested", { userId: ctx.session.user.id, organizationId: ctx.workspace.organizationId, workspaceId: ws, surface: `action:ai.${kind}`, props: { kind, targets } });

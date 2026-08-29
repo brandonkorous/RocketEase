@@ -10,7 +10,11 @@ import { SectionBody } from "./section-body";
 
 export const metadata: Metadata = { title: "Settings" };
 
-const CONNECTED = "Conversion source connected. The first import is running; numbers appear once it finishes.";
+const OK_MESSAGES: Record<string, string> = {
+  connected: "Conversion source connected. The first import is running; numbers appear once it finishes.",
+  subscribed: "Subscription started. It can take a moment for Stripe to confirm the first payment.",
+};
+const CONNECTED = OK_MESSAGES.connected;
 
 export default async function SettingsPage({ params, searchParams }: { params: Promise<{ workspaceId: string; section: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [{ workspaceId, section }, sp] = await Promise.all([params, searchParams]);
@@ -22,7 +26,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   return (
     <AppPage>
       <PageHeader title="Settings" description={ctx.workspace.name} />
-      <QueryToast ok={sp.ok ? CONNECTED : null} error={typeof sp.error === "string" ? sp.error : null} />
+      <QueryToast ok={sp.ok ? (OK_MESSAGES[String(sp.ok)] ?? CONNECTED) : null} error={typeof sp.error === "string" ? sp.error : null} />
       <div className="mt-8 grid gap-8 md:grid-cols-[220px_1fr]">
         <nav aria-label="Settings sections" className="flex flex-row gap-1 overflow-x-auto md:flex-col">
           {SETTINGS_SECTIONS.map((s) => (

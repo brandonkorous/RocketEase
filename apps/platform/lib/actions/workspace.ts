@@ -9,6 +9,9 @@ import { track } from "@/lib/telemetry";
 import { requireUser } from "@/lib/session";
 import { db } from "@/db";
 import { workspace, workspaceMembership } from "@/db/schema/app";
+import { activeWorkspaceCount } from "@/lib/billing/customer";
+import { BillingRequiredError, requireEntitled } from "@/lib/billing/entitlements";
+import { syncWorkspaceQuantity } from "@/lib/billing/subscription";
 
 const slugify = (s: string) =>
   s
@@ -46,6 +49,15 @@ export async function createWorkspace(_prev: CreateWorkspaceState, formData: For
     return { error: "Only organization owners and admins can create workspaces." };
   }
 
+  // Billing gates adding a workspace (never reading one). Flat price per workspace.
+  try {
+    await requireEntitled(organizationId, await activeWorkspaceCount(organizationId));
+  } catch (e) {
+    if (!(e instanceof BillingRequiredError)) throw e;
+    await audit({ action: "workspace.create", actorUserId: session.user.id, organizationId, result: "denied", summary: { note: "billing" } });
+    return { error: e.reason };
+  }
+
   let slug = slugify(name);
   const clash = await db.query.workspace.findFirst({
     where: (w, { and, eq }) => and(eq(w.organizationId, organizationId), eq(w.slug, slug)),
@@ -70,5 +82,7 @@ export async function createWorkspace(_prev: CreateWorkspaceState, formData: For
     summary: { after: { name, timezone } },
   });
   await track("workspace_created", { userId: session.user.id, organizationId, workspaceId: ws.id, surface: "action:createWorkspace" });
+  // The bill follows the workspace count; a Stripe failure here never blocks the create.
+  await syncWorkspaceQuantity(organizationId);
   redirect(`/app/${ws.id}/home`);
 }

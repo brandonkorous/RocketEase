@@ -4,6 +4,7 @@ import { and, count, desc, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { Badge } from "@wizeworks/silicaui-react";
 import { buttonClasses } from "@wizeworks/silicaui-react/server";
 import { NetMark } from "@/components/library-screen";
+import { GenerateLink } from "@/components/generator/entry";
 import { db } from "@/db";
 import { contentItem, postVariant } from "@/db/schema/content";
 import { channel } from "@/db/schema/connections";
@@ -46,7 +47,12 @@ export default async function HomePage({ params }: { params: Promise<{ workspace
           <h1 className="app-title">{allDone ? `Good to see you, ${firstName}.` : `Welcome to Make It Social, ${firstName}! 👋`}</h1>
           <p className="mt-1 text-base text-secondary">{allDone ? `${workspace.name} · ${tz}` : "Let's get you set up to plan, publish, and grow your brand."}</p>
         </div>
-        {canCreate && <Link href={workspacePath(workspaceId, "create")} className={buttonClasses({ color: "primary" })}>{hasPosts ? "Create post" : "Create your first post"}</Link>}
+        {canCreate && (
+          <div className="flex flex-wrap items-center gap-2">
+            <GenerateLink workspaceId={workspaceId} />
+            <Link href={workspacePath(workspaceId, "create")} className={buttonClasses({ color: "primary" })}>{hasPosts ? "Create post" : "Create your first post"}</Link>
+          </div>
+        )}
       </div>
 
       {attention > 0 && (

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Composer } from "@/components/composer";
+import { GenerateStrip } from "@/components/generator/entry";
 import { requireWorkspace } from "@/lib/session";
 import { NoCapability, NoChannels } from "./empty-states";
 import { loadComposer, type CreateSearch } from "./load";
@@ -15,5 +16,10 @@ export default async function CreatePage({ params, searchParams }: { params: Pro
   if (r.kind === "redirect") redirect(r.to);
   if (r.kind === "no_capability") return <NoCapability workspaceId={workspaceId} />;
   if (r.kind === "no_channels") return <NoChannels workspaceId={workspaceId} />;
-  return <Composer {...r.props} />;
+  return (
+    <>
+      <GenerateStrip workspaceId={workspaceId} />
+      <Composer {...r.props} />
+    </>
+  );
 }

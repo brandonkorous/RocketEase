@@ -7,6 +7,7 @@ import { getSessionCookie } from "better-auth/cookies";
  * (see lib/session.ts). This just keeps anonymous users off app routes.
  */
 // "/r" is the public client-report surface: signed, expiring share tokens carry their own proof (lib/reports/access.ts).
+// "/api/webhooks/stripe" is signed by Stripe (STRIPE_WEBHOOK_SECRET), never a session cookie.
 // "/api/scim" carries its own per-organization bearer token (lib/scim/auth.ts), never a session cookie.
 // "/api/v1" is the public API: a workspace-scoped bearer key, never a session cookie (lib/api/auth.ts).
 // "/capabilities" is the public capability contract (app/(public)/capabilities): no tenant data, readable signed out.

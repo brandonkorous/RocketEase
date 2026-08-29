@@ -44,6 +44,8 @@ export type JobPayloads = {
   "recycle.tick": { workspaceId?: string; ruleId?: string };
   /** Nightly warning before a rights or authorisation clock lapses under a scheduled/promoted post. */
   "rights.expiring": Record<string, never>;
+  /** Nightly + period-end: report AI credits above the included allowance to the Stripe meter. */
+  "billing.report_usage": Record<string, never>;
 };
 
 export type JobName = keyof JobPayloads;
@@ -76,6 +78,8 @@ export const QUEUES: Record<JobName, Omit<Queue, "name">> = {
   // One run per (rule, occurrence) is enforced in the database, so a retry is always safe.
   "recycle.tick": { policy: "singleton", retryLimit: 2, retryDelay: 120, retryBackoff: true, expireInSeconds: 1800 },
   "rights.expiring": { policy: "singleton", retryLimit: 1, retryDelay: 300, expireInSeconds: 1800 },
+  // Reporting is idempotent (billing_usage_report holds the running total), so a retry cannot double-charge.
+  "billing.report_usage": { policy: "singleton", retryLimit: 2, retryDelay: 300, retryBackoff: true, expireInSeconds: 1800 },
 };
 
 export const JOB_NAMES = Object.keys(QUEUES) as JobName[];

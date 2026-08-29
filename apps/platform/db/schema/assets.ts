@@ -4,7 +4,7 @@
  * rights, scan status, and accessibility text. Deletion is soft.
  */
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { organization, user } from "./auth";
 import { workspace } from "./app";
 
@@ -79,6 +79,9 @@ export const asset = pgTable(
     rightsExpiresAt: timestamp("rights_expires_at", { withTimezone: true }),
     /** Whether the licence covers organic posting, paid usage, or both. */
     rightsScope: text("rights_scope").$type<RightsScope>().notNull().default("both"),
+    /** Made by an image model rather than captured. Drives the synthetic-media disclosure suggestion. */
+    generatedByAi: boolean("generated_by_ai").notNull().default(false),
+    generationModel: text("generation_model"),
     uploadStatus: uploadStatus("upload_status").notNull().default("pending"),
     scanStatus: scanStatus("scan_status").notNull().default("pending"),
     scanNote: text("scan_note"),

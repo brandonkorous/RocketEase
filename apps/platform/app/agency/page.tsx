@@ -12,11 +12,13 @@ import { db } from "@/db";
 import { channel } from "@/db/schema/connections";
 import { and, count, eq, ne } from "drizzle-orm";
 import { BrandingSection } from "@/components/agency/branding-section";
+import { EconomicsSection } from "@/components/agency/margin-section";
 
 export const metadata: Metadata = { title: "Agency overview" };
 
 /** Read-only client list (pages.md): no mutation without entering a workspace. */
-export default async function AgencyPage() {
+export default async function AgencyPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
+  const { period } = await searchParams;
   const session = await requireUser();
   const workspaces = await listUserWorkspaces(session.user.id);
   if (workspaces.length === 0) redirect("/onboarding");
@@ -88,6 +90,7 @@ export default async function AgencyPage() {
               </tbody>
             </Table>
             <BrandingSection organizationId={orgId} userId={session.user.id} clients={list.map((w) => ({ id: w.id, name: w.name }))} />
+            <EconomicsSection organizationId={orgId} userId={session.user.id} clients={list.map((w) => ({ id: w.id, name: w.name }))} timezone={list[0].timezone} period={period} />
           </section>
         ))}
       </main>

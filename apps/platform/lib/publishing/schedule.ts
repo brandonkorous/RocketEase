@@ -13,6 +13,7 @@ import { audit } from "@/lib/audit";
 import { track } from "@/lib/telemetry";
 import { validateVariant } from "@/lib/content";
 import { emit } from "@/lib/jobs/outbox";
+import { schedulingBlock } from "@/lib/billing/gate";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Item = { id: string; organizationId: string; workspaceId: string; currentVersionId: string | null };
@@ -55,6 +56,9 @@ export async function scheduleItemCore(actor: ScheduleActor, itemId: string, whe
   if (!item) return { error: "Draft not found." };
   const blocked = await approvalBlock(item, actor.role);
   if (blocked) return { error: blocked };
+  // Billing may pause NEW scheduling; anything already queued still publishes.
+  const unpaid = await schedulingBlock(item.organizationId);
+  if (unpaid) return { error: unpaid };
   const variants = await db.select().from(postVariant).where(and(eq(postVariant.contentItemId, item.id), inArray(postVariant.status, ["draft", "failed", "canceled", "scheduled"])));
   if (variants.length === 0) return { error: "Choose at least one channel." };
   const at = when === "now" ? new Date() : when;

@@ -16,6 +16,7 @@ import { readRequireAiDisclosure } from "@/lib/disclosure";
 import { automationsData, EMPTY_AUTOMATIONS, type AutomationsData } from "@/lib/automations/queries";
 import { ssoSectionData, EMPTY_SSO, type SsoSectionData } from "@/lib/sso/queries";
 import { apiKeysData, EMPTY_API_KEYS, type ApiKeysData } from "@/lib/api/queries";
+import { billingData, EMPTY_BILLING, type BillingData } from "@/lib/billing/queries";
 import { readGoals, readRecycling, readTracking, type GoalKey, type TrackingSettings } from "@/lib/actions/settings/catalog";
 import { listHashtagSets, type HashtagSetRow } from "@/lib/actions/hashtag-sets";
 import { recyclingData, EMPTY_RECYCLING, type RecyclingData } from "@/lib/recycling/queries";
@@ -48,9 +49,10 @@ export type SectionData = {
   grants: GrantRow[];
   hashtagSets: HashtagSetRow[];
   recycling: RecyclingData;
+  billing: BillingData;
 };
 
-const EMPTY: SectionData = { policies: [], channels: [], sessions: [], inbox: { minutes: 60, replies: [] }, tracking: readTracking({}), sources: [], sourceKinds: { ga4: false, shopify: false }, goals: [], prefs: {}, automations: EMPTY_AUTOMATIONS, sso: EMPTY_SSO, apiKeys: EMPTY_API_KEYS, brandVoice: EMPTY_BRAND_VOICE, aiEnabled: false, requireAiDisclosure: false, grants: [], hashtagSets: [], recycling: EMPTY_RECYCLING };
+const EMPTY: SectionData = { policies: [], channels: [], sessions: [], inbox: { minutes: 60, replies: [] }, tracking: readTracking({}), sources: [], sourceKinds: { ga4: false, shopify: false }, goals: [], prefs: {}, automations: EMPTY_AUTOMATIONS, sso: EMPTY_SSO, apiKeys: EMPTY_API_KEYS, brandVoice: EMPTY_BRAND_VOICE, aiEnabled: false, requireAiDisclosure: false, grants: [], hashtagSets: [], recycling: EMPTY_RECYCLING, billing: EMPTY_BILLING };
 
 /** Conversion sources as the settings list renders them (freshness in the workspace timezone). */
 async function trackingSourceRows(workspaceId: string, tz: string): Promise<SectionData["sources"]> {
@@ -124,6 +126,14 @@ export async function loadSection(section: string, ctx: WorkspaceContext): Promi
   }
   if (section === "sso") {
     data.sso = await ssoSectionData(ctx);
+  }
+  if (section === "billing") {
+    data.billing = await billingData({
+      organizationId: ctx.workspace.organizationId,
+      organizationName: ctx.workspace.organizationName,
+      userId: ctx.session.user.id,
+      timezone: ctx.workspace.timezone,
+    });
   }
   if (section === "api") {
     data.apiKeys = await apiKeysData(ctx);

@@ -43,11 +43,15 @@ RUN pnpm --filter @rocketease/platform build
 FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
-RUN addgroup -S app && adduser -S app -G app
-COPY --from=build --chown=app:app /repo/apps/platform/.next/standalone ./
-COPY --from=build --chown=app:app /repo/apps/platform/.next/static ./apps/platform/.next/static
-COPY --from=build --chown=app:app /repo/apps/platform/public ./apps/platform/public
+# NUMERIC uid/gid, and USER is the NUMBER. Kubernetes cannot verify a non-numeric
+# user against runAsNonRoot: true — it refuses the container outright with
+#   "image has non-numeric user (app), cannot verify user is non-root"
+# which surfaces as CreateContainerConfigError, not as an image or secret problem.
+RUN addgroup -g 1001 -S app && adduser -u 1001 -S app -G app
+COPY --from=build --chown=1001:1001 /repo/apps/platform/.next/standalone ./
+COPY --from=build --chown=1001:1001 /repo/apps/platform/.next/static ./apps/platform/.next/static
+COPY --from=build --chown=1001:1001 /repo/apps/platform/public ./apps/platform/public
 # Migrations are applied by a separate job step (drizzle-kit migrate), not at container start.
-USER app
+USER 1001
 EXPOSE 3000
 CMD ["node", "apps/platform/server.js"]

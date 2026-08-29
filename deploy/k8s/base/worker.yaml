@@ -18,4 +18,4 @@ spec:
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { cpu: 1, memory: 1Gi }
-          securityContext: { runAsNonRoot: true, allowPrivilegeEscalation: false }
+          securityContext: { runAsNonRoot: true, runAsUser: 1001, runAsGroup: 1001, allowPrivilegeEscalation: false }

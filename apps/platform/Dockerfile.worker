@@ -2,8 +2,14 @@
 # Background worker for apps/platform. Build from the monorepo root:
 #   docker build -f apps/platform/Dockerfile.worker -t rocketease/worker .
 FROM node:24-alpine AS base
-RUN corepack enable && corepack prepare pnpm@10.9.0 --activate
 WORKDIR /repo
+# COREPACK_HOME inside /repo, so the pnpm corepack prepares at build time is still
+# reachable by the numeric runtime user (the final stage chowns /repo to 1001).
+# Left at its default it lands in ROOT's home, unreadable to that user, and corepack
+# silently re-downloads pnpm from npmjs on every container start — a network round
+# trip on the critical path of the migrate Job, on a cluster that may not allow it.
+ENV COREPACK_HOME=/repo/.corepack
+RUN corepack enable && corepack prepare pnpm@10.9.0 --activate
 
 FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
@@ -22,8 +28,18 @@ COPY packages/ui packages/ui
 COPY packages/providers packages/providers
 COPY apps/platform apps/platform
 ENV NODE_ENV=production RKE_PROCESS=worker
-RUN addgroup -S app && adduser -S app -G app && chown -R app:app /repo
-USER app
+# NUMERIC uid/gid, and USER is the NUMBER. Kubernetes cannot verify a non-numeric
+# user against runAsNonRoot: true — it refuses the container outright with
+#   "image has non-numeric user (app), cannot verify user is non-root"
+# which surfaces as CreateContainerConfigError, not as an image or secret problem.
+RUN addgroup -g 1001 -S app && adduser -u 1001 -S app -G app && chown -R 1001:1001 /repo
+# HOME must be set explicitly. A NUMERIC USER does not pick up its home directory
+# from /etc/passwd, so HOME falls back to "/" and corepack cannot find the pnpm it
+# prepared at build time. It then tries to DOWNLOAD pnpm on every container start,
+# which in-cluster means the migrate Job stalls on a registry it may not be able to
+# reach. This image runs pnpm at runtime (CMD and the migrate Job), so it matters.
+ENV HOME=/home/app
+USER 1001
 WORKDIR /repo/apps/platform
 # tsx runs the TypeScript entrypoint directly; no Next build needed for the worker.
 CMD ["pnpm", "exec", "tsx", "worker/index.ts"]

@@ -4,7 +4,9 @@ import { clickUntilUrl, gotoReady, loadState, pageAs, waitForHydration } from ".
 /** Connect the demo network to the workspace through the real consent + selection flow. */
 async function connectDemoNetwork(page: Page, workspaceId: string) {
   await gotoReady(page, `/app/${workspaceId}/accounts`);
-  const connected = page.getByText("Demo Brand", { exact: false }).first();
+  // The accounts list renders the channel KIND plus the handle ("Demo profile @demobrand"),
+  // never the provider's account name, so matching on "Demo Brand" found nothing.
+  const connected = page.getByText("@demobrand", { exact: false }).first();
   // "Available integrations" in the health rail (components/accounts/rail.tsx) keeps a plain
   // <a> per network, which is the stable way in. The header's "Connect account" control is a
   // portaled dropdown AND is rendered twice — once in the header, once in the empty state — so
@@ -30,7 +32,18 @@ async function connectDemoNetwork(page: Page, workspaceId: string) {
 /** Dev-mode reloads (Fast Refresh) can wipe the form; re-open the tools and re-fill before each attempt. */
 async function simulateUntilToast(page: Page, marker: string) {
   const tools = page.locator("details", { hasText: "Demo network tools" });
-  await expect(tools).toBeVisible({ timeout: 60_000 });
+  // A NEWLY CONNECTED channel is `connecting`, and inboxChannels only returns
+  // healthy/degraded ones — so the panel does not exist until the worker's
+  // channel.sync promotes it. The inbox is server-rendered, so a plain wait sits on
+  // a DOM that never re-fetches and can only ever time out. Reload until it lands,
+  // the same way the ingestion assertion below already does.
+  await expect
+    .poll(async () => {
+      if (await tools.isVisible().catch(() => false)) return true;
+      await page.reload({ waitUntil: "domcontentloaded" }).catch(() => undefined);
+      return tools.isVisible({ timeout: 5_000 }).catch(() => false);
+    }, { timeout: 120_000, intervals: [2_000] })
+    .toBe(true);
   for (let i = 0; i < 4; i++) {
     await waitForHydration(page);
     if (!(await tools.getAttribute("open").then((v) => v !== null))) await tools.locator("summary").click();

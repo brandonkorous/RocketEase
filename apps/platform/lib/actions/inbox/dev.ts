@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { webhookReceipt } from "@/db/schema/connections";
 import { enqueue } from "@/lib/jobs/boss";
 import { requireCapability } from "@/lib/session";
+import { providers } from "@/lib/providers";
 import { fail, guard, type ActionState } from "../content/shared";
 
 const PEOPLE = [
@@ -20,7 +21,12 @@ const PEOPLE = [
  */
 export async function simulateInbound(workspaceId: string, channelId: string, input: { text: string; kind?: InboxItemKind; threadRemoteId?: string; who?: number; rating?: number }): Promise<ActionState> {
   return guard(async () => {
-    if (process.env.NODE_ENV === "production") return fail("Not available in production.");
+    // Guarded by the DEMO NETWORK, not NODE_ENV. This only ever touches a mock channel
+    // (checked below), and mock channels exist only where PROVIDERS_ENABLE_MOCK is set,
+    // which production does not. The NODE_ENV form additionally disabled it in every
+    // production build — including the one CI runs — so the inbox e2e could reach this
+    // action and only ever get "Not available in production" back.
+    if (!providers().has("mock")) return fail("The demo network is not enabled here.");
     await requireCapability(workspaceId, "conversations.handle");
     const ch = await db.query.channel.findFirst({ where: (c, { and, eq }) => and(eq(c.id, channelId), eq(c.workspaceId, workspaceId)) });
     if (!ch || ch.provider !== "mock") return fail("Pick a demo-network channel.");

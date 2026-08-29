@@ -163,15 +163,15 @@ Positioning: **the honest social OS** — never a duplicate or phantom failure, 
 | 8.8 | AI that drafts, never publishes — caption variants, repurposing, inbox reply drafts grounded in brand voice; always lands as a draft | ✅ |
 | 8.9 | Table stakes — evergreen recycling, hashtag sets, CSV import | ✅ |
 | 8.10 | Review management — Google Business Profile adapter feeding the inbox `review` kind (human-only reply gate) | ✅ |
-| 8.11 | Agency per-client cost & margin roll-up | ⏳ after 9.1–9.2 |
+| 8.11 | Agency per-client cost & margin roll-up — `client_rate`, Economics section on the agency overview, CSV export (owner/admin only; unknowns never 0) | ✅ |
 
 ## Milestone 9 — Monetise & generate (started 2026-08-28)
 
 | # | Item | Status |
 |---|---|---|
-| 9.1 | AI usage ledger + credits (`ai_usage`, monthly allowance, hard cap, usage meter) | ⏳ |
-| 9.2 | Stripe billing — per-workspace subscription, Customer Portal, AI overage via Billing Meters, webhooks, Settings → Billing, entitlements + 7-day grace | ⏳ |
-| 9.3 | Post & ad generator — brief → concepts per network + ad copy sets against network specs → draft in Create; env-gated image generation | ⏳ |
+| 9.1 | AI usage ledger + credits (`ai_usage`, monthly allowance, hard cap, usage meter) | ✅ |
+| 9.2 | Stripe billing — per-workspace subscription, Customer Portal, AI overage via Billing Meters, webhooks, Settings → Billing, entitlements + 7-day grace | ✅ |
+| 9.3 | Post & ad generator — brief → concepts per network + ad copy sets against network specs → draft in Create; env-gated image generation (`OPENAI_API_KEY` + `AI_IMAGE_MODEL`). Needs: `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_AI_ENABLED=1`; Stripe dashboard setup per `docs/billing.md` | ✅ |
 
 ---
 

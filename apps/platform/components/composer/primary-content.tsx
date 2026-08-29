@@ -7,6 +7,7 @@ import { workspacePath } from "@/lib/nav";
 import { NetMark } from "../library-screen";
 import { ChannelOverride } from "./channel-override";
 import { HashtagSets } from "./hashtag-sets";
+import { AiCaption } from "./ai-caption";
 import { DisclosureSection } from "./disclosure";
 import type { ComposerChannel } from "./types";
 import type { ComposerState } from "./use-composer";
@@ -100,6 +101,7 @@ function SharedFields({ s, workspaceId, onPickMedia }: { s: ComposerState; works
               firstCommentAvailable={s.selectedChannels.some((c) => c.firstComment)}
               onInsert={(target, next) => (target === "text" ? s.setText(() => next) : setSharedFirstComment(s, next))}
             />
+            <AiCaption s={s} workspaceId={workspaceId} />
           </div>
           <span className={s.text.length > textMax ? "font-semibold text-error" : ""}>{s.text.length.toLocaleString()} / {Number.isFinite(textMax) ? textMax.toLocaleString() : "∞"}</span>
         </div>

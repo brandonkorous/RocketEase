@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightIcon, CheckIcon } from "@make-it-social/ui/icons";
+import { ArrowRightIcon, CheckIcon } from "@rocketease/ui/icons";
 import { DashboardSurface } from "../product-surfaces";
 
 const CAPABILITIES = ["Visual content calendar", "Cross-platform publishing", "Unified social inbox", "Paid ads management", "Advanced analytics & reporting", "Team collaboration & approvals"];
@@ -15,7 +15,7 @@ export function ProductProof() {
             Do anything.
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-secondary">
-            From content planning to ad performance, Make It Social gives you the clarity and
+            From content planning to ad performance, RocketEase gives you the clarity and
             control to grow your brand without stitching tools together.
           </p>
           <ul className="mt-8 flex flex-col gap-3">

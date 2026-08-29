@@ -71,7 +71,7 @@ async function sendSavedReply(c: ApplyContext, savedReplyId: string): Promise<Ac
   if (!conv || !reply) return skip("inbox.saved_reply", "that saved reply no longer exists");
   const ch = await db.query.channel.findFirst({ where: (x, { eq }) => eq(x.id, conv.channelId) });
   if (!ch || !["healthy", "degraded"].includes(ch.status)) return skip("inbox.saved_reply", "the channel is disconnected");
-  if (!ch.capabilities.inbox.reply) return skip("inbox.saved_reply", `${ch.name} does not allow replies through Make It Social`);
+  if (!ch.capabilities.inbox.reply) return skip("inbox.saved_reply", `${ch.name} does not allow replies through RocketEase`);
   const max = conv.kind === "message" ? 2000 : (ch.capabilities.limits.textMaxChars ?? 2000);
   if (reply.body.length > max) return skip("inbox.saved_reply", `the saved reply is longer than this channel's ${max} character limit`);
   const last = await db.query.message.findFirst({ where: (m, { and, eq }) => and(eq(m.conversationId, conv.id), eq(m.direction, "inbound")), orderBy: (m, { desc }) => desc(m.occurredAt) });

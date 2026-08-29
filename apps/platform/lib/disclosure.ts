@@ -4,8 +4,8 @@
  * The provider package owns what a network can do; this owns what the workspace
  * requires, what the composer shows, and when publishing is blocked.
  */
-import type { Capabilities, DisclosureInput, DisclosureMethod } from "@make-it-social/providers/client";
-import { disclosureSupport, planDisclosure } from "@make-it-social/providers/client";
+import type { Capabilities, DisclosureInput, DisclosureMethod } from "@rocketease/providers/client";
+import { disclosureSupport, planDisclosure } from "@rocketease/providers/client";
 import type { SyntheticFlag, SyntheticMedia } from "@/db/schema/content";
 
 export const SYNTHETIC_CHOICES: { flag: SyntheticFlag; label: string; desc: string }[] = [

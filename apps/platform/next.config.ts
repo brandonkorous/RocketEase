@@ -15,7 +15,7 @@ const NODE_ONLY = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
-  transpilePackages: ["@make-it-social/ui", "@make-it-social/providers"],
+  transpilePackages: ["@rocketease/ui", "@rocketease/providers"],
   serverExternalPackages: NODE_ONLY,
   webpack(config, { nextRuntime }) {
     if (nextRuntime !== "nodejs") {

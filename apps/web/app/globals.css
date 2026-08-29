@@ -3,11 +3,11 @@
 @source "../node_modules/@wizeworks/silicaui-react/dist";
 
 /*
- * Make It Social theme — black, white, and structure.
+ * RocketEase theme — black, white, and structure.
  * Platform color is never a token here; it lives only on platform marks.
  */
 @plugin "@wizeworks/silicaui/theme" {
-  name: mis;
+  name: rke;
   default: true;
   color-scheme: light;
   --color-base-100: #ffffff;
@@ -37,7 +37,7 @@
 
 /* Dark island for the results band and footer. */
 @plugin "@wizeworks/silicaui/theme" {
-  name: mis-dark;
+  name: rke-dark;
   color-scheme: dark;
   --color-base-100: #0a0a0a;
   --color-base-200: #111111;

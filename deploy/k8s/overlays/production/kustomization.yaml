@@ -1,23 +1,55 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+namespace: rocketease
 resources:
   - ../../base
+
+# IMAGE NAMES ARE HYPHENATED AND LOWERCASE, deliberately.
+#
+# A Docker reference may not contain uppercase, so the obvious
+# `ghcr.io/${{ github.repository }}/web` is invalid here twice over: the repo is
+# `brandonkorous/RocketEase`, and a slash would address a nested package that
+# does not exist. Either mistake fails the pull with a 401 that reads like a
+# missing tag while the images sit untouched beside it.
+#
+# These packages must ALSO be public — the cluster pulls anonymously and no
+# manifest here carries an imagePullSecret. A new GHCR package is private by
+# default; see deploy/README.md.
 images:
-  # CI tags every image with the git SHA; the sparx pipeline pins these.
-  - name: make-it-social/web
-    newName: ghcr.io/wizeworks/make-it-social/web
+  - name: rocketease/web
+    newName: ghcr.io/brandonkorous/rocketease-web
     newTag: latest
-  - name: make-it-social/platform
-    newName: ghcr.io/wizeworks/make-it-social/platform
+  - name: rocketease/platform
+    newName: ghcr.io/brandonkorous/rocketease-platform
     newTag: latest
-  - name: make-it-social/worker
-    newName: ghcr.io/wizeworks/make-it-social/worker
+  - name: rocketease/worker
+    newName: ghcr.io/brandonkorous/rocketease-worker
     newTag: latest
+
+# Non-secret runtime config.
+#
+# NEXT_PUBLIC_APP_URL appears here AND as a build arg, which is correct rather
+# than redundant: server code reads it at request time (lib/connections.ts,
+# lib/reports/deliver.ts, the SCIM routes), while lib/auth-client.ts reads it in
+# the browser, where Next has already inlined it at build time.
+#
+# The other NEXT_PUBLIC_* vars are client-only and are build args ONLY
+# (see apps/platform/Dockerfile). Adding one here would look configured and do
+# nothing at all.
 configMapGenerator:
   - name: platform-config
     literals:
-      - BETTER_AUTH_URL=https://app.make-it-social.com
-      - NEXT_PUBLIC_APP_URL=https://app.make-it-social.com
-      - MAIL_FROM=Make It Social <no-reply@make-it-social.com>
+      - BETTER_AUTH_URL=https://app.rocketease.com
+      - NEXT_PUBLIC_APP_URL=https://app.rocketease.com
+      - MAIL_FROM=RocketEase <hello@rocketease.com>
       - LOG_LEVEL=info
-# Secret `platform-env` is created by the sparx.works Terraform (Key Vault -> k8s Secret). Not generated here.
+      - STORAGE_DRIVER=azure
+      - AZURE_STORAGE_CONTAINER=media
+    options:
+      # A rolling ConfigMap name would restart every pod on any edit; these
+      # values are read at request time, so a plain name is what we want.
+      disableNameSuffixHash: true
+
+# Secret `platform-env` (app config) and `db-admin` (migration credentials, Jobs
+# only) are created by .github/workflows/deploy.yml from Key Vault. Not generated
+# here — a secret in git is a secret leaked.

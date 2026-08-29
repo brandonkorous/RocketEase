@@ -81,7 +81,7 @@ export function verifyPasscode(passcode: string, stored: string | null): boolean
 export const passcodeProof = (shareId: string, passcodeHash: string) =>
   createHmac("sha256", secret()).update(`report-share-pass:${shareId}:${passcodeHash}`).digest("base64url");
 
-export const passcodeCookieName = (shareId: string) => `mis_r_${shareId.slice(0, 12)}`;
+export const passcodeCookieName = (shareId: string) => `rke_r_${shareId.slice(0, 12)}`;
 
 /** Audit-safe visitor fingerprint: no full IP, no full user agent (privacy by default). */
 export function truncateVisitor(ip: string | null, userAgent: string | null) {

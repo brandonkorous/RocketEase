@@ -43,7 +43,7 @@ export async function buildCsv(input: { workspaceId: string; workspaceName: stri
     conversionState(workspaceId),
   ]);
   const lines: string[] = [];
-  lines.push(`# Make It Social analytics export`);
+  lines.push(`# RocketEase analytics export`);
   lines.push(`# workspace,${esc(input.workspaceName)},${workspaceId}`);
   lines.push(`# generated_at,${new Date().toISOString()},by,${esc(input.generatedBy)}`);
   lines.push(`# period,${filters.from},${filters.to},timezone,${input.timezone}`);

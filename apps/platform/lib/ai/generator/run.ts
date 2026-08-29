@@ -17,16 +17,17 @@ export type { Generator } from "./ask";
 
 const NOTHING = "Nothing came back to edit. Try again, or add a key point to the brief.";
 
-export type RunInput = { brief: Brief; channels: DraftChannel[]; voice: BrandVoice };
+/** `brand` is the rest of the brand kit as prompt text (`lib/brand/prompt.ts`). */
+export type RunInput = { brief: Brief; channels: DraftChannel[]; voice: BrandVoice; brand?: string };
 
 /** `adGen` is separate so paid copy can be metered under its own usage kind. */
 export async function runGenerator(input: RunInput, gen: Generator, adGen: Generator = gen): Promise<GeneratorResult> {
-  const { brief, channels, voice } = input;
+  const { brief, channels, voice, brand } = input;
   const wantAds = brief.includeAds ? channels.filter((c) => adCapable(c.network, c.capabilities)) : [];
 
   const [conceptRuns, adRuns] = await Promise.all([
-    Promise.all(channels.map((ch) => conceptsForChannel(ch, { brief, voice }, gen))),
-    Promise.all(wantAds.map((ch) => adsForChannel(ch, { brief, voice }, adGen))),
+    Promise.all(channels.map((ch) => conceptsForChannel(ch, { brief, voice, brand }, gen))),
+    Promise.all(wantAds.map((ch) => adsForChannel(ch, { brief, voice, brand }, adGen))),
   ]);
 
   const concepts: Concept[] = conceptRuns.flatMap((r) => r.concepts);
@@ -42,11 +43,11 @@ export async function runGenerator(input: RunInput, gen: Generator, adGen: Gener
 
 /** One fresh concept for one channel, told which angles the person already rejected. */
 export async function runRegenerate(
-  input: { brief: Brief; channel: DraftChannel; voice: BrandVoice; avoid: string[] },
+  input: { brief: Brief; channel: DraftChannel; voice: BrandVoice; brand?: string; avoid: string[] },
   gen: Generator,
 ): Promise<{ concept?: Concept; error?: string }> {
   const brief = { ...input.brief, count: 1 };
-  const r = await conceptsForChannel(input.channel, { brief, voice: input.voice, avoid: input.avoid }, gen);
+  const r = await conceptsForChannel(input.channel, { brief, voice: input.voice, brand: input.brand, avoid: input.avoid }, gen);
   if (r.error || !r.concepts.length) return { error: r.error ?? NOTHING };
   return { concept: r.concepts[0] };
 }

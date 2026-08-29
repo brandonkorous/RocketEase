@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Multi-stage build for apps/web. Build from the monorepo root:
-#   docker build -f apps/web/Dockerfile -t make-it-social/web .
+#   docker build -f apps/web/Dockerfile -t rocketease/web .
 FROM node:24-alpine AS base
 RUN corepack enable && corepack prepare pnpm@10.9.0 --activate
 WORKDIR /repo
@@ -9,13 +9,13 @@ FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/web/package.json apps/web/
 COPY packages/ui/package.json packages/ui/
-RUN pnpm install --frozen-lockfile --filter @make-it-social/web...
+RUN pnpm install --frozen-lockfile --filter @rocketease/web...
 
 FROM deps AS build
 COPY packages/ui packages/ui
 COPY apps/web apps/web
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm --filter @make-it-social/web build
+RUN pnpm --filter @rocketease/web build
 
 FROM node:24-alpine AS runner
 WORKDIR /app

@@ -17,7 +17,7 @@ export function WorkspaceSwitcher({ workspace, workspaces }: { workspace: Worksp
           <ChevronsIcon />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" data-theme="mis" className="z-60 min-w-65 bg-base-100 text-base-content">
+      <DropdownMenuContent align="start" data-theme="rke" className="z-60 min-w-65 bg-base-100 text-base-content">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
           {workspaces.map((w) => (

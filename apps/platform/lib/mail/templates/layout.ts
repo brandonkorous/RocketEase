@@ -1,6 +1,6 @@
 /* Shared chrome for every transactional email. Monochrome, no images by default. */
 
-export const APP_NAME = "Make It Social";
+export const APP_NAME = "RocketEase";
 
 export type Rendered = { subject: string; html: string; text: string };
 

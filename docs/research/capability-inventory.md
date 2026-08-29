@@ -1,4 +1,4 @@
-# Make It Social — Capability Inventory (as built, 2026-08-28)
+# RocketEase — Capability Inventory (as built, 2026-08-28)
 
 Audited against `docs/originals/*`, `apps/platform`, `packages/providers`. **Headline caveat:** the whole product is verified end-to-end only against the in-repo **mock provider** (`packages/providers/src/mock/`). Every real adapter is written but has never run against a live API — no credentials exist.
 

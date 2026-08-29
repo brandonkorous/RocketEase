@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRightIcon, Mark, PlatformIcon, type Platform } from "@make-it-social/ui/icons";
+import { ArrowRightIcon, Mark, PlatformIcon, type Platform } from "@rocketease/ui/icons";
 import { primaryCta, textCta } from "./shared";
+import { AUTH_LINKS } from "@/lib/nav";
 
 const ORBIT: { platform: Platform; className: string }[] = [
   { platform: "instagram", className: "left-1/12 top-1/12" },
@@ -39,14 +40,14 @@ export function FinalCta() {
         <Orbit />
         <div>
           <h2 id="cta-heading" className="h2-marketing">
-            Ready to make your marketing social?
+            Ready to make launching effortless?
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-secondary">
             Start your free trial and bring planning, publishing, engagement, and performance into
             one workflow.
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link href="/signup" className={primaryCta}>
+            <Link href={AUTH_LINKS.signup} className={primaryCta}>
               Start free trial
             </Link>
             <Link href="/demo" className={textCta}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GOOGLE_CLIENT_ID, authClient } from "@/lib/auth-client";
 
@@ -8,8 +8,11 @@ import { GOOGLE_CLIENT_ID, authClient } from "@/lib/auth-client";
 export function GoogleOneTap({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const next = useSearchParams().get("next") ?? "/";
+  const started = useRef(false);
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) return;
+    // StrictMode runs effects twice; a second prompt() would abort the first FedCM request.
+    if (!GOOGLE_CLIENT_ID || started.current) return;
+    started.current = true;
     const client = authClient as unknown as { oneTap?: (o: Record<string, unknown>) => Promise<void> };
     client.oneTap?.({
       context: mode === "signup" ? "signup" : "signin",

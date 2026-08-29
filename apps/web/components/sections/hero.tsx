@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Text } from "@wizeworks/silicaui-react";
-import { ArrowRightIcon, CheckIcon } from "@make-it-social/ui/icons";
+import { ArrowRightIcon, CheckIcon } from "@rocketease/ui/icons";
 import { HeroCalendar } from "../product-surfaces";
+import { AUTH_LINKS } from "@/lib/nav";
 import { primaryCta, textCta } from "./shared";
 
 export function Hero() {
@@ -10,18 +11,18 @@ export function Hero() {
       <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-8">
         <div className="lg:col-span-5">
           <h1 className="hero-title">
-            Everything
+            Effortless
             <br />
-            social.
+            Launch.
             <br />
-            <span className="light">One workflow.</span>
+            <span className="light">Better by Design.</span>
           </h1>
           <Text variant="lead" className="mt-6 max-w-130 text-lg leading-relaxed text-secondary">
             Plan, publish, engage, and grow across every platform from one powerful, easy-to-use
             social marketing platform.
           </Text>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link href="/signup" className={primaryCta}>
+            <Link href={AUTH_LINKS.signup} className={primaryCta}>
               Start your free trial
             </Link>
             <Link href="/demo" className={textCta}>

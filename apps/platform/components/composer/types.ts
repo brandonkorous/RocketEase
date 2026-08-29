@@ -1,4 +1,4 @@
-import type { DisclosureSupport, ValidationIssue } from "@make-it-social/providers";
+import type { DisclosureSupport, ValidationIssue } from "@rocketease/providers";
 import type { SyntheticFlag } from "@/db/schema/content";
 
 export type ComposerChannel = { id: string; provider: string; network: string; kind: string; name: string; handle: string | null; avatarUrl: string | null; status: string; formats: string[]; textMax: number | null; hashtagsMax: number | null; firstComment: boolean; links: string; disclosure: DisclosureSupport; disclosureReason: string | null };

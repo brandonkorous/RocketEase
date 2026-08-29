@@ -25,7 +25,7 @@ function socialProviders() {
 }
 
 export const auth = betterAuth({
-  appName: "Make It Social",
+  appName: "RocketEase",
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: "pg", schema }),
@@ -61,7 +61,7 @@ export const auth = betterAuth({
       organizationLimit: 25,
       invitationExpiresIn: 60 * 60 * 48,
     }),
-    twoFactor({ issuer: "Make It Social" }),
+    twoFactor({ issuer: "RocketEase" }),
     // Google One Tap (auto sign-in prompt); shares the Google OAuth client id.
     ...(process.env.GOOGLE_CLIENT_ID ? [oneTap()] : []),
     // Enterprise SSO (OIDC + SAML), configured per organization in

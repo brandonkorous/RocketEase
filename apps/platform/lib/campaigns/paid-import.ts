@@ -5,7 +5,7 @@
  * under entity "channel"; boosted-post rows under entity "post".
  */
 import { and, eq, sql } from "drizzle-orm";
-import type { AdAccountDescriptor, CanonicalMetric, PaidInsightsPage, PaidObjects } from "@make-it-social/providers";
+import type { AdAccountDescriptor, CanonicalMetric, PaidInsightsPage, PaidObjects } from "@rocketease/providers";
 import { db } from "@/db";
 import { metricFact } from "@/db/schema/analytics";
 import { adCampaign, adCreative, adSet, promotion, type AdAccount } from "@/db/schema/campaigns";

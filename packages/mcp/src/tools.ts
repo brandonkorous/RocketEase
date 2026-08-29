@@ -4,7 +4,7 @@
  */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { MisApiError, type MisClient } from "./client.js";
+import { RkeApiError, type RkeClient } from "./client.js";
 
 const text = (data: unknown) => ({ content: [{ type: "text" as const, text: typeof data === "string" ? data : JSON.stringify(data, null, 2) }] });
 
@@ -13,12 +13,12 @@ async function call(fn: () => Promise<unknown>) {
   try {
     return text(await fn());
   } catch (e) {
-    const msg = e instanceof MisApiError ? `${e.code}: ${e.message}` : e instanceof Error ? e.message : String(e);
+    const msg = e instanceof RkeApiError ? `${e.code}: ${e.message}` : e instanceof Error ? e.message : String(e);
     return { ...text(msg), isError: true };
   }
 }
 
-export function registerTools(server: McpServer, client: MisClient) {
+export function registerTools(server: McpServer, client: RkeClient) {
   server.registerTool(
     "get_capabilities",
     {

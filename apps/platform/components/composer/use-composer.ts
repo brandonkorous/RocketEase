@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { ValidationIssue } from "@make-it-social/providers";
+import type { ValidationIssue } from "@rocketease/providers";
 import { saveDraft, scheduleItem } from "@/lib/actions/content";
 import { requestApproval } from "@/lib/actions/approvals";
 import { workspacePath } from "@/lib/nav";

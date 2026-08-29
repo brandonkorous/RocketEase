@@ -26,9 +26,9 @@ const { authenticateApi, requireScope, idempotencyKey, API_RATE_LIMIT } = await 
 const { ApiError } = await import("./errors");
 const { hashApiKey } = await import("./keys");
 
-const RAW = "mis_test-token";
+const RAW = "rke_test-token";
 const liveKey = () => ({ id: "k1", keyHash: hashApiKey(RAW), organizationId: "org1", workspaceId: "ws1", name: "Agent", scopes: ["content.create"], createdByUserId: "u1", revokedAt: null });
-const req = (headers: Record<string, string> = {}) => new Request("https://mis.test/api/v1/workspace", { headers });
+const req = (headers: Record<string, string> = {}) => new Request("https://rke.test/api/v1/workspace", { headers });
 
 beforeEach(() => {
   resetRateLimits();

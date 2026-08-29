@@ -7,7 +7,7 @@ export function AuthHeading({ mode }: { mode: "login" | "signup" }) {
   return (
     <div>
       <h1 className="text-2xl font-bold tracking-tight">{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
-      <p className="mt-1.5 text-sm text-secondary">{mode === "signup" ? "Start your free 14-day trial. No credit card required." : "Log in to your Make It Social account."}</p>
+      <p className="mt-1.5 text-sm text-secondary">{mode === "signup" ? "Start your free 14-day trial. No credit card required." : "Log in to your RocketEase account."}</p>
     </div>
   );
 }

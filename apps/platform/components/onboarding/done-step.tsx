@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { buttonClasses } from "@wizeworks/silicaui-react/server";
-import { CheckIcon } from "@make-it-social/ui/icons";
+import { CheckIcon } from "@rocketease/ui/icons";
 
 export function DoneStep({ firstName, dashboardHref }: { firstName: string; dashboardHref: string }) {
   return (

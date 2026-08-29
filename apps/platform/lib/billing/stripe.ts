@@ -19,7 +19,7 @@ let cached: Stripe | null = null;
 export function stripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new BillingNotConfiguredError();
-  cached ??= new Stripe(key, { appInfo: { name: "Make It Social", url: "https://make-it-social.com" } });
+  cached ??= new Stripe(key, { appInfo: { name: "RocketEase", url: "https://rocketease.com" } });
   return cached;
 }
 

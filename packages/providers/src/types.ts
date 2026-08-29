@@ -223,7 +223,22 @@ export interface ProviderAdapter {
 
   verifyWebhook?(req: { headers: Record<string, string>; rawBody: string; query?: Record<string, string> }): boolean;
   parseWebhook?(rawBody: string): WebhookEvent[];
+
+  /**
+   * Verify and decode a provider-signed deauthorize / data-deletion callback.
+   * Returns null when the signature does not verify — never throw, and never
+   * treat an unverified body as a request (providers re-test these endpoints).
+   */
+  parseSignedRequest?(rawBody: string): SignedRequest | null;
 }
+
+/** A verified deauthorize / data-deletion callback from a provider. */
+export type SignedRequest = {
+  /** The provider's id for the person who revoked access or asked for deletion. */
+  remoteUserId: string;
+  issuedAt?: number;
+  payload: Record<string, unknown>;
+};
 
 export type ProviderConfig = {
   clientId: string;

@@ -42,7 +42,11 @@ Provider cards/rows with channel identity, capability summary, scopes, health, l
 
 ### Team and settings
 
-General workspace, brand, members/invitations, roles, approval policies, notifications, connected accounts, billing, security/sessions, data/privacy, and audit log. Settings use stable subsections and explicit save/impact feedback.
+General workspace, members/invitations, roles, approval policies, notifications, connected accounts, billing, security/sessions, data/privacy, and audit log. Settings use stable subsections and explicit save/impact feedback.
+
+### Brand
+
+First-level area (decision, 2026-08-28: brand moved out of Settings because it is an input to the work, not a preference). Overview states completeness and what each gap costs; sections cover identity, voice, visual identity (logo variants, palette, typography, imagery direction), approved messaging with dated offers, audiences, compliance rules, brand assets, and per-network profile copy. Everything is entered by a person — the product never infers a brand fact — and drafting, image generation, and client reports read from it.
 
 ### Agency overview
 
@@ -58,7 +62,7 @@ Purpose-built Home, Calendar agenda/month, quick Create, Inbox queue/thread, app
 
 ## Public pages
 
-- Landing page centered on “Everything social. One workflow.” and real product surfaces.
+- Landing page centered on “Effortless Launch. Better by Design.” and real product surfaces.
 - Features overview organized by the product lifecycle.
 - Reusable feature detail template for Publishing, Inbox, Campaigns/Ads, Analytics, Collaboration, and Agencies.
 - Pricing with honest limits and no invented claims.

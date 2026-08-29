@@ -17,7 +17,7 @@ export function getBoss(): Promise<PgBoss> {
       const boss = new PgBoss({
         connectionString: url,
         schema: "pgboss",
-        application_name: `mis-${process.env.MIS_PROCESS ?? "platform"}`,
+        application_name: `rke-${process.env.RKE_PROCESS ?? "platform"}`,
         max: 5,
       });
       boss.on("error", (err: Error) => log.error("pg-boss error", { err }));

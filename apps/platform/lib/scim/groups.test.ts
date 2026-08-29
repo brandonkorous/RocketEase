@@ -10,37 +10,37 @@ describe("group ↔ workspace role mapping", () => {
   });
 
   it("accepts the underscored preset names", () => {
-    expect(parseGroupName("mis:acme:client_approver")).toEqual({ workspaceSlug: "acme", role: "client_approver" });
+    expect(parseGroupName("rke:acme:client_approver")).toEqual({ workspaceSlug: "acme", role: "client_approver" });
   });
 
   it("is case-insensitive and trims", () => {
-    expect(parseGroupName("  MIS:Acme:ADMIN ")).toEqual({ workspaceSlug: "acme", role: "admin" });
+    expect(parseGroupName("  RKE:Acme:ADMIN ")).toEqual({ workspaceSlug: "acme", role: "admin" });
   });
 
   it("ignores groups that are not ours", () => {
-    for (const name of ["Engineering", "okta:acme:admin", "mis:acme", "mis:acme:admin:extra", ""]) {
+    for (const name of ["Engineering", "okta:acme:admin", "rke:acme", "rke:acme:admin:extra", ""]) {
       expect(parseGroupName(name)).toBeNull();
     }
   });
 
   it("rejects an unknown role rather than defaulting to one", () => {
-    expect(parseGroupName("mis:acme:superuser")).toBeNull();
-    expect(parseGroupName("mis:acme:Owner ")).toEqual({ workspaceSlug: "acme", role: "owner" });
+    expect(parseGroupName("rke:acme:superuser")).toBeNull();
+    expect(parseGroupName("rke:acme:Owner ")).toEqual({ workspaceSlug: "acme", role: "owner" });
   });
 
   it("rejects a slug with illegal characters", () => {
-    expect(parseGroupName("mis:acme corp:admin")).toBeNull();
-    expect(parseGroupName("mis:-acme:admin")).toBeNull();
+    expect(parseGroupName("rke:acme corp:admin")).toBeNull();
+    expect(parseGroupName("rke:-acme:admin")).toBeNull();
   });
 
   it("uses the display name as the id", () => {
-    expect(groupIdFor("MIS:Acme:Admin")).toBe("mis:acme:admin");
+    expect(groupIdFor("RKE:Acme:Admin")).toBe("rke:acme:admin");
   });
 
   it("lists one group per workspace per role", () => {
     const all = groupsForWorkspaces(["acme", "globex"]);
     expect(all).toHaveLength(WORKSPACE_ROLES.length * 2);
-    expect(all).toContain("mis:globex:responder");
+    expect(all).toContain("rke:globex:responder");
     expect(new Set(all).size).toBe(all.length);
   });
 });

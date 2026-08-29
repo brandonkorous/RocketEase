@@ -31,5 +31,5 @@ export function isEnabled(key: string): boolean {
 }
 
 export function disabledReason(key: string): string | null {
-  return isEnabled(key) ? null : "Temporarily disabled by Make It Social while the network is having issues.";
+  return isEnabled(key) ? null : "Temporarily disabled by RocketEase while the network is having issues.";
 }

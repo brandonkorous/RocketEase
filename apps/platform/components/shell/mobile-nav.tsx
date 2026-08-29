@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Dock, DockItem, DockLabel, Drawer, DrawerContent, DrawerTitle } from "@wizeworks/silicaui-react";
-import { MenuIcon } from "@make-it-social/ui/icons";
+import { MenuIcon } from "@rocketease/ui/icons";
 import { MANAGE_NAV, MOBILE_NAV, PRIMARY_NAV, workspacePath } from "@/lib/nav";
 import { useSignOut } from "./account-menu";
 import { NAV_ICONS } from "./icons";

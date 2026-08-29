@@ -6,6 +6,8 @@ export type AssetCard = {
 };
 export type CollectionRow = { id: string; name: string; count: number };
 export type RecentRow = { id: string; fileName: string; bytes: number | null; createdAt: string; thumbUrl: string | null };
+/** A glance at the brand kit, which lives on its own pages. */
+export type BrandSummary = { logos: number; palette: string[]; fonts: string[]; assets: number };
 export type LibraryQuery = { q: string; tab: string; folder: string; smart: string; sort: string; tag: string };
 export type LibraryData = {
   workspaceId: string; timezone: string; canEdit: boolean; canPublish: boolean;
@@ -13,7 +15,7 @@ export type LibraryData = {
   collections: CollectionRow[];
   smart: { expiring: number; review: number; unused: number; used: number };
   assets: AssetCard[]; selected: AssetCard | null; matched: number; page: number; pageSize: number;
-  recent: RecentRow[]; allTags: string[]; query: LibraryQuery;
+  recent: RecentRow[]; allTags: string[]; query: LibraryQuery; brand: BrandSummary;
 };
 
 export const fmtBytes = (b: number | null) => (b == null ? "" : b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);

@@ -71,7 +71,7 @@ function TemplateLink() {
     const url = URL.createObjectURL(new Blob([csvTemplate()], { type: "text/csv" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = "make-it-social-posts-template.csv";
+    a.download = "rocketease-posts-template.csv";
     a.click();
     URL.revokeObjectURL(url);
   };

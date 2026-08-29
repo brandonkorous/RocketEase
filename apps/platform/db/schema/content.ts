@@ -12,7 +12,7 @@ import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, b
 import { organization, user } from "./auth";
 import { workspace } from "./app";
 import { channel } from "./connections";
-import type { DisclosureEmission, PublishFormat, ValidationIssue } from "@make-it-social/providers";
+import type { DisclosureEmission, PublishFormat, ValidationIssue } from "@rocketease/providers";
 
 const id = (name = "id") =>
   text(name)

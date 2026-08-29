@@ -5,7 +5,7 @@
  *
  * Pure apart from the injected generator, so concepts.test.ts needs no SDK.
  */
-import { validateAgainstCapabilities, type Capabilities, type PublishFormat, type ValidationIssue } from "@make-it-social/providers/client";
+import { validateAgainstCapabilities, type Capabilities, type PublishFormat, type ValidationIssue } from "@rocketease/providers/client";
 import type { BrandVoice } from "../brand-voice";
 import type { DraftChannel } from "../drafts";
 import { askJson, type Generator } from "./ask";
@@ -94,10 +94,10 @@ export type ChannelConcepts = { concepts: Concept[]; error?: string };
 /** Concepts for one channel, already validated and length-corrected. */
 export async function conceptsForChannel(
   ch: DraftChannel,
-  input: { brief: Brief; voice: BrandVoice; avoid?: string[] },
+  input: { brief: Brief; voice: BrandVoice; brand?: string; avoid?: string[] },
   gen: Generator,
 ): Promise<ChannelConcepts> {
-  const prompt = conceptPrompt({ target: targetFor(ch), brief: input.brief, voice: input.voice, avoid: input.avoid });
+  const prompt = conceptPrompt({ target: targetFor(ch), brief: input.brief, voice: input.voice, brand: input.brand, avoid: input.avoid });
   const res = await askJson(gen, prompt, "concepts");
   if ("error" in res) return { concepts: [], error: res.error };
   const drafted = res.items.slice(0, input.brief.count).map((o, i) => toConcept(ch, o, i));

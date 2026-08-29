@@ -49,7 +49,7 @@ export function RateDialog({ organizationId, workspaceId, clientName, initial }:
       <DialogContent className="max-w-130">
         <DialogTitle>Rate for {clientName}</DialogTitle>
         <DialogDescription className="mt-1 text-sm text-secondary">
-          What you invoice this client. Make It Social never guesses a rate — with nothing here, revenue and margin stay unavailable.
+          What you invoice this client. RocketEase never guesses a rate — with nothing here, revenue and margin stay unavailable.
         </DialogDescription>
         <form onSubmit={submit} className="mt-4 grid gap-4 sm:grid-cols-2">
           <RateFields values={v} set={set} />

@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import { ProviderError, type ReplyResult } from "@make-it-social/providers";
+import { ProviderError, type ReplyResult } from "@rocketease/providers";
 import { db } from "@/db";
 import { conversation, conversationEvent, message, type Message } from "@/db/schema/engagement";
 import type { JobPayloads } from "@/lib/jobs/queues";
@@ -39,7 +39,7 @@ export async function inboxReply(data: JobPayloads["inbox.reply"], ctx: HandlerC
   const conn = ch && (await db.query.providerConnection.findFirst({ where: (c, { eq }) => eq(c.id, ch.connectionId) }));
   if (!conv || !ch || !conn) return markFailed(m, "The channel is no longer connected.");
   const adapter = getAdapter(conn.provider);
-  if (!adapter.reply) return markFailed(m, "This network does not support replies from Make It Social.");
+  if (!adapter.reply) return markFailed(m, "This network does not support replies from RocketEase.");
   const l = ctx.log.child({ messageId: m.id, conversationId: conv.id });
   const cred = await loadCredential(conn);
   const desc = toDescriptor(ch);

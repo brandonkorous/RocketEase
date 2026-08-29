@@ -13,6 +13,7 @@ import { findPublication, publicationStatus, publishToInstagram, publishToPage }
 import { fetchInbox, findReply, reply } from "./inbox";
 import { fetchInsights } from "./insights";
 import { metaInboxItemsFromWebhook, parseMetaWebhook, verifyMetaWebhook } from "./webhooks";
+import { parseMetaSignedRequest } from "./signed-request";
 import { fetchPaidInsights, fetchPaidObjects, findPromotion, listAdAccounts, promote, setPaidObjectStatus } from "./ads";
 
 const SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "pages_manage_metadata", "pages_read_user_content", "pages_manage_engagement", "pages_messaging", "instagram_basic", "instagram_content_publish", "instagram_manage_comments", "instagram_manage_insights", "instagram_manage_messages", "business_management", "read_insights", "ads_read"];
@@ -112,6 +113,7 @@ export function createMetaProvider(cfg: ProviderConfig): ProviderAdapter {
     inboxItemsFromWebhook: metaInboxItemsFromWebhook,
     verifyWebhook: (req) => verifyMetaWebhook(cfg, req),
     parseWebhook: parseMetaWebhook,
+    parseSignedRequest: (raw) => parseMetaSignedRequest(cfg, raw),
 
     /** Cheap probe: the channel node with its own token, plus granted vs required user permissions. */
     async healthCheck(cred, channel): Promise<HealthReport> {

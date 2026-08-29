@@ -2,7 +2,7 @@
  * Shared content helpers used by actions, pages, and the worker.
  */
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import type { MediaInput, PublishFormat, ValidationIssue } from "@make-it-social/providers";
+import type { MediaInput, PublishFormat, ValidationIssue } from "@rocketease/providers";
 import { db } from "@/db";
 import { asset, assetRendition } from "@/db/schema/assets";
 import { channel } from "@/db/schema/connections";

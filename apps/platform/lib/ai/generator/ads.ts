@@ -3,7 +3,7 @@
  * fields (ad-specs.ts). Nothing here spends money or touches an ad account —
  * it produces copy a person reviews before any promotion is created.
  */
-import type { Capabilities } from "@make-it-social/providers/client";
+import type { Capabilities } from "@rocketease/providers/client";
 import type { BrandVoice } from "../brand-voice";
 import type { DraftChannel } from "../drafts";
 import { adSpecFor, validateAdCopy, type AdSpec } from "./ad-specs";
@@ -34,10 +34,10 @@ function toVariant(spec: AdSpec, o: Record<string, unknown>, channelId: string, 
 
 export type ChannelAds = { adSet?: AdSet; error?: string };
 
-export async function adsForChannel(ch: DraftChannel, input: { brief: Brief; voice: BrandVoice; count?: number }, gen: Generator): Promise<ChannelAds> {
+export async function adsForChannel(ch: DraftChannel, input: { brief: Brief; voice: BrandVoice; brand?: string; count?: number }, gen: Generator): Promise<ChannelAds> {
   const spec = adSpecFor(ch.network);
   if (!spec) return {};
-  const res = await askJson(gen, adPrompt({ target: targetFor(ch), spec, brief: input.brief, voice: input.voice, count: input.count }), "variants");
+  const res = await askJson(gen, adPrompt({ target: targetFor(ch), spec, brief: input.brief, voice: input.voice, brand: input.brand, count: input.count }), "variants");
   if ("error" in res) return { error: `${ch.networkLabel} ad copy: ${res.error}` };
   const variants = res.items.slice(0, 4).map((o, i) => toVariant(spec, o, ch.channelId, i)).filter((v) => v.primaryText || v.headline);
   if (!variants.length) return { error: `${ch.networkLabel} ad copy came back empty.` };

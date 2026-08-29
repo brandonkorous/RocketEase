@@ -21,7 +21,7 @@ export async function resolveReplyTarget(workspaceId: string, conversationId: st
   if (!conv) return { error: "Conversation not found." };
   const ch = await db.query.channel.findFirst({ where: (c, { eq }) => eq(c.id, conv.channelId) });
   if (!ch || !["healthy", "degraded"].includes(ch.status)) return { error: "This channel is disconnected. Reconnect it before replying." };
-  if (!ch.capabilities.inbox.reply) return { error: `${ch.name} does not allow replies through Make It Social.` };
+  if (!ch.capabilities.inbox.reply) return { error: `${ch.name} does not allow replies through RocketEase.` };
   const max = conv.kind === "message" ? 2000 : (ch.capabilities.limits.textMaxChars ?? 2000);
   if (body.trim().length > max) return { error: `Replies on this channel are limited to ${max} characters.` };
   const last = await db.query.message.findFirst({ where: (m, { and, eq }) => and(eq(m.conversationId, conv.id), eq(m.direction, "inbound")), orderBy: (m, { desc }) => desc(m.occurredAt) });

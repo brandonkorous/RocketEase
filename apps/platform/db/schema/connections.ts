@@ -7,7 +7,7 @@ import { sql } from "drizzle-orm";
 import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { organization, user } from "./auth";
 import { workspace } from "./app";
-import type { Capabilities, ChannelKind, Network, ProviderKey } from "@make-it-social/providers";
+import type { Capabilities, ChannelKind, Network, ProviderKey } from "@rocketease/providers";
 
 const id = (name = "id") =>
   text(name)
@@ -160,3 +160,41 @@ export const oauthState = pgTable(
 
 export type ProviderConnection = typeof providerConnection.$inferSelect;
 export type Channel = typeof channel.$inferSelect;
+
+/**
+ * Provider-initiated deauthorization and data-deletion callbacks (Meta requires
+ * both to publish an app). Rows are the audit trail behind the public status
+ * page, so they outlive the connections they erased.
+ */
+export const DELETION_REQUEST_KINDS = ["deauthorize", "data_deletion"] as const;
+export type DeletionRequestKind = (typeof DELETION_REQUEST_KINDS)[number];
+export const deletionRequestKind = pgEnum("deletion_request_kind", DELETION_REQUEST_KINDS);
+
+export const DELETION_REQUEST_STATUSES = ["received", "processing", "completed", "no_match", "failed"] as const;
+export type DeletionRequestStatus = (typeof DELETION_REQUEST_STATUSES)[number];
+export const deletionRequestStatus = pgEnum("deletion_request_status", DELETION_REQUEST_STATUSES);
+
+export const providerDeletionRequest = pgTable(
+  "provider_deletion_request",
+  {
+    id: id(),
+    provider: providerKey("provider").notNull(),
+    kind: deletionRequestKind("kind").notNull(),
+    /** The provider's id for the person who revoked access. Not our user id. */
+    remoteUserId: text("remote_user_id").notNull(),
+    /** Opaque code we hand back to the provider; the public status page key. */
+    confirmationCode: text("confirmation_code").notNull(),
+    status: deletionRequestStatus("status").notNull().default("received"),
+    /** What was actually erased, for the status page and for our own audit. */
+    result: jsonb("result").$type<{ connections?: number; channels?: number; note?: string }>(),
+    error: text("error"),
+    receivedAt: now("received_at"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("provider_deletion_request_code_idx").on(t.confirmationCode),
+    index("provider_deletion_request_remote_idx").on(t.provider, t.remoteUserId),
+  ],
+);
+
+export type ProviderDeletionRequest = typeof providerDeletionRequest.$inferSelect;

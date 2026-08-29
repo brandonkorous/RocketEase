@@ -44,7 +44,7 @@ const line = (r: MarginRow) =>
 export function buildMarginCsv(report: MarginReport, meta: { organizationName: string; generatedBy: string; timezone: string }): string {
   const t = report.totals;
   const lines = [
-    csvNote("Make It Social client economics"),
+    csvNote("RocketEase client economics"),
     csvNote("organization", meta.organizationName),
     csvNote("period", report.period.label, report.period.from.toISOString(), report.period.to.toISOString()),
     csvNote("timezone", meta.timezone),

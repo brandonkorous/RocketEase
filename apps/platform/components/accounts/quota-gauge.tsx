@@ -26,7 +26,7 @@ export function QuotaGauge({ quota }: { quota: ChannelQuota }) {
         <span className="text-secondary/70">{left === 0 ? "No headroom left" : `${left} left`}</span>
       </div>
       <Progress className="mt-1" size="xs" color={color} value={Math.min(quota.used, quota.cap)} max={quota.cap} aria-label={`Publishes ${WINDOW_LABEL[quota.window]}`} />
-      <p className="mt-1 text-xs text-secondary/70">Counted from posts sent through Make It Social. {quota.note}</p>
+      <p className="mt-1 text-xs text-secondary/70">Counted from posts sent through RocketEase. {quota.note}</p>
     </div>
   );
 }

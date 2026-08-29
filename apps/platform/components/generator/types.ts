@@ -22,6 +22,8 @@ export type GeneratorProps = {
   savedBriefs: SavedBriefView[];
   /** Image generation is configured on the server; the button is hidden when it isn't. */
   imagesEnabled: boolean;
+  /** What the brand kit contributes to this run — stated, never implied. */
+  brand: { configured: boolean; styled: boolean };
 };
 
 export const emptyBrief = (channels: GeneratorChannel[]): Brief => ({

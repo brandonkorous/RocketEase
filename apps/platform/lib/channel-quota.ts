@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, gte, isNotNull } from "drizzle-orm";
-import { estimatePublishCost, type CapWindow, type ChannelKind, type ProviderKey } from "@make-it-social/providers/client";
+import { estimatePublishCost, type CapWindow, type ChannelKind, type ProviderKey } from "@rocketease/providers/client";
 import { db } from "@/db";
 import { postVariant } from "@/db/schema/content";
 import { dayKey, zonedToUtc } from "@/lib/time";

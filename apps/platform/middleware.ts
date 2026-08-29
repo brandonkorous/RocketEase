@@ -11,11 +11,15 @@ import { getSessionCookie } from "better-auth/cookies";
 // "/api/scim" carries its own per-organization bearer token (lib/scim/auth.ts), never a session cookie.
 // "/api/v1" is the public API: a workspace-scoped bearer key, never a session cookie (lib/api/auth.ts).
 // "/capabilities" is the public capability contract (app/(public)/capabilities): no tenant data, readable signed out.
-const PUBLIC = ["/login", "/signup", "/api/auth", "/api/health", "/api/webhooks", "/api/connect/mock/authorize", "/invite", "/r/", "/api/scim", "/api/v1", "/capabilities"];
+// "/data-deletion" is the status page a provider hands the requester; the code in the URL is the only credential.
+const PUBLIC = ["/login", "/signup", "/api/auth", "/api/health", "/api/webhooks", "/api/connect/mock/authorize", "/invite", "/r/", "/api/scim", "/api/v1", "/capabilities", "/data-deletion"];
+
+/* Provider-signed callbacks: verified by app-secret HMAC in the route, never by a cookie. */
+const PROVIDER_CALLBACK = /^\/api\/connect\/[^/]+\/(deauthorize|data-deletion)$/;
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isPublic = PUBLIC.some((p) => pathname.startsWith(p));
+  const isPublic = PUBLIC.some((p) => pathname.startsWith(p)) || PROVIDER_CALLBACK.test(pathname);
   const hasSession = Boolean(getSessionCookie(req));
 
   // Correlation id for logs/audit (NFR-008). Honour an upstream one from the ingress.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Capabilities } from "@make-it-social/providers";
+import type { Capabilities } from "@rocketease/providers";
 import { SYNTHETIC_CHOICES, disclosureGap, previewFor, previewLine, readRequireAiDisclosure, toDisclosureInput } from "./disclosure";
 import type { SyntheticMedia } from "@/db/schema/content";
 

@@ -1,5 +1,5 @@
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
-import { ProviderError, type InsightFact } from "@make-it-social/providers";
+import { ProviderError, type InsightFact } from "@rocketease/providers";
 import { db } from "@/db";
 import { metricFact } from "@/db/schema/analytics";
 import { syncCursor } from "@/db/schema/connections";

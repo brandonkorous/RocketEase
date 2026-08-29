@@ -1,10 +1,10 @@
-import type { Capabilities, CapabilityPath, CatalogEntry } from "@make-it-social/providers/client";
-import { capabilitySupported, reasonFor } from "@make-it-social/providers/client";
+import type { Capabilities, CapabilityPath, CatalogEntry } from "@rocketease/providers/client";
+import { capabilitySupported, reasonFor } from "@rocketease/providers/client";
 import { NetMark } from "@/components/net-mark";
 import { CAPABILITY_COLUMNS as COLUMNS } from "@/lib/capabilities";
 
 const FORMATS: Record<string, string> = { text: "Text", image: "Image", carousel: "Carousel", video: "Video", reel: "Reel", story: "Story", document: "Document" };
-const SCHEDULING: Record<Capabilities["scheduling"], string> = { native: "Network", internal: "Make It Social", none: "No" };
+const SCHEDULING: Record<Capabilities["scheduling"], string> = { native: "Network", internal: "RocketEase", none: "No" };
 const LINKS: Record<string, string> = { inline: "In the post", attached: "Attached", none: "No" };
 
 const HEAD = "border-b border-base-300 px-3 py-2 text-left align-bottom font-medium";
@@ -13,7 +13,7 @@ export function CapabilityMatrix({ entries }: { entries: CatalogEntry[] }) {
   return (
     <div className="mt-8 overflow-x-auto rounded-box border border-base-300">
       <table className="w-full min-w-300 border-collapse text-sm">
-        <caption className="sr-only">What each social network lets Make It Social do, and why anything is unavailable.</caption>
+        <caption className="sr-only">What each social network lets RocketEase do, and why anything is unavailable.</caption>
         <thead className="text-xs text-secondary">
           <tr>
             <th scope="col" className={`${HEAD} sticky left-0 bg-base-100`}>Network</th>

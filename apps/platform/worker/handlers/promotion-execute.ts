@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import { ProviderError, type PromotionResult } from "@make-it-social/providers";
+import { ProviderError, type PromotionResult } from "@rocketease/providers";
 import { db } from "@/db";
 import { campaignEvent, promotion, type Promotion } from "@/db/schema/campaigns";
 import { audit } from "@/lib/audit";
@@ -48,7 +48,7 @@ export async function promotionExecute(data: JobPayloads["promotion.execute"], c
   const conn = account && (await db.query.providerConnection.findFirst({ where: (c, { eq }) => eq(c.id, account.connectionId) }));
   if (!account || !conn || conn.status !== "active") return markFailed(p, "The ad account's connection is no longer active. Reconnect it and confirm the promotion again.");
   const adapter = getAdapter(conn.provider);
-  if (!adapter.promote) return markFailed(p, "This network does not support promotions from Make It Social.");
+  if (!adapter.promote) return markFailed(p, "This network does not support promotions from RocketEase.");
   const l = ctx.log.child({ promotionId: p.id });
   const cred = await loadCredential(conn);
   const desc = toAccountDescriptor(account);

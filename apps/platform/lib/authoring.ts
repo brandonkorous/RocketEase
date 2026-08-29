@@ -5,7 +5,7 @@
  * same audit, same states.
  */
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import type { ValidationIssue } from "@make-it-social/providers";
+import type { ValidationIssue } from "@rocketease/providers";
 import { db } from "@/db";
 import { asset } from "@/db/schema/assets";
 import { channel } from "@/db/schema/connections";

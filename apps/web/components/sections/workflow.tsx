@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightIcon, CalendarIcon, ChartIcon, InboxIcon, SendIcon } from "@make-it-social/ui/icons";
+import { ArrowRightIcon, CalendarIcon, ChartIcon, InboxIcon, SendIcon } from "@rocketease/ui/icons";
 
 const STAGES = [
   { icon: CalendarIcon, title: "Plan", copy: "Content ideas, campaigns, a shared calendar, and approvals before anything goes out.", href: "#plan" },
@@ -16,7 +16,7 @@ export function Workflow() {
           One platform. Every step.
         </h2>
         <p className="mt-5 text-lg leading-relaxed text-secondary">
-          Make It Social brings your entire social marketing workflow together so nothing falls
+          RocketEase brings your entire social marketing workflow together so nothing falls
           through the cracks.
         </p>
       </div>

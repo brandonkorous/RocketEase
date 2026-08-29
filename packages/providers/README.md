@@ -1,12 +1,12 @@
-# @make-it-social/providers
+# @rocketease/providers
 
 Adapter contract for social networks (`src/types.ts`, `inbox-types.ts`, `insights-types.ts`) plus one adapter per provider. Capabilities are declared **per channel** from what the account actually granted; the UI and workers never assume parity between networks. Anything a provider does not offer is declared `false` with a `reasons` entry rather than implemented speculatively.
 
 `CAPABILITY_CATALOG` (`src/catalog.ts`) is the static, credential-free view of all of it: it calls the same `*_CAPS` factories with a synthetic full-grant credential (plus the default-scope grant, so anything needing an extra permission is listed as *conditional* rather than promised) and feeds the public `/capabilities` page in the platform. `catalog.test.ts` fails the build if any `false` inbox / ads / ingestion capability has no `reasons` entry, so the page can never claim more than the adapters declare.
 
 ```
-pnpm --filter @make-it-social/providers test        # vitest (fixtures are hand-written from the official webhook/API references)
-pnpm --filter @make-it-social/providers typecheck
+pnpm --filter @rocketease/providers test        # vitest (fixtures are hand-written from the official webhook/API references)
+pnpm --filter @rocketease/providers typecheck
 ```
 
 ## Contract → provider mapping

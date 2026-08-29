@@ -26,7 +26,7 @@ export const BILLING_MODEL_LABELS: Record<ClientBillingModel, string> = {
 
 export const NO_RATE = "No rate is set for this client. Use Set rate to record what you charge them.";
 export const HOURS_NOT_TRACKED =
-  "This client is billed hourly and Make It Social does not track hours, so revenue cannot be computed here. Record the retainer equivalent, or bill from your time-tracking tool.";
+  "This client is billed hourly and RocketEase does not track hours, so revenue cannot be computed here. Record the retainer equivalent, or bill from your time-tracking tool.";
 export const NO_PER_POST_RATE = "This client is billed per post but no per-post rate is set yet.";
 export const MIXED_CURRENCY = "Clients here bill in different currencies, so a combined total would not mean anything. Totals are per currency.";
 

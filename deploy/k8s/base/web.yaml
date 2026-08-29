@@ -10,7 +10,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: make-it-social/web:latest
+          image: rocketease/web:latest
           ports: [{ containerPort: 3000 }]
           readinessProbe: { httpGet: { path: /, port: 3000 }, initialDelaySeconds: 5 }
           livenessProbe: { httpGet: { path: /, port: 3000 }, periodSeconds: 20 }

@@ -1,6 +1,6 @@
-# Make It Social product foundation
+# RocketEase product foundation
 
-This directory is the implementation baseline for Make It Social, a social marketing operating system that joins planning, publishing, engagement, paid promotion, and measurement.
+This directory is the implementation baseline for RocketEase, a social marketing operating system that joins planning, publishing, engagement, paid promotion, and measurement.
 
 ## Canonical documents
 

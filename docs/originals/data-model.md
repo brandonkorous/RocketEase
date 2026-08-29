@@ -72,4 +72,4 @@ Use a relational database for transactional state, object storage for media/expo
 
 ## Retention and privacy
 
-Define retention by record class and plan. Provider tokens are encrypted and removed promptly on disconnect. User-facing deletion identifies remote content that cannot be erased by Make It Social. Contact data collection must be minimized, region-aware, exportable, and deletable subject to legal holds and audit obligations.
+Define retention by record class and plan. Provider tokens are encrypted and removed promptly on disconnect. User-facing deletion identifies remote content that cannot be erased by RocketEase. Contact data collection must be minimized, region-aware, exportable, and deletable subject to legal holds and audit obligations.

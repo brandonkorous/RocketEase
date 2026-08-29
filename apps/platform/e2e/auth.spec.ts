@@ -7,7 +7,7 @@ test.describe("auth", () => {
     const email = uniqueEmail("auth");
     const wsId = await signupAndOnboard(page, { name: "E2E Auth", email, password: PASSWORD, organizationName: "E2E Auth Org", workspaceName: "E2E Auth Workspace" });
     await waitForHydration(page);
-    await expect(page.getByRole("link", { name: "Make It Social" })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole("link", { name: "RocketEase" })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole("link", { name: /^calendar$/i }).first()).toBeVisible({ timeout: 60_000 });
     expect(page.url()).toContain(`/app/${wsId}/home`);
   });

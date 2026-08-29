@@ -1,15 +1,25 @@
-# Base manifests for the sparx AKS cluster. Images, hostnames, and secrets are
-# supplied by the overlay / the sparx.works Terraform. Never commit real secrets.
+# Base manifests for the sparx AKS cluster (aks-sparx-prod-cus, namespace
+# `rocketease`). Images and config come from the overlay; Secrets are created by
+# the deploy workflow from Key Vault. Never commit real secrets.
+#
+# THERE IS NO INGRESS RESOURCE HERE, and that is not an omission. This cluster
+# runs no nginx-ingress and no cert-manager: the shared Caddy in the `sparx-prod`
+# namespace terminates TLS and reverse-proxies to these Services cross-namespace
+# by ClusterIP. RocketEase's host blocks live in sparx.works/k8s/ingress/Caddyfile,
+# and every hostname must also be allow-listed for on-demand TLS (see deploy/README).
+# An Ingress object applied here would be silently inert — nothing watches it.
+#
+# The migrate and db-role Jobs are likewise absent: they are applied by
+# .github/workflows/deploy.yml pinned to the image SHA being released, and waited
+# on before any Deployment rolls.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: make-it-social
+namespace: rocketease
 resources:
   - namespace.yaml
   - web.yaml
   - platform.yaml
   - worker.yaml
-  - migrate-job.yaml
-  - ingress.yaml
 labels:
-  - pairs: { app.kubernetes.io/part-of: make-it-social }
+  - pairs: { app.kubernetes.io/part-of: rocketease }
     includeSelectors: false

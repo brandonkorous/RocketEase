@@ -6,7 +6,7 @@
  */
 import { sql } from "drizzle-orm";
 import { index, integer, jsonb, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
-import type { AdAccountStatus, PaidObjectStatus, PromotionRequest } from "@make-it-social/providers";
+import type { AdAccountStatus, PaidObjectStatus, PromotionRequest } from "@rocketease/providers";
 import { organization, user } from "./auth";
 import { workspace } from "./app";
 import { channel, providerConnection, providerKey } from "./connections";

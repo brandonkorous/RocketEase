@@ -13,9 +13,9 @@ describe("api keys", () => {
   });
 
   it("reads only a well-formed bearer header", () => {
-    expect(bearerFrom("Bearer mis_abc")).toBe("mis_abc");
-    expect(bearerFrom("bearer mis_abc")).toBe("mis_abc");
-    expect(bearerFrom("Basic mis_abc")).toBeNull();
+    expect(bearerFrom("Bearer rke_abc")).toBe("rke_abc");
+    expect(bearerFrom("bearer rke_abc")).toBe("rke_abc");
+    expect(bearerFrom("Basic rke_abc")).toBeNull();
     expect(bearerFrom(null)).toBeNull();
   });
 

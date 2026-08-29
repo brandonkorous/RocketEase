@@ -3,7 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Badge, Table } from "@wizeworks/silicaui-react";
 import { buttonClasses } from "@wizeworks/silicaui-react/server";
-import { Mark } from "@make-it-social/ui/icons";
+import { Mark } from "@rocketease/ui/icons";
+import { Wordmark } from "@rocketease/ui/brand";
 import { listUserWorkspaces, requireUser } from "@/lib/session";
 import { workspacePath } from "@/lib/nav";
 import { conversationSummary } from "@/lib/engagement/summary";
@@ -35,9 +36,9 @@ export default async function AgencyPage({ searchParams }: { searchParams: Promi
     <div className="min-h-dvh">
       <header className="border-b border-base-300">
         <div className="page-container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 font-bold" aria-label="Make It Social">
+          <Link href="/" className="flex items-center gap-2.5 font-bold" aria-label="RocketEase">
             <Mark size={28} />
-            <span>Make It Social</span>
+            <Wordmark />
           </Link>
           <Link href="/onboarding/workspace" className={buttonClasses({ color: "primary", size: "sm" })}>
             New workspace

@@ -29,7 +29,7 @@ export function ScimPanel({ workspaceId, scim, canManage }: Props) {
       <h3 id="scim-h" className="text-base font-semibold">Directory provisioning (SCIM 2.0)</h3>
       <p className="mt-1 max-w-140 text-sm leading-relaxed text-secondary">
         Point your identity provider at this base URL with the token below. Users are created and deactivated
-        automatically; groups named <code className="font-mono text-xs">mis:&lt;workspace&gt;:&lt;role&gt;</code> set
+        automatically; groups named <code className="font-mono text-xs">rke:&lt;workspace&gt;:&lt;role&gt;</code> set
         workspace roles.
       </p>
 

@@ -4,7 +4,7 @@
  * offered (that IS the feature flag for M1.11 at the provider level).
  */
 import { eq } from "drizzle-orm";
-import { createProviderRegistry, ProviderError, type ChannelDescriptor, type Credential, type ProviderAdapter, type ProviderKey } from "@make-it-social/providers";
+import { createProviderRegistry, ProviderError, type ChannelDescriptor, type Credential, type ProviderAdapter, type ProviderKey } from "@rocketease/providers";
 import { db } from "@/db";
 import { channel, providerConnection, type Channel, type ProviderConnection } from "@/db/schema/connections";
 import { decryptJson, encryptJson } from "./crypto";

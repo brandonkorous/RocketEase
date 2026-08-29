@@ -40,7 +40,7 @@ async function boot(serviceName: string) {
 
 /** Run `fn` inside a span; records the error and rethrows. Cheap when OTel is off (no-op tracer). */
 export async function withSpan<T>(name: string, attributes: Attributes, fn: () => Promise<T>): Promise<T> {
-  return trace.getTracer("make-it-social").startActiveSpan(name, { attributes }, async (span) => {
+  return trace.getTracer("rocketease").startActiveSpan(name, { attributes }, async (span) => {
     try {
       return await fn();
     } catch (err) {

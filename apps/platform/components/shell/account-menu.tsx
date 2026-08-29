@@ -24,7 +24,7 @@ export function AccountMenu({ user, role, workspaceId }: { user: ShellUser; role
           <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium leading-tight">{user.name}</span><span className="block truncate text-xs capitalize leading-tight opacity-60">{role.replace("_", " ")}</span></span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="top" data-theme="mis" className="z-60 min-w-55 bg-base-100 text-base-content">
+      <DropdownMenuContent align="start" side="top" data-theme="rke" className="z-60 min-w-55 bg-base-100 text-base-content">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => router.push(workspacePath(workspaceId, "settings/security"))}>Security & sessions</DropdownMenuItem>

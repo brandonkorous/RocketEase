@@ -8,7 +8,7 @@
  * is never a post — it becomes one only when someone clicks "Use in Create".
  */
 import { z } from "zod";
-import type { PublishFormat, ValidationIssue } from "@make-it-social/providers/client";
+import type { PublishFormat, ValidationIssue } from "@rocketease/providers/client";
 import type { SyntheticFlag } from "@/db/schema/content";
 import type { AdField } from "./ad-specs";
 

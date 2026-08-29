@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { AI_UNCONFIGURED, aiConfigured, aiGenerator } from "@/lib/ai/client";
-import { loadBrandVoice, loadDraftChannels, loadReplyContext } from "@/lib/ai/context";
+import { loadBrandContext, loadDraftChannels, loadReplyContext } from "@/lib/ai/context";
 import { captionDrafts, repurposeDrafts, replyDrafts, type AiDraftState } from "@/lib/ai/drafts";
 import { requireCapability } from "@/lib/session";
 import { track } from "@/lib/telemetry";
@@ -25,10 +25,10 @@ export async function draftCaptionVariants(input: z.input<typeof captionSchema>)
   return guard(async () => {
     const ctx = await requireCapability(ws, "content.create");
     if (!aiConfigured()) return { error: AI_UNCONFIGURED };
-    const [voice, targets] = await Promise.all([loadBrandVoice(ws), loadDraftChannels(ws, channels)]);
+    const [brand, targets] = await Promise.all([loadBrandContext(ws, ctx.workspace.timezone), loadDraftChannels(ws, channels)]);
     if (!targets.length) return { error: NO_CHANNELS };
     await requested(ctx, ws, "caption", targets.length);
-    return captionDrafts({ channels: targets, text, voice }, metered(ctx, ws, "caption"));
+    return captionDrafts({ channels: targets, text, ...brand }, metered(ctx, ws, "caption"));
   });
 }
 
@@ -39,10 +39,10 @@ export async function repurpose(input: z.input<typeof repurposeSchema>): Promise
   return guard(async () => {
     const ctx = await requireCapability(ws, "content.create");
     if (!aiConfigured()) return { error: AI_UNCONFIGURED };
-    const [voice, channels] = await Promise.all([loadBrandVoice(ws), loadDraftChannels(ws, targets)]);
+    const [brand, channels] = await Promise.all([loadBrandContext(ws, ctx.workspace.timezone), loadDraftChannels(ws, targets)]);
     if (!channels.length) return { error: NO_CHANNELS };
     await requested(ctx, ws, "repurpose", channels.length);
-    return repurposeDrafts({ channels, sourceText, voice }, metered(ctx, ws, "repurpose"));
+    return repurposeDrafts({ channels, sourceText, ...brand }, metered(ctx, ws, "repurpose"));
   });
 }
 
@@ -54,8 +54,8 @@ export async function draftReply(input: z.input<typeof replySchema>): Promise<Ai
   return guard(async () => {
     const ctx = await requireCapability(ws, "conversations.handle");
     if (!aiConfigured()) return { error: AI_UNCONFIGURED };
-    const voice = await loadBrandVoice(ws);
-    const context = await loadReplyContext(ws, conversationId, ctx.workspace.timezone, voice);
+    const brand = await loadBrandContext(ws, ctx.workspace.timezone);
+    const context = await loadReplyContext(ws, conversationId, ctx.workspace.timezone, brand);
     if (!context) return { error: "There's nothing in this conversation to reply to yet." };
     await requested(ctx, ws, "reply", 1);
     return replyDrafts(context, metered(ctx, ws, "reply"));

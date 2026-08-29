@@ -1,4 +1,4 @@
-import { ImageIcon, PlatformIcon, type Platform } from "@make-it-social/ui/icons";
+import { ImageIcon, PlatformIcon, type Platform } from "@rocketease/ui/icons";
 import { AppSidebar } from "./sidebar";
 
 type Post = { day: number; time: string; platform: Platform; tone: 1 | 2 | 3 };

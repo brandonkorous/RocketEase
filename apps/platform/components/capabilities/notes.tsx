@@ -1,5 +1,5 @@
-import type { CapabilityPath, CatalogEntry } from "@make-it-social/providers/client";
-import { CAPABILITY_PATHS, extraNotes, reasonFor } from "@make-it-social/providers/client";
+import type { CapabilityPath, CatalogEntry } from "@rocketease/providers/client";
+import { CAPABILITY_PATHS, extraNotes, reasonFor } from "@rocketease/providers/client";
 import { NetMark } from "@/components/net-mark";
 import { CAPABILITY_LABELS as LABELS } from "@/lib/capabilities";
 
@@ -33,7 +33,7 @@ export function CapabilityNotes({ entries }: { entries: CatalogEntry[] }) {
   return (
     <section aria-labelledby="why-heading" className="mt-12">
       <h2 id="why-heading" className="text-lg font-semibold">Why</h2>
-      <p className="mt-1 text-sm text-secondary">Every limit above comes from the network&apos;s own API and the access it grants — never from a Make It Social plan.</p>
+      <p className="mt-1 text-sm text-secondary">Every limit above comes from the network&apos;s own API and the access it grants — never from a RocketEase plan.</p>
       <div className="mt-5 grid gap-6 lg:grid-cols-2">
         {entries.map((entry) => {
           const notes = notesFor(entry);

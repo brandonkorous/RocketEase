@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { Alert, AlertContent, Button, Checkbox, Input, Label, NativeSelect } from "@wizeworks/silicaui-react";
-import { FolderIcon } from "@make-it-social/ui/icons";
+import { FolderIcon } from "@rocketease/ui/icons";
 import { createOrganizationAndWorkspace, type OnboardingState } from "@/lib/actions/onboarding";
 import { INDUSTRIES } from "@/lib/actions/settings/catalog";
 import { StepIntro } from "./frame";

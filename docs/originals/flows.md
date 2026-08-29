@@ -55,7 +55,7 @@
 ## Agency multi-client work
 
 1. Agency overview displays per-client approvals, failed posts, inbox backlog, upcoming content, connection alerts, and directional performance.
-2. User selects a workspace; header and shell adopt that client identity while Make It Social styling remains constant.
+2. User selects a workspace; header and shell adopt that client identity while RocketEase styling remains constant.
 3. All create/reply/spend actions show the active workspace and destination.
 4. Switching with unsaved work requires save/discard/cancel.
 5. Cross-workspace reports are view-only aggregates unless the user enters a workspace to mutate data.

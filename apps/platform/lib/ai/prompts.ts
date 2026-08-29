@@ -34,18 +34,19 @@ function limits(t: DraftTarget): string {
   return parts.join("\n");
 }
 
-function system(voice: BrandVoice, task: string): string {
+/** `brand` is the rest of the brand kit as prompt text (`lib/brand/prompt.ts`). */
+function system(voice: BrandVoice, task: string, brand?: string): string {
   const v = brandVoicePrompt(voice);
-  return [`You draft social posts for a marketing team inside Make It Social. ${task}`, "Rules:", SAFETY_RULES, v, OUTPUT_RULES].filter(Boolean).join("\n\n");
+  return [`You draft social posts for a marketing team inside RocketEase. ${task}`, "Rules:", SAFETY_RULES, v, brand ?? "", OUTPUT_RULES].filter(Boolean).join("\n\n");
 }
 
 export type Prompt = { system: string; user: string; maxTokens: number };
 
 /** Caption variants for one channel, from the writer's own draft text. */
-export function captionPrompt(input: { target: DraftTarget; text: string; voice: BrandVoice; count?: number }): Prompt {
+export function captionPrompt(input: { target: DraftTarget; text: string; voice: BrandVoice; brand?: string; count?: number }): Prompt {
   const count = input.count ?? 2;
   return {
-    system: system(input.voice, "You rewrite a draft into alternatives the writer can pick from and edit."),
+    system: system(input.voice, "You rewrite a draft into alternatives the writer can pick from and edit.", input.brand),
     user: [
       `Write ${count} alternative versions of the post below for this channel.`,
       limits(input.target),
@@ -58,10 +59,10 @@ export function captionPrompt(input: { target: DraftTarget; text: string; voice:
 }
 
 /** Long-form source (a blog post, transcript, release note) → one channel's short post. */
-export function repurposePrompt(input: { target: DraftTarget; sourceText: string; voice: BrandVoice; count?: number }): Prompt {
+export function repurposePrompt(input: { target: DraftTarget; sourceText: string; voice: BrandVoice; brand?: string; count?: number }): Prompt {
   const count = input.count ?? 2;
   return {
-    system: system(input.voice, "You turn long-form material into short social posts."),
+    system: system(input.voice, "You turn long-form material into short social posts.", input.brand),
     user: [
       `Write ${count} short posts for this channel drawn from the material below.`,
       limits(input.target),
@@ -78,6 +79,7 @@ export type ThreadTurn = { who: "customer" | "us"; text: string };
 /** A reply suggestion grounded in the thread and the workspace's saved replies. */
 export function replyPrompt(input: {
   voice: BrandVoice;
+  brand?: string;
   networkLabel: string;
   contactName: string;
   turns: ThreadTurn[];
@@ -91,7 +93,7 @@ export function replyPrompt(input: {
     ? ["Approved saved replies for this workspace. If one of them answers the question, adapt it rather than writing something new:", ...input.savedReplies.map((r) => `- ${r.title}: ${r.body}`)].join("\n")
     : "";
   return {
-    system: system(input.voice, "You draft replies to customers for a support and social team."),
+    system: system(input.voice, "You draft replies to customers for a support and social team.", input.brand),
     user: [
       `Write ${count} possible replies to the customer's latest message on ${input.networkLabel}.`,
       `Hard limit: ${input.textMax} characters each.`,

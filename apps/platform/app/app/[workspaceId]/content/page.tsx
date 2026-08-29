@@ -9,6 +9,7 @@ import { contentItem, postVariant } from "@/db/schema/content";
 import { channel } from "@/db/schema/connections";
 import { presignGet } from "@/lib/storage";
 import { hasCapability, requireWorkspace } from "@/lib/session";
+import { loadBrandKit } from "@/lib/brand/store";
 
 export const metadata: Metadata = { title: "Content" };
 
@@ -22,6 +23,8 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
   const ctx = await requireWorkspace(workspaceId);
   const canEdit = hasCapability(ctx.workspace, "content.edit");
   const tz = ctx.workspace.timezone;
+
+  const kit = await loadBrandKit(workspaceId);
 
   const [tags, folders] = await Promise.all([
     db.select().from(tag).where(eq(tag.workspaceId, workspaceId)).orderBy(tag.name),
@@ -126,6 +129,12 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
     pageSize: PAGE,
     recent: recentCards,
     allTags: tags.map((t) => t.name),
+    brand: {
+      logos: kit.visual.logos.length,
+      palette: kit.visual.palette.slice(0, 6).map((c) => c.hex),
+      fonts: [kit.visual.typography.headingFamily, kit.visual.typography.bodyFamily].filter(Boolean),
+      assets: kit.assets.assetIds.length,
+    },
     query: { q: sp.q ?? "", tab: sp.tab ?? "all", folder: sp.folder ?? "", smart: sp.smart ?? "", sort: sp.sort ?? "newest", tag: sp.tag ?? "" },
   };
 

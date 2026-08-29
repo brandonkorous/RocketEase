@@ -1,4 +1,4 @@
-import { PlatformIcon, type Platform } from "@make-it-social/ui/icons";
+import { PlatformIcon, type Platform } from "@rocketease/ui/icons";
 
 /** Network identity mark. The demo network's blue is a brand color, the one place hex is allowed. */
 export function NetMark({ network, size = 16 }: { network: string; size?: number }) {

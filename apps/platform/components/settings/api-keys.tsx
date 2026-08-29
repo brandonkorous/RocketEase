@@ -24,7 +24,7 @@ export function ApiKeys({ workspaceId, data }: { workspaceId: string; data: ApiK
         <h3 id="api-h" className="text-base font-semibold">Keys</h3>
         <p className="mt-1 text-sm leading-relaxed text-secondary">
           A key lets an agent or script work in this workspace through <span className="font-mono text-xs">{data.baseUrl}</span> and the
-          Make It Social MCP server. The same gates apply as in the app: drafts stay drafts, approvals are decided by people, replies wait to be sent.
+          RocketEase MCP server. The same gates apply as in the app: drafts stay drafts, approvals are decided by people, replies wait to be sent.
           A key can never do more than the person who created it, and loses access the moment their role does.
         </p>
 

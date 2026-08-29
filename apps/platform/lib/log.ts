@@ -32,5 +32,5 @@ export function createLogger(base: Fields = {}) {
   };
 }
 
-export const log = createLogger({ app: process.env.MIS_PROCESS ?? "platform" });
+export const log = createLogger({ app: process.env.RKE_PROCESS ?? "platform" });
 export type Logger = ReturnType<typeof createLogger>;

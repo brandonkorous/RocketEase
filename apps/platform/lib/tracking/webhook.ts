@@ -2,8 +2,8 @@
  * Generic conversion webhook — for pixels and CRMs we do not integrate directly.
  *
  *   POST /api/webhooks/tracking/{sourceId}
- *   x-mis-timestamp: <unix seconds>
- *   x-mis-signature: sha256=<hex HMAC of "{timestamp}.{rawBody}">
+ *   x-rke-timestamp: <unix seconds>
+ *   x-rke-signature: sha256=<hex HMAC of "{timestamp}.{rawBody}">
  *
  * The timestamp is inside the signed material and must be recent, so a captured
  * request cannot be replayed later. Each event carries an id (or gets one from
@@ -16,11 +16,11 @@ import { z } from "zod";
 import { cleanDimension, dimensionHash, isDay, type ConversionRow } from "./normalize";
 import type { ConversionDimension } from "@/db/schema/tracking";
 
-export const SIGNATURE_HEADER = "x-mis-signature";
-export const TIMESTAMP_HEADER = "x-mis-timestamp";
+export const SIGNATURE_HEADER = "x-rke-signature";
+export const TIMESTAMP_HEADER = "x-rke-timestamp";
 export const MAX_SKEW_SECONDS = 300;
 
-export const newWebhookSecret = () => `mis_whsec_${randomBytes(24).toString("base64url")}`;
+export const newWebhookSecret = () => `rke_whsec_${randomBytes(24).toString("base64url")}`;
 
 export const signPayload = (secret: string, timestamp: string, rawBody: string) => `sha256=${createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex")}`;
 

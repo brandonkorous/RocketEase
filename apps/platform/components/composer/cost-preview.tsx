@@ -1,6 +1,6 @@
 "use client";
 
-import { estimatePublishCost, isFreeToPublish, type ChannelKind, type ProviderKey, type PublishCost } from "@make-it-social/providers/client";
+import { estimatePublishCost, isFreeToPublish, type ChannelKind, type ProviderKey, type PublishCost } from "@rocketease/providers/client";
 import { NetMark } from "../library-screen";
 import { NETWORK_LABEL, type ComposerChannel } from "./types";
 import type { ComposerState } from "./use-composer";

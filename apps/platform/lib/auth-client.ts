@@ -12,7 +12,8 @@ export const authClient = createAuthClient({
     organizationClient(),
     twoFactorClient({ onTwoFactorRedirect: () => window.location.assign("/login/2fa") }),
     ssoClient(),
-    ...(GOOGLE_CLIENT_ID ? [oneTapClient({ clientId: GOOGLE_CLIENT_ID, context: "use", promptOptions: { maxAttempts: 2 } })] : []),
+    // maxAttempts 1: a re-prompt aborts the still-pending FedCM credentials.get() ("AbortError: signal is aborted").
+    ...(GOOGLE_CLIENT_ID ? [oneTapClient({ clientId: GOOGLE_CLIENT_ID, context: "use", promptOptions: { maxAttempts: 1 } })] : []),
   ],
 });
 

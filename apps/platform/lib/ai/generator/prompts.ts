@@ -19,7 +19,7 @@ export type GeneratorTarget = DraftTarget & {
 
 /** Extra rules the generator needs on top of the shared drafting rules. */
 export const GENERATOR_RULES = [
-  "The brief is the only source of facts. If the brief does not say it, it does not go in the post — no prices, no percentages, no dates, no customer counts, no awards, no partner names.",
+  "The brief is the only source of facts beyond the brand information below. If neither says it, it does not go in the post — no prices, no percentages, no dates, no customer counts, no awards, no partner names.",
   "Only mention an offer or a discount if the brief's Offer field contains one, and then use the brief's own wording.",
   "Make no claim about what the product does beyond what the brief states. If the brief is thin, write a thinner post rather than a fuller one.",
   "Write for one channel at a time. Respect that channel's limits exactly.",
@@ -29,14 +29,15 @@ export const GENERATOR_RULES = [
 
 const JSON_RULES = "Return JSON and nothing else: no prose before or after, no markdown fence, no comments. Every string must be plain text.";
 
-function system(voice: BrandVoice, task: string, toneOverride?: string): string {
+function system(voice: BrandVoice, task: string, toneOverride?: string, brand?: string): string {
   const tone = toneOverride ? `For this run the marketer asked for this tone, which overrides the brand voice tone: ${toneOverride}` : "";
   return [
-    `You draft social posts and ad copy for a marketing team inside Make It Social. ${task}`,
+    `You draft social posts and ad copy for a marketing team inside RocketEase. ${task}`,
     "Rules:",
     SAFETY_RULES,
     GENERATOR_RULES,
     brandVoicePrompt(voice),
+    brand ?? "",
     tone,
     JSON_RULES,
   ].filter(Boolean).join("\n\n");
@@ -67,13 +68,13 @@ function targetBlock(t: GeneratorTarget): string {
 const CONCEPT_SHAPE = `{"concepts":[{"format":"one of the accepted formats","hook":"first line that earns the next line","body":"the middle of the post","cta":"one short call to action","hashtags":["NoHash","JustWords"],"firstComment":"","altText":"","rationale":"one sentence on why this angle"}]}`;
 
 /** N distinct concepts for one channel. `avoid` powers Regenerate. */
-export function conceptPrompt(input: { target: GeneratorTarget; brief: Brief; voice: BrandVoice; avoid?: string[] }): Prompt {
+export function conceptPrompt(input: { target: GeneratorTarget; brief: Brief; voice: BrandVoice; brand?: string; avoid?: string[] }): Prompt {
   const count = Math.max(1, input.brief.count);
   const avoid = input.avoid?.length
     ? `Do not repeat these angles, which the marketer has already seen:\n${input.avoid.map((a) => `- ${a}`).join("\n")}`
     : "";
   return {
-    system: system(input.voice, "You propose post concepts a marketer will edit before publishing.", input.brief.tone),
+    system: system(input.voice, "You propose post concepts a marketer will edit before publishing.", input.brief.tone, input.brand),
     user: [
       `Write ${count} post concept${count === 1 ? "" : "s"} for this one channel.`,
       targetBlock(input.target),
@@ -118,10 +119,10 @@ function adFieldBlock(spec: AdSpec): string {
 const AD_SHAPE = `{"variants":[{"primaryText":"","headline":"","description":"","cta":"one of the allowed values"}]}`;
 
 /** Ad variants for one ad-capable channel, bounded by that network's real fields. */
-export function adPrompt(input: { target: GeneratorTarget; spec: AdSpec; brief: Brief; voice: BrandVoice; count?: number }): Prompt {
+export function adPrompt(input: { target: GeneratorTarget; spec: AdSpec; brief: Brief; voice: BrandVoice; brand?: string; count?: number }): Prompt {
   const count = input.count ?? 3;
   return {
-    system: system(input.voice, "You write paid ad copy a marketer will review, edit, and decide whether to spend money on.", input.brief.tone),
+    system: system(input.voice, "You write paid ad copy a marketer will review, edit, and decide whether to spend money on.", input.brief.tone, input.brand),
     user: [
       `Write ${count} ad copy variants for ${input.spec.networkLabel} (${input.spec.placement}).`,
       `Fields on this placement:\n${adFieldBlock(input.spec)}`,

@@ -28,7 +28,7 @@ export function SignupForm() {
     });
     setPending(false);
     if (res.error) return setError(res.error.message ?? "Something went wrong. Try again.");
-    if (fd.get("updates") === "on") window.localStorage?.setItem("mis:product-updates", "1");
+    if (fd.get("updates") === "on") window.localStorage?.setItem("rke:product-updates", "1");
     router.replace(next);
     router.refresh();
   }

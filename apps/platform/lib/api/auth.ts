@@ -33,7 +33,7 @@ export type ApiContext = {
  */
 export async function authenticateApi(req: Request): Promise<ApiContext> {
   const raw = bearerFrom(req.headers.get("authorization"));
-  if (!raw) throw unauthorized("Send your key as `Authorization: Bearer mis_…`.");
+  if (!raw) throw unauthorized("Send your key as `Authorization: Bearer rke_…`.");
   const row = await db.query.apiKey.findFirst({ where: and(eq(apiKey.keyHash, hashApiKey(raw)), isNull(apiKey.revokedAt)) });
   if (!row) throw unauthorized("Invalid or revoked API key.");
 

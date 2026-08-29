@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Progress, SearchInput } from "@wizeworks/silicaui-react";
 import { workspacePath } from "@/lib/nav";
 import { DetailPanel } from "./library/detail-panel";
+import { BrandKitPanel } from "./library/brand-kit-panel";
 import { AssetGrid } from "./library/grid";
 import { ImportCsvDialog } from "./library/import-csv";
 import { LibIcon } from "./library/icons";
@@ -105,10 +106,7 @@ function BottomRow({ data, nav }: { data: LibraryData; nav: Nav }) {
         <div className="flex items-center justify-between"><h2 id="tpl-h" className="text-sm font-semibold">Saved templates</h2><span className="text-xs text-secondary/70">View all</span></div>
         <p className="mt-3 text-sm leading-relaxed text-secondary">Save a post as a template from the post page to reuse its structure. Templates carry structure and defaults, never live results.</p>
       </section>
-      <section className="rounded-box border border-base-300 p-4" aria-labelledby="brand-h">
-        <div className="flex items-center justify-between"><h2 id="brand-h" className="text-sm font-semibold">Brand Kit</h2><Link href={workspacePath(data.workspaceId, "settings/brand")} className="text-xs font-medium hover:underline">View all</Link></div>
-        <p className="mt-3 text-sm leading-relaxed text-secondary">Logos, colors, and fonts for this workspace live in Settings → Brand. Nothing has been added yet.</p>
-      </section>
+      <BrandKitPanel workspaceId={data.workspaceId} brand={data.brand} />
     </div>
   );
 }

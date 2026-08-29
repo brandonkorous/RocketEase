@@ -21,6 +21,7 @@ import { trackingSync } from "./tracking-sync";
 import { recycleTick } from "./recycle-tick";
 import { rightsExpiring } from "./rights-expiring";
 import { billingReportUsage } from "./billing-report-usage";
+import { providerDeletion } from "./provider-deletion";
 
 export type HandlerContext = { log: Logger; signal: AbortSignal };
 export type Handler<N extends JobName> = (data: JobPayloads[N], ctx: HandlerContext) => Promise<void>;
@@ -42,6 +43,7 @@ export const handlers: { [N in Exclude<JobName, "outbox.relay">]: Handler<N> } =
   "quality.check": qualityCheck,
   "publication.reconcile": publicationReconcile,
   "connection.refresh": connectionRefresh,
+  "provider.deletion": providerDeletion,
   "ads.sync": adsSync,
   "promotion.execute": promotionExecute,
   "recommendations.compute": recommendationsCompute,

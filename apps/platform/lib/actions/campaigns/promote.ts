@@ -1,7 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import type { PromotionRequest } from "@make-it-social/providers";
+import type { PromotionRequest } from "@rocketease/providers";
 import { db } from "@/db";
 import { campaignEvent, promotion } from "@/db/schema/campaigns";
 import { totals } from "@/lib/analytics/queries";
@@ -61,7 +61,7 @@ function eligibilityIssue({ variant, item, ch, account, conn }: Targets, input: 
   if (!variant || !item || !ch) return "Post not found.";
   if (variant.status !== "published" || !variant.remoteId) return "Only published posts can be promoted.";
   if (!["healthy", "degraded"].includes(ch.status)) return "Reconnect this channel before promoting.";
-  if (!ch.capabilities.ads.manage) return ch.capabilities.reasons?.ads ?? `${ch.name} does not allow promotions from Make It Social.`;
+  if (!ch.capabilities.ads.manage) return ch.capabilities.reasons?.ads ?? `${ch.name} does not allow promotions from RocketEase.`;
   if (!account || !conn || conn.status !== "active") return "Pick a connected ad account.";
   if (account.provider !== ch.provider) return "The ad account must belong to the same network as the post.";
   if (!getAdapter(conn.provider).promote) return "This network only supports read-only ad import.";

@@ -2,18 +2,14 @@ import type { SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
-/** The Make It Social conversation mark. Solid in currentColor: black by default, white when reversed. */
+/** The RocketEase mark. Solid in currentColor: black by default, white when reversed. */
 export function Mark({ size = 28, ...rest }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden="true" {...rest}>
       <path
-        d="M17 12h30a9 9 0 0 1 9 9v18a9 9 0 0 1-9 9h-9.5L28 55.5V48H17a9 9 0 0 1-9-9V21a9 9 0 0 1 9-9Z"
-        stroke="currentColor"
-        strokeWidth="6"
-        strokeLinejoin="round"
+        d="M23.74 18.48 55.07 8.07Q59.98 6.43 58 11.34L47.32 37.77Q46.45 39.93 45 40.61L27.44 48.87Q26.24 49.44 26.92 47.93L33.03 34.41Q35.64 28.65 29.5 30.71L13.58 36.05 21.75 20.64Q22.72 18.82 23.74 18.48ZM24.68 38.03 17.88 51.03 6.77 55.93Q5.62 56.44 6 55.68L11.94 43.71Z"
+        fill="currentColor"
       />
-      <circle cx="25" cy="30" r="4" fill="currentColor" />
-      <circle cx="39" cy="30" r="4" fill="currentColor" />
     </svg>
   );
 }

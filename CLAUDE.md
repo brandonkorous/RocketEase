@@ -15,7 +15,7 @@ Guidance for Claude Code when working in this repository.
 
 ## Repo layout
 
-pnpm workspace monorepo (`pnpm-workspace.yaml`: `apps/*`, `packages/*`). Not a git repository.
+pnpm workspace monorepo (`pnpm-workspace.yaml`: `apps/*`, `packages/*`). Git remote: `brandonkorous/RocketEase`.
 
 - `apps/web/` — `@rocketease/web`: the marketing site (landing page) — Next.js 15 App Router, React 19, Tailwind v4, **Silica UI** (`@wizeworks/silicaui` + `@wizeworks/silicaui-react`). Built from `docs/originals/landing.md`.
 - `apps/platform/` — `@rocketease/platform`: the authenticated product at `/app/:workspaceId/...`. Next.js 15 + Silica UI + **Better Auth** (email/password + organization plugin) + **Drizzle** on **self-hosted Postgres** (Docker locally, Azure in prod via the sparx.works Terraform → sparx AKS cluster). Phase 0 done: tenancy (Organization → Workspace → 8 workspace role presets), audit log, onboarding, black-sidebar shell, every route from navigation.md as a designed empty state, agency overview. No provider integrations yet.
@@ -31,6 +31,7 @@ pnpm workspace monorepo (`pnpm-workspace.yaml`: `apps/*`, `packages/*`). Not a g
 pnpm install                 # root — installs all workspaces
 pnpm dev                     # starts Postgres (docker) + BOTH apps: web :5000, platform :5001
 pnpm dev:web / dev:platform  # one app only (dev:platform also starts Postgres)
+pnpm dev:kill                # stop this repo's dev servers + worker (--all also stops containers)
 pnpm db:up / db:down         # Postgres container only
 pnpm db:migrate              # apply platform migrations from the root
 pnpm build                   # build every workspace
@@ -63,7 +64,7 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
 - **Providers**: `packages/providers` is the adapter contract; `mock` (dev, `PROVIDERS_ENABLE_MOCK=1`) exercises the full connect → select → sync → publish → reconcile loop locally; `meta`/`linkedin`/`tiktok` are real API code, untested live until credentials exist. Tokens are AES-GCM envelopes bound to the row id (`lib/crypto.ts`, `lib/providers.ts`); never log or return them.
 - **Jobs**: enqueue only via the transactional outbox (`emit(tx, name, payload)` in `lib/jobs/outbox.ts`); the worker relays. Queue names/payloads live in `lib/jobs/queues.ts`; handlers in `worker/handlers/`. Worker code must not import `server-only` or `next/headers` (use `lib/audit.ts`'s dynamic pattern).
 - **Publishing**: `post_variant` state is authoritative; `content_item.status` is a summary (`summarizeItem`). The publish worker revalidates everything first, treats ambiguous provider errors by **reconciling before any retry**, and only retries retryable categories with backoff. Never bypass `idempotencyKey`.
-- **Storage**: `lib/storage.ts` (S3 API; MinIO locally at :5090, console :5091). Browser uploads go straight to storage via presigned PUT; `asset.process` makes renditions and runs the scan hook. Unscanned/expired-rights assets can't publish.
+- **Storage**: `lib/storage/` — one API, two drivers chosen by `STORAGE_DRIVER`: `s3.ts` (MinIO locally at :5090, console :5091) and `azure.ts` (Azure Blob in production; Azure has **no** S3-compatible API, so it is a real driver, not a re-pointed endpoint). Browser uploads go straight to storage via presigned PUT; `asset.process` makes renditions and runs the scan hook. Unscanned/expired-rights assets can't publish.
 - **Conversion tracking** (`lib/tracking`, `docs/tracking.md`): GA4 / Shopify / signed webhook sources write `conversion_fact` via `tracking.sync`. Site-reported and ad-reported conversions never double-count — a paid `utm_medium` belongs to the ad platform, everything else to the tracking source; ROAS is paid-medium revenue ÷ spend. `lib/tracking/availability.ts` owns every "why is this unavailable" string; never show a missing conversion metric as 0.
 - **Inbox**: `packages/providers` inbox contract (`fetchInbox`/`reply`/`findReply`/`inboxItemsFromWebhook`, `inbox-types.ts`). Ingestion is `lib/engagement/ingest.ts` (idempotent on channel+remoteId) fed by `inbox.sync` polling (worker tick every 2 min) and `POST /api/webhooks/[provider]` → `webhook_receipt` → `webhook.process`. Outbound replies are `message` rows in `queued` state delivered by `inbox.reply`; an ambiguous provider result is reconciled with `findReply` before any resend (ENG-003). The mock store lives in the worker process, so local "simulate incoming" goes through the webhook receipt path, never a direct in-process call.
 - Local URLs: web :5000, platform :5001, Postgres :5050, Mailpit UI :5026, MinIO :5090/:5091. `pnpm dev` starts all of it including the worker.
@@ -79,6 +80,32 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
 - When revealing a `.btn` responsively use `hidden sm:inline-block`, not `sm:inline-flex` — the latter drops Silica's vertical centering (documented gotcha in the plugin).
 - Product surfaces (`components/product-surfaces/`) are real HTML/Silica UI, not screenshots, so they stay in sync with the design system. Their data is illustrative only.
 - Platform brand colors live only inside `PlatformIcon` (`components/icons.tsx`); pass `mono` for monochrome contexts.
+
+## Deployment
+
+Production is the shared **sparx AKS cluster** (`aks-sparx-prod-cus`) in a `rocketease`
+namespace, with RocketEase's own Postgres server, Key Vault and storage account.
+**Read `deploy/README.md` before touching anything deployment-shaped.** The traps
+that cost a release, in short:
+
+- **No Ingress, no cert-manager.** A shared Caddy in `sparx-prod` terminates TLS and
+  proxies to the Services. An `Ingress` object here is silently inert. Host blocks live
+  in `sparx.works/k8s/ingress/Caddyfile`, and every hostname must ALSO be allow-listed in
+  api-rest's `PLATFORM_HOSTNAMES` or Cloudflare answers 525 for that name alone.
+- **`NEXT_PUBLIC_*` is baked at build time**, so it is a Docker build arg, never a
+  ConfigMap value. A missing one does not error — the browser gets `undefined` and the
+  feature quietly never renders.
+- **Migrations run as an in-cluster Job**, never from a laptop or a runner: the Postgres
+  server has no public network access. The app connects as a restricted role that cannot
+  execute DDL in `public`, but OWNS the `pgboss` schema because pg-boss issues DDL at
+  runtime.
+- **`TOKEN_MASTER_KEY` is set once, by hand, in Key Vault** and must never be
+  Terraform-managed: regenerating it makes every stored provider token undecryptable, and
+  no re-run recovers them.
+
+Azure resources and DNS live in the **sparx.works** repo
+(`terraform/envs/azure/rocketease.tf`, `terraform/bootstrap-azure/rocketease.tf`,
+`terraform/modules/dns`), not here.
 
 ## Working with the docs
 

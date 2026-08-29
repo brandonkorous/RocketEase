@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge, Button, Input, Textarea } from "@wizeworks/silicaui-react";
-import { estimatePublishCost, isFreeToPublish, type ChannelKind, type ProviderKey } from "@make-it-social/providers/client";
+import { estimatePublishCost, isFreeToPublish, type ChannelKind, type ProviderKey } from "@rocketease/providers/client";
 import { conceptText, type Concept } from "@/lib/ai/generator/types";
 import { NetMark } from "../net-mark";
 import { IssueList, LengthMeter } from "./meter";

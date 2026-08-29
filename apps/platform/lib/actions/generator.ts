@@ -3,11 +3,13 @@
 import { z } from "zod";
 import { db } from "@/db";
 import { AI_UNCONFIGURED, aiConfigured, aiGenerator } from "@/lib/ai/client";
-import { loadBrandVoice, loadDraftChannels } from "@/lib/ai/context";
+import { loadBrandContext, loadDraftChannels } from "@/lib/ai/context";
 import { saveBriefRow } from "@/lib/ai/generator/briefs";
 import { imageGeneratorFor } from "@/lib/ai/generator/image-assets";
 import { imagesConfigured, MAX_IMAGES } from "@/lib/ai/generator/images";
 import { runGenerator, runRegenerate } from "@/lib/ai/generator/run";
+import { brandImagePrompt } from "@/lib/brand/prompt";
+import { loadBrandKit } from "@/lib/brand/store";
 import { draftFromConcept } from "@/lib/ai/generator/send";
 import { briefSchema, conceptWireSchema, type Brief, type Concept, type GeneratorResult } from "@/lib/ai/generator/types";
 import { workspacePath } from "@/lib/nav";
@@ -36,11 +38,11 @@ export async function generateConcepts(input: { workspaceId: string; brief: Brie
   return guard(async () => {
     const ctx = await requireCapability(ws, "content.create");
     if (!aiConfigured()) return { error: AI_UNCONFIGURED };
-    const [voice, channels] = await Promise.all([loadBrandVoice(ws), loadDraftChannels(ws, brief.channels)]);
+    const [brand, channels] = await Promise.all([loadBrandContext(ws, ctx.workspace.timezone), loadDraftChannels(ws, brief.channels)]);
     if (!channels.length) return { error: NO_CHANNELS };
     const meta = { organizationId: ctx.workspace.organizationId, workspaceId: ws, userId: ctx.session.user.id };
     await track("ai.generate.requested", { userId: meta.userId, organizationId: meta.organizationId, workspaceId: ws, surface: "action:generator.run", props: { goal: brief.goal, channels: channels.length, count: brief.count, ads: brief.includeAds } });
-    return runGenerator({ brief: brief as Brief, channels, voice }, aiGenerator({ ...meta, kind: "generate_post" }), aiGenerator({ ...meta, kind: "generate_ad" }));
+    return runGenerator({ brief: brief as Brief, channels, ...brand }, aiGenerator({ ...meta, kind: "generate_post" }), aiGenerator({ ...meta, kind: "generate_ad" }));
   });
 }
 
@@ -54,10 +56,10 @@ export async function regenerateConcept(input: z.input<typeof regenSchema>): Pro
   return guard(async () => {
     const ctx = await requireCapability(ws, "content.create");
     if (!aiConfigured()) return { error: AI_UNCONFIGURED };
-    const [voice, channels] = await Promise.all([loadBrandVoice(ws), loadDraftChannels(ws, [channelId])]);
+    const [brand, channels] = await Promise.all([loadBrandContext(ws, ctx.workspace.timezone), loadDraftChannels(ws, [channelId])]);
     if (!channels.length) return { error: NO_CHANNELS };
     const meta = { organizationId: ctx.workspace.organizationId, workspaceId: ws, userId: ctx.session.user.id, kind: "generate_post" as const };
-    return runRegenerate({ brief: brief as Brief, channel: channels[0], voice, avoid }, aiGenerator(meta));
+    return runRegenerate({ brief: brief as Brief, channel: channels[0], ...brand, avoid }, aiGenerator(meta));
   });
 }
 
@@ -96,9 +98,12 @@ export async function generateImage(input: z.input<typeof imageSchema>): Promise
     const actor = { organizationId: ctx.workspace.organizationId, workspaceId: ws, userId: ctx.session.user.id };
     const generator = imageGeneratorFor(actor, altText ?? null);
     if (!generator) return { error: "Image generation isn't configured." };
-    const res = await generator.generate(prompt, { aspect, count });
+    // The brand's visual direction is appended server-side, so every image from
+    // this workspace follows the same palette and house style.
+    const style = brandImagePrompt(await loadBrandKit(ws));
+    const res = await generator.generate([prompt, style].filter(Boolean).join("\n\n"), { aspect, count });
     if ("error" in res) return res;
-    await track("ai.image.generated", { userId: actor.userId, organizationId: actor.organizationId, workspaceId: ws, surface: "action:generator.image", props: { count: res.assetIds.length, aspect } });
+    await track("ai.image.generated", { userId: actor.userId, organizationId: actor.organizationId, workspaceId: ws, surface: "action:generator.image", props: { count: res.assetIds.length, aspect, branded: Boolean(style) } });
     return { images: await previews(ws, res.assetIds) };
   });
 }

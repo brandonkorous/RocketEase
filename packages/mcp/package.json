@@ -1,11 +1,11 @@
 {
-  "name": "@make-it-social/mcp",
+  "name": "@rocketease/mcp",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Model Context Protocol server for Make It Social \u00e2\u20ac\u201d the trusted publishing layer under any AI agent.",
+  "description": "Model Context Protocol server for RocketEase \u00e2\u20ac\u201d the trusted publishing layer under any AI agent.",
   "bin": {
-    "make-it-social-mcp": "./dist/index.js"
+    "rocketease-mcp": "./dist/index.js"
   },
   "main": "./dist/index.js",
   "files": [

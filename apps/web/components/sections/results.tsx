@@ -11,7 +11,7 @@ const PROOF = [
 
 export function ResultsBand() {
   return (
-    <section data-theme="mis-dark" className="bg-base-100 text-base-content" aria-labelledby="results-heading">
+    <section data-theme="rke-dark" className="bg-base-100 text-base-content" aria-labelledby="results-heading">
       <div className="page-container py-16 md:py-20">
         <h2 id="results-heading" className="h2-marketing text-center">
           Built for real marketing work

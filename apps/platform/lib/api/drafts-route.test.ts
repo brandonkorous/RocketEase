@@ -37,7 +37,7 @@ const { forbidden } = await import("./errors");
 
 const item = { id: "item1", title: "Post", status: "draft", approvalState: "not_required", sharedText: "hi", sharedAssetIds: [], link: null, scheduledAt: null, createdAt: new Date(0), updatedAt: new Date(0) };
 const post = (body: unknown, headers: Record<string, string> = {}) =>
-  POST(new Request("https://mis.test/api/v1/drafts", { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) }));
+  POST(new Request("https://rke.test/api/v1/drafts", { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) }));
 
 beforeEach(() => {
   state.prior = null;

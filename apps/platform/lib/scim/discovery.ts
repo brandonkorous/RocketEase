@@ -31,7 +31,7 @@ function resourceType(base: string, name: "User" | "Group", schema: string) {
     id: name,
     name,
     endpoint: `/${name}s`,
-    description: `Make It Social ${name}`,
+    description: `RocketEase ${name}`,
     schema,
     meta: { resourceType: "ResourceType", location: `${base}/ResourceTypes/${name}` },
   };
@@ -69,7 +69,7 @@ export function schemas() {
     {
       id: SCIM_SCHEMA.group,
       name: "Group",
-      description: 'Workspace role preset, named "mis:<workspaceSlug>:<role>"',
+      description: 'Workspace role preset, named "rke:<workspaceSlug>:<role>"',
       attributes: [
         attr("displayName", "string", { required: true, uniqueness: "server" }),
         attr("members", "complex", {

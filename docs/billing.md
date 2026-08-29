@@ -131,5 +131,5 @@ To exercise the overage job without waiting for the nightly cron, enqueue `billi
 Unit tests cover the entitlement maths, the overage calculation and webhook idempotency:
 
 ```bash
-pnpm --filter @make-it-social/platform test lib/billing
+pnpm --filter @rocketease/platform test lib/billing
 ```

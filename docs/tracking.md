@@ -44,8 +44,8 @@ publishing providers follow.
 
 ```
 POST /api/webhooks/tracking/{sourceId}
-x-mis-timestamp: 1800000000                 # unix seconds, must be within 5 minutes
-x-mis-signature: sha256=<hex HMAC-SHA256 of "{timestamp}.{rawBody}" with the signing secret>
+x-rke-timestamp: 1800000000                 # unix seconds, must be within 5 minutes
+x-rke-signature: sha256=<hex HMAC-SHA256 of "{timestamp}.{rawBody}" with the signing secret>
 content-type: application/json
 ```
 
@@ -134,13 +134,13 @@ takes the queue's backoff.
 `PROVIDERS_ENABLE_MOCK=1` does not cover tracking; use the webhook source instead.
 
 ```bash
-SECRET='mis_whsec_...'          # shown once when the source is created
+SECRET='rke_whsec_...'          # shown once when the source is created
 URL='http://localhost:5001/api/webhooks/tracking/<sourceId>'
 BODY='{"occurredAt":"2026-08-10T14:03:00Z","value":249,"currency":"USD","utm_source":"instagram","utm_medium":"social","utm_campaign":"spring-launch"}'
 TS=$(date +%s)
 SIG="sha256=$(printf '%s.%s' "$TS" "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -r | cut -d' ' -f1)"
 curl -sS -X POST "$URL" -H "content-type: application/json" \
-  -H "x-mis-timestamp: $TS" -H "x-mis-signature: $SIG" -d "$BODY"
+  -H "x-rke-timestamp: $TS" -H "x-rke-signature: $SIG" -d "$BODY"
 ```
 
 ## Known gaps

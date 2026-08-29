@@ -23,7 +23,7 @@ export const apiKey = pgTable(
     name: text("name").notNull(),
     /** Hex SHA-256 of the bearer token. Never the token itself. */
     keyHash: text("key_hash").notNull(),
-    /** Display stub, e.g. "mis_a1b2c3". */
+    /** Display stub, e.g. "rke_a1b2c3". */
     prefix: text("prefix").notNull(),
     /** Capability keys from lib/authz.ts; always a subset of the creator's own. */
     scopes: jsonb("scopes").$type<string[]>().notNull().default([]),

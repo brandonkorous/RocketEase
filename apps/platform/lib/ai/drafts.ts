@@ -2,7 +2,7 @@
  * Draft orchestration (M8.8). Pure: the generator is injected, so this module
  * is testable without the SDK. Nothing here writes, saves, schedules, or sends.
  */
-import { validateAgainstCapabilities, type Capabilities } from "@make-it-social/providers/client";
+import { validateAgainstCapabilities, type Capabilities } from "@rocketease/providers/client";
 import type { BrandVoice } from "./brand-voice";
 import { captionPrompt, parseVariants, repurposePrompt, replyPrompt, type DraftTarget, type Prompt, type ThreadTurn } from "./prompts";
 
@@ -49,18 +49,19 @@ function merge(results: { variants: DraftVariant[]; error?: string }[]): DraftOu
   return { variants: [], error: results.find((r) => r.error)?.error ?? NOTHING };
 }
 
-export async function captionDrafts(input: { channels: DraftChannel[]; text: string; voice: BrandVoice }, gen: Generator): Promise<DraftOutcome> {
-  const results = await Promise.all(input.channels.map((ch) => draftsFor(ch, captionPrompt({ target: ch, text: input.text, voice: input.voice }), gen, 2)));
+export async function captionDrafts(input: { channels: DraftChannel[]; text: string; voice: BrandVoice; brand?: string }, gen: Generator): Promise<DraftOutcome> {
+  const results = await Promise.all(input.channels.map((ch) => draftsFor(ch, captionPrompt({ target: ch, text: input.text, voice: input.voice, brand: input.brand }), gen, 2)));
   return merge(results);
 }
 
-export async function repurposeDrafts(input: { channels: DraftChannel[]; sourceText: string; voice: BrandVoice }, gen: Generator): Promise<DraftOutcome> {
-  const results = await Promise.all(input.channels.map((ch) => draftsFor(ch, repurposePrompt({ target: ch, sourceText: input.sourceText, voice: input.voice }), gen, 2)));
+export async function repurposeDrafts(input: { channels: DraftChannel[]; sourceText: string; voice: BrandVoice; brand?: string }, gen: Generator): Promise<DraftOutcome> {
+  const results = await Promise.all(input.channels.map((ch) => draftsFor(ch, repurposePrompt({ target: ch, sourceText: input.sourceText, voice: input.voice, brand: input.brand }), gen, 2)));
   return merge(results);
 }
 
 export type ReplyInput = {
   voice: BrandVoice;
+  brand?: string;
   networkLabel: string;
   contactName: string;
   turns: ThreadTurn[];

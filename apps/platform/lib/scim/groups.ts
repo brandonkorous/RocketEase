@@ -1,12 +1,12 @@
 import { WORKSPACE_ROLES, type WorkspaceRole } from "@/db/schema/app";
 
 /**
- * A SCIM Group is one workspace role preset: `mis:<workspaceSlug>:<role>`.
- * Adding a user to `mis:acme:manager` gives them the manager preset in the
+ * A SCIM Group is one workspace role preset: `rke:<workspaceSlug>:<role>`.
+ * Adding a user to `rke:acme:manager` gives them the manager preset in the
  * Acme workspace; removing them takes it away. The prefix keeps our groups
  * distinguishable from every other group an IdP might push.
  */
-export const GROUP_PREFIX = "mis";
+export const GROUP_PREFIX = "rke";
 
 export type GroupRef = { workspaceSlug: string; role: WorkspaceRole };
 

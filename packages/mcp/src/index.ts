@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /*
- * Make It Social MCP server.
+ * RocketEase MCP server.
  *
- *   make-it-social-mcp             stdio (Claude Desktop, Claude Code)
- *   make-it-social-mcp --http      streamable HTTP on MIS_MCP_PORT (default 5010)
+ *   rocketease-mcp             stdio (Claude Desktop, Claude Code)
+ *   rocketease-mcp --http      streamable HTTP on RKE_MCP_PORT (default 5010)
  *
- * Credentials come from the environment: MIS_API_KEY, MIS_API_URL.
+ * Credentials come from the environment: RKE_API_KEY, RKE_API_URL.
  */
 import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -26,7 +26,7 @@ async function readBody(req: IncomingMessage): Promise<unknown> {
 }
 
 async function runHttp() {
-  const port = Number(process.env.MIS_MCP_PORT ?? 5010);
+  const port = Number(process.env.RKE_MCP_PORT ?? 5010);
   const server = createServer(clientFromEnv());
   // Stateless: one transport, no session ids — every request carries the API key's own context.
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
@@ -39,7 +39,7 @@ async function runHttp() {
       }
       await transport.handleRequest(req, res, await readBody(req));
     })();
-  }).listen(port, () => console.error(`[make-it-social-mcp] streamable HTTP on :${port}/mcp`));
+  }).listen(port, () => console.error(`[rocketease-mcp] streamable HTTP on :${port}/mcp`));
 }
 
 async function runStdio() {
@@ -49,6 +49,6 @@ async function runStdio() {
 
 const main = process.argv.includes("--http") ? runHttp : runStdio;
 main().catch((e: unknown) => {
-  console.error("[make-it-social-mcp]", e instanceof Error ? e.message : e);
+  console.error("[rocketease-mcp]", e instanceof Error ? e.message : e);
   process.exit(1);
 });

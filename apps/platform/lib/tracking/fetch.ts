@@ -4,7 +4,7 @@
  * from its own deduped event ledger.
  */
 import { eq } from "drizzle-orm";
-import { ProviderError } from "@make-it-social/providers";
+import { ProviderError } from "@rocketease/providers";
 import { db } from "@/db";
 import { trackingSource, type TrackingSource } from "@/db/schema/tracking";
 import { fetchGa4Conversions, refreshGa4Token, type Ga4Credential } from "./ga4";

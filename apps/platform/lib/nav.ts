@@ -11,6 +11,7 @@ export type NavKey =
   | "campaigns"
   | "analytics"
   | "content"
+  | "brand"
   | "approvals"
   | "accounts"
   | "team"
@@ -24,6 +25,7 @@ export const PRIMARY_NAV: { key: NavKey; label: string; segment: string }[] = [
   { key: "campaigns", label: "Campaigns", segment: "campaigns" },
   { key: "analytics", label: "Analytics", segment: "analytics" },
   { key: "content", label: "Content", segment: "content" },
+  { key: "brand", label: "Brand", segment: "brand" },
   { key: "approvals", label: "Approvals", segment: "approvals" },
 ];
 
@@ -38,7 +40,6 @@ export const MOBILE_NAV: NavKey[] = ["home", "calendar", "create", "inbox"];
 
 export const SETTINGS_SECTIONS = [
   { slug: "general", label: "General" },
-  { slug: "brand", label: "Brand" },
   { slug: "team", label: "Team and roles" },
   { slug: "notifications", label: "Notifications" },
   { slug: "inbox", label: "Inbox" },

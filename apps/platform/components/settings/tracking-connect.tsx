@@ -89,7 +89,7 @@ export function SecretPanel({ secret, onDismiss }: { secret: NewSecret; onDismis
           <dd className="break-all font-mono text-xs">{secret.secret}</dd>
         </dl>
         <p className="text-xs leading-relaxed">
-          Sign each request as <code className="font-mono">sha256=HMAC-SHA256(&quot;{"{timestamp}"}.{"{body}"}&quot;)</code> and send it as <code className="font-mono">x-mis-signature</code> with the unix seconds in <code className="font-mono">x-mis-timestamp</code>. See docs/tracking.md for the payload shape.
+          Sign each request as <code className="font-mono">sha256=HMAC-SHA256(&quot;{"{timestamp}"}.{"{body}"}&quot;)</code> and send it as <code className="font-mono">x-rke-signature</code> with the unix seconds in <code className="font-mono">x-rke-timestamp</code>. See docs/tracking.md for the payload shape.
         </p>
         <div><Button size="sm" variant="outline" color="neutral" onClick={onDismiss}>Done</Button></div>
       </div>

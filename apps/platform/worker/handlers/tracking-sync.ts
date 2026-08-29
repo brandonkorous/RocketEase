@@ -1,4 +1,4 @@
-import { ProviderError } from "@make-it-social/providers";
+import { ProviderError } from "@rocketease/providers";
 import { db } from "@/db";
 import type { TrackingSource } from "@/db/schema/tracking";
 import type { JobPayloads } from "@/lib/jobs/queues";

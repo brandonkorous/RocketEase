@@ -3,7 +3,7 @@
  * (channel, remoteId); safe to run from polling and webhooks concurrently.
  */
 import { and, eq, sql } from "drizzle-orm";
-import type { InboxItem } from "@make-it-social/providers";
+import type { InboxItem } from "@rocketease/providers";
 import { db, type Db } from "@/db";
 import type { Channel } from "@/db/schema/connections";
 import { contact, contactIdentity, conversation, conversationEvent, inboxSettings, message } from "@/db/schema/engagement";

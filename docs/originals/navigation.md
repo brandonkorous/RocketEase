@@ -8,7 +8,7 @@ Navigation follows recurring work, while the lifecycle remains the conceptual ba
 
 Black sidebar:
 
-1. Make It Social mark
+1. RocketEase mark
 2. Organization/workspace switcher
 3. Home
 4. Calendar
@@ -17,9 +17,10 @@ Black sidebar:
 7. Campaigns
 8. Analytics
 9. Content
-10. Approvals
-11. Collapsible “Manage” group: Connected accounts, Team, Settings
-12. Help, notifications, profile
+10. Brand
+11. Approvals
+12. Collapsible “Manage” group: Connected accounts, Team, Settings
+13. Help, notifications, profile
 
 Use badges only for actionable counts: overdue approvals, unresolved assigned conversations, publish failures, or connection problems. The sidebar remains structurally monochrome; small platform marks may appear inside scoped content, not as navigation decoration.
 
@@ -37,6 +38,8 @@ Use badges only for actionable counts: overdue approvals, unresolved assigned co
 /app/:workspaceId/analytics
 /app/:workspaceId/reports/:reportId
 /app/:workspaceId/content
+/app/:workspaceId/brand
+/app/:workspaceId/brand/:section
 /app/:workspaceId/approvals
 /app/:workspaceId/accounts
 /app/:workspaceId/team
@@ -54,13 +57,14 @@ The switcher shows organization, client/brand name, avatar/mark, role, and conne
 ## Contextual navigation
 
 - Campaign detail: Overview, Content, Ads, Audience, Conversations, Performance, Activity.
-- Settings: General, Brand, Team and roles, Notifications, Connected accounts, Billing, Security, Audit log.
+- Settings: General, Team and roles, Notifications, Connected accounts, Billing, Security, Audit log.
+- Brand: Overview, Identity, Voice, Visual identity, Messaging, Audiences, Rules, Assets, Channel presence.
 - Analytics: Overview, Content, Engagement, Audience, Paid, Reports.
 - Composer: Content, Channels, Preview, Settings; use progressive sections rather than nested app navigation.
 
 ## Mobile
 
-Bottom navigation contains Home, Calendar, Create, Inbox, and More. More opens Campaigns, Analytics, Content, Approvals, Accounts, and Settings. Workspace switching is available from the header. A selected desktop three-pane object becomes a full-screen detail with a clear back path.
+Bottom navigation contains Home, Calendar, Create, Inbox, and More. More opens Campaigns, Analytics, Content, Brand, Approvals, Accounts, and Settings. Workspace switching is available from the header. A selected desktop three-pane object becomes a full-screen detail with a clear back path.
 
 ## Global utilities
 

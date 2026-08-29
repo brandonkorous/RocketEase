@@ -9,6 +9,9 @@ import { db } from "@/db";
 import { workspace } from "@/db/schema/app";
 import { channel } from "@/db/schema/connections";
 import { conversationDetail } from "@/lib/engagement/detail";
+import { brandKitPrompt } from "@/lib/brand/prompt";
+import { loadBrandKit } from "@/lib/brand/store";
+import { dayKey } from "@/lib/time";
 import { readBrandVoice, type BrandVoice } from "./brand-voice";
 import type { DraftChannel, ReplyInput } from "./drafts";
 
@@ -17,6 +20,18 @@ const NETWORK_LABEL: Record<string, string> = { instagram: "Instagram", facebook
 export async function loadBrandVoice(workspaceId: string): Promise<BrandVoice> {
   const [ws] = await db.select({ settings: workspace.settings }).from(workspace).where(eq(workspace.id, workspaceId));
   return readBrandVoice(ws?.settings ?? {});
+}
+
+export type BrandContext = { voice: BrandVoice; brand: string };
+
+/**
+ * The whole brand kit as drafting input: the voice, plus the identity, rules,
+ * approved messaging, and audiences as prompt text. Offers are filtered against
+ * today in the workspace timezone, so a lapsed one never reaches a draft.
+ */
+export async function loadBrandContext(workspaceId: string, timezone: string): Promise<BrandContext> {
+  const kit = await loadBrandKit(workspaceId);
+  return { voice: kit.voice, brand: brandKitPrompt(kit, { today: dayKey(new Date(), timezone) }) };
 }
 
 /**
@@ -42,7 +57,7 @@ export async function loadDraftChannels(workspaceId: string, channelIds: string[
 }
 
 /** The last turns of a conversation, plus the workspace's approved saved replies. */
-export async function loadReplyContext(workspaceId: string, conversationId: string, timezone: string, voice: BrandVoice): Promise<ReplyInput | null> {
+export async function loadReplyContext(workspaceId: string, conversationId: string, timezone: string, brand: BrandContext): Promise<ReplyInput | null> {
   const d = await conversationDetail(workspaceId, conversationId, timezone);
   if (!d) return null;
   const turns = d.messages
@@ -51,7 +66,8 @@ export async function loadReplyContext(workspaceId: string, conversationId: stri
     .map((m) => ({ who: (m.direction === "inbound" ? "customer" : "us") as "customer" | "us", text: m.body.trim() }));
   if (!turns.length) return null;
   return {
-    voice,
+    voice: brand.voice,
+    brand: brand.brand,
     networkLabel: NETWORK_LABEL[d.channel.network] ?? d.channel.network,
     contactName: d.contact.name,
     turns,

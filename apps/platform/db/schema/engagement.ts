@@ -6,7 +6,7 @@
  */
 import { sql } from "drizzle-orm";
 import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
-import type { InboxAttachment, InboxItemKind, Network } from "@make-it-social/providers";
+import type { InboxAttachment, InboxItemKind, Network } from "@rocketease/providers";
 import { organization, user } from "./auth";
 import { workspace } from "./app";
 import { channel, providerKey } from "./connections";

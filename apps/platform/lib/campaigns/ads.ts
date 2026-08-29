@@ -1,6 +1,6 @@
 /* Ads tab data (images/ads.png inside campaign detail): accounts, imported ad campaigns, promotion candidates. */
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
-import type { AdAccountDescriptor } from "@make-it-social/providers";
+import type { AdAccountDescriptor } from "@rocketease/providers";
 import { db } from "@/db";
 import { adAccount, adCampaign, campaign as campaignTable, promotion, type Campaign } from "@/db/schema/campaigns";
 import { channel } from "@/db/schema/connections";
@@ -66,7 +66,7 @@ async function eligiblePosts(workspaceId: string, campaignId: string | null, acc
   const rows = await db.select({ v: postVariant, item: { title: contentItem.title, text: contentItem.sharedText }, ch: channel }).from(postVariant).innerJoin(contentItem, eq(contentItem.id, postVariant.contentItemId)).innerJoin(channel, eq(channel.id, postVariant.channelId)).where(and(eq(postVariant.workspaceId, workspaceId), eq(postVariant.status, "published"), inCampaign)).orderBy(desc(postVariant.publishedAt)).limit(20);
   return rows.map(({ v, item, ch }) => {
     const acc = accounts.filter((a) => a.provider === ch.provider && a.status === "active").map((a) => ({ id: a.id, name: a.name, currency: a.currency }));
-    const blocked = !["healthy", "degraded"].includes(ch.status) ? "Channel needs reconnecting." : !ch.capabilities.ads.manage ? (ch.capabilities.reasons?.ads ?? `${ch.name} does not allow promotions from Make It Social.`) : !getAdapter(ch.provider).promote ? "This network only supports read-only ad import." : acc.length ? null : `Connect a ${ch.provider === "mock" ? "demo" : ch.provider} ad account first.`;
+    const blocked = !["healthy", "degraded"].includes(ch.status) ? "Channel needs reconnecting." : !ch.capabilities.ads.manage ? (ch.capabilities.reasons?.ads ?? `${ch.name} does not allow promotions from RocketEase.`) : !getAdapter(ch.provider).promote ? "This network only supports read-only ad import." : acc.length ? null : `Connect a ${ch.provider === "mock" ? "demo" : ch.provider} ad account first.`;
     return { variantId: v.id, title: item.title, text: (v.textOverride ?? item.text).slice(0, 140), channel: { id: ch.id, name: ch.name, network: ch.network }, url: v.remoteUrl, publishedAt: v.publishedAt ? formatInZone(v.publishedAt, tz) : "", accounts: acc, blocked };
   });
 }

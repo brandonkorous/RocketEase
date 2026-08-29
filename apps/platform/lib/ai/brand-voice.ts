@@ -1,6 +1,7 @@
 /*
- * Brand voice (M8.8). Stored in `workspace.settings.brandVoice` so it needs no
- * schema of its own; it only ever shapes a draft a person still edits and sends.
+ * Brand voice (M8.8). Stored in `workspace.settings.brandKit.voice` so it needs
+ * no schema of its own; it only ever shapes a draft a person still edits and
+ * sends. The rest of the brand kit lives beside it in `lib/brand`.
  */
 import { z } from "zod";
 
@@ -28,9 +29,15 @@ export const brandVoiceSchema = z.object({
 const strings = (v: unknown, max: number): string[] =>
   Array.isArray(v) ? v.filter((s): s is string => typeof s === "string" && s.trim().length > 0).map((s) => s.trim()).slice(0, max) : [];
 
-/** Tolerant read: an older or hand-edited settings blob must never break a screen. */
+/**
+ * Tolerant read: an older or hand-edited settings blob must never break a
+ * screen. Voice moved into the brand kit (`settings.brandKit.voice`); the
+ * legacy `settings.brandVoice` key is still read for workspaces written before
+ * the move and is dropped the next time voice is saved.
+ */
 export function readBrandVoice(settings: Record<string, unknown>): BrandVoice {
-  const raw = (settings.brandVoice ?? {}) as Record<string, unknown>;
+  const kit = (settings.brandKit ?? {}) as Record<string, unknown>;
+  const raw = ((kit.voice as Record<string, unknown> | undefined) ?? settings.brandVoice ?? {}) as Record<string, unknown>;
   return {
     tone: typeof raw.tone === "string" ? raw.tone.trim() : "",
     audience: typeof raw.audience === "string" ? raw.audience.trim() : "",

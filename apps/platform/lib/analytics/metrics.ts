@@ -4,7 +4,7 @@
  * definition and freshness next to the number. Bump DEFINITIONS_VERSION
  * whenever a formula or mapping changes so exports can be compared.
  */
-import type { CanonicalMetric } from "@make-it-social/providers";
+import type { CanonicalMetric } from "@rocketease/providers";
 
 export const DEFINITIONS_VERSION = "2026.08.2";
 

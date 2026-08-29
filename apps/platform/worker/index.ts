@@ -9,6 +9,7 @@ import "./env";
 import { getBoss, stopBoss } from "@/lib/jobs/boss";
 import { relayOutbox, pruneOutbox } from "@/lib/jobs/outbox";
 import { log } from "@/lib/log";
+import { ensureStorage } from "@/lib/storage";
 import { withSpan } from "@/lib/otel";
 import type { JobPayloads } from "@/lib/jobs/queues";
 import { handlers } from "./handlers";
@@ -20,6 +21,11 @@ import { enqueueDueReports } from "./handlers/report-run";
 import { scheduleNightly, scheduleAutomationSweep, scheduleRecycling } from "./ticks";
 
 async function main() {
+  // Local dev only (STORAGE_AUTO_CREATE_BUCKET): make sure the media bucket is
+  // there before any asset job runs. It lives here rather than in the Next
+  // instrumentation hook because that hook is also compiled for the edge
+  // runtime, where `node:crypto` cannot be bundled.
+  await ensureStorage();
   const boss = await getBoss();
 
   // Outbox relay: a singleton job re-scheduled every 5s, plus a cron fallback.

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { PublishFormat } from "@make-it-social/providers";
+import type { PublishFormat } from "@rocketease/providers";
 import { db } from "@/db";
 import { asset } from "@/db/schema/assets";
 import { SYNTHETIC_FLAGS, contentItem, postVariant, type SyntheticMedia } from "@/db/schema/content";

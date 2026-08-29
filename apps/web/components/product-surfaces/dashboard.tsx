@@ -1,4 +1,4 @@
-import { PLATFORM_NAMES, PlatformIcon, type Platform } from "@make-it-social/ui/icons";
+import { PLATFORM_NAMES, PlatformIcon, type Platform } from "@rocketease/ui/icons";
 import { AppSidebar } from "./sidebar";
 
 /* Illustrative numbers only — never presented as a customer claim. */

@@ -32,6 +32,8 @@ export type JobPayloads = {
   "ads.sync": { adAccountId: string; since?: string };
   /** Create remote paid objects for a confirmed promotion; reconciles before any retry (CAM-002). */
   "promotion.execute": { promotionId: string };
+  /** Erase every connection a provider identity owns, after a verified deauthorize / data-deletion callback. */
+  "provider.deletion": { requestId: string };
   /** Nightly (or on-demand) recommendation + best-time pass; one workspace or all. */
   "recommendations.compute": { workspaceId?: string };
   /** Evaluate automation rules for one trigger event (lib/automations). */
@@ -71,6 +73,8 @@ export const QUEUES: Record<JobName, Omit<Queue, "name">> = {
   "ads.sync": { policy: "singleton", retryLimit: 3, retryDelay: 60, retryBackoff: true, expireInSeconds: 1800 },
   // Spend mutations reconcile before any retry; the handler decides whether a retry is safe.
   "promotion.execute": { policy: "stately", retryLimit: 3, retryDelay: 30, retryBackoff: true, expireInSeconds: 600 },
+  // Idempotent by design: a second run finds nothing live and completes cleanly.
+  "provider.deletion": { ...STANDARD, retryLimit: 6, retryDelay: 30, retryBackoff: true, expireInSeconds: 900 },
   "recommendations.compute": { policy: "singleton", retryLimit: 1, retryDelay: 300, expireInSeconds: 1800 },
   "automation.evaluate": { ...STANDARD, retryLimit: 3, expireInSeconds: 300 },
   "automation.apply": { ...STANDARD, retryLimit: 3, expireInSeconds: 300 },

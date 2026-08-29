@@ -1,6 +1,6 @@
 "use client";
 
-import type { ValidationIssue } from "@make-it-social/providers";
+import type { ValidationIssue } from "@rocketease/providers";
 import { Input, Label, Switch, Textarea } from "@wizeworks/silicaui-react";
 import type { ComposerChannel, Override } from "./types";
 

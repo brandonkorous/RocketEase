@@ -24,7 +24,7 @@ export class ApiError extends Error {
   }
 }
 
-export const unauthorized = (m: string) => new ApiError(401, "unauthorized", m, { "www-authenticate": 'Bearer realm="mis"' });
+export const unauthorized = (m: string) => new ApiError(401, "unauthorized", m, { "www-authenticate": 'Bearer realm="rke"' });
 export const forbidden = (m: string) => new ApiError(403, "forbidden", m);
 export const notFound = (m: string) => new ApiError(404, "not_found", m);
 export const invalid = (m: string) => new ApiError(400, "invalid_request", m);

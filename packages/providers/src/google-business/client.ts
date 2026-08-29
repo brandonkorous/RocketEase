@@ -37,7 +37,7 @@ const REASONS: Record<string, string> = {
   altText: "Replies carry no media, so there is no alt text.",
   insights: "Location performance lives in the separate Business Profile Performance API, which this adapter does not integrate.",
   ads: "Google Ads is a separate product this adapter does not integrate.",
-  disclosure: "Nothing is published to a location from here, so there is nothing to disclose. A review reply is a human answer that Make It Social never drafts or sends on its own.",
+  disclosure: "Nothing is published to a location from here, so there is nothing to disclose. A review reply is a human answer that RocketEase never drafts or sends on its own.",
   // If a publish path is ever added here, flip `disclosure` to "caption" with `formats`.
   webhooks: "Google publishes review notifications through a Pub/Sub topic that must be provisioned per project; this adapter polls instead.",
   quota: "Business Profile API access is granted per Google Cloud project through an application form. An unapproved project has a quota of 0 requests a minute and every call fails.",

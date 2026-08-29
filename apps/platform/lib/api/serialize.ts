@@ -5,7 +5,7 @@
  */
 import type { Channel } from "@/db/schema/connections";
 import type { ContentItem, PostVariant } from "@/db/schema/content";
-import type { ValidationIssue } from "@make-it-social/providers";
+import type { ValidationIssue } from "@rocketease/providers";
 import { channelCapabilityItems } from "@/lib/capabilities";
 import type { PublishReceipt } from "@/lib/publishing/receipt";
 

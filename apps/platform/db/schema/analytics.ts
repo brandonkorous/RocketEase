@@ -5,7 +5,7 @@
  */
 import { sql } from "drizzle-orm";
 import { boolean, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
-import type { CanonicalMetric } from "@make-it-social/providers";
+import type { CanonicalMetric } from "@rocketease/providers";
 import { organization, user } from "./auth";
 import { workspace } from "./app";
 import { channel } from "./connections";

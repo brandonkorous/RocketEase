@@ -1,5 +1,5 @@
 import { and, eq, gte, inArray, lte, or, sql, type SQL } from "drizzle-orm";
-import type { CanonicalMetric } from "@make-it-social/providers";
+import type { CanonicalMetric } from "@rocketease/providers";
 import { db } from "@/db";
 import { metricFact } from "@/db/schema/analytics";
 import { channel } from "@/db/schema/connections";

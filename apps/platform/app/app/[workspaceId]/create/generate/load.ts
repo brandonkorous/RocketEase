@@ -5,6 +5,7 @@ import { aiConfigured } from "@/lib/ai/client";
 import { adCapable } from "@/lib/ai/generator/ads";
 import { listBriefs } from "@/lib/ai/generator/briefs";
 import { imagesConfigured } from "@/lib/ai/generator/images";
+import { loadBrandKit } from "@/lib/brand/store";
 import { publishableChannels } from "@/lib/content";
 import { hasCapability, type WorkspaceContext } from "@/lib/session";
 
@@ -12,7 +13,7 @@ export type GeneratorLoad =
   | { kind: "no_capability" }
   | { kind: "no_channels" }
   | { kind: "unconfigured" }
-  | { kind: "ready"; channels: GeneratorChannel[]; savedBriefs: SavedBriefView[]; imagesEnabled: boolean };
+  | { kind: "ready"; channels: GeneratorChannel[]; savedBriefs: SavedBriefView[]; imagesEnabled: boolean; brand: { configured: boolean; styled: boolean } };
 
 export async function loadGenerator(ctx: WorkspaceContext): Promise<GeneratorLoad> {
   const workspaceId = ctx.workspace.id;
@@ -33,5 +34,10 @@ export async function loadGenerator(ctx: WorkspaceContext): Promise<GeneratorLoa
     hashtagsMax: c.capabilities.limits.hashtagsMax ?? null,
   }));
   const savedBriefs = (await listBriefs(workspaceId)).map((b) => ({ id: b.id, name: b.name, brief: b.brief }));
-  return { kind: "ready", channels, savedBriefs, imagesEnabled: imagesConfigured() };
+  const kit = await loadBrandKit(ctx.workspace.id);
+  const brand = {
+    configured: Boolean(kit.voice.tone || kit.identity.oneLiner || kit.messaging.valueProps.length),
+    styled: Boolean(kit.visual.imagery.style || kit.visual.palette.length),
+  };
+  return { kind: "ready", channels, savedBriefs, imagesEnabled: imagesConfigured(), brand };
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { buttonClasses } from "@wizeworks/silicaui-react/server";
+import { brandPath } from "@/lib/brand/sections";
 import { workspacePath } from "@/lib/nav";
 import { AppPage, PageHeader } from "../page-frame";
 import { AdPanel } from "./ad-panel";
@@ -17,7 +18,7 @@ export type { GeneratorProps, GeneratorChannel, SavedBriefView } from "./types";
  * here is a draft — the only way out of this screen is "Use in Create", which
  * makes an ordinary draft a person still edits, approves, and sends.
  */
-export function GeneratorScreen({ workspaceId, channels, savedBriefs, imagesEnabled }: GeneratorProps) {
+export function GeneratorScreen({ workspaceId, channels, savedBriefs, imagesEnabled, brand }: GeneratorProps) {
   const api = useGenerator(workspaceId, channels);
   const byChannel = channels.map((c) => ({ channel: c, concepts: api.concepts.filter((x) => x.channelId === c.id) })).filter((g) => g.concepts.length > 0);
 
@@ -28,6 +29,7 @@ export function GeneratorScreen({ workspaceId, channels, savedBriefs, imagesEnab
         description="Describe the post you want. You get concepts to edit, not posts to publish."
         actions={<Link href={workspacePath(workspaceId, "create")} className={buttonClasses({ color: "neutral", variant: "outline" })}>Open Create</Link>}
       />
+      <BrandLine workspaceId={workspaceId} brand={brand} />
       <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] xl:items-start">
         <BriefForm api={api} channels={channels} savedBriefs={savedBriefs} />
         <div className="flex flex-col gap-5">
@@ -67,5 +69,17 @@ function Placeholder({ ran, running }: { ran: boolean; running: boolean }) {
       <p className="text-base font-semibold">{title}</p>
       <p className="mx-auto mt-1 max-w-110 text-sm text-secondary">{body}</p>
     </div>
+  );
+}
+
+/** Says plainly what the brand kit is contributing, and links to it either way. */
+function BrandLine({ workspaceId, brand }: { workspaceId: string; brand: GeneratorProps["brand"] }) {
+  const text = brand.configured
+    ? `Concepts follow this workspace's brand${brand.styled ? ", and generated images follow its visual direction" : ". No visual direction is set, so generated images use no house style"}.`
+    : "This workspace has no brand set up yet, so concepts are written from the brief alone.";
+  return (
+    <p className="mt-3 text-sm text-secondary">
+      {text} <Link href={brandPath(workspaceId)} className="font-medium underline underline-offset-2">Brand</Link>
+    </p>
   );
 }

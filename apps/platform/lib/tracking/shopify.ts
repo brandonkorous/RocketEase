@@ -12,7 +12,7 @@
  * UNTESTED AGAINST A LIVE SHOP: no Shopify app credentials exist yet.
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { categoryFromStatus, httpJson, ProviderError } from "@make-it-social/providers";
+import { categoryFromStatus, httpJson, ProviderError } from "@rocketease/providers";
 import { cleanDimension, dimensionHash, isDay, type ConversionRow } from "./normalize";
 import type { ConversionDimension } from "@/db/schema/tracking";
 
@@ -76,7 +76,7 @@ export async function shopifyGraphql<T>(shop: string, token: string, query: stri
   return res.body.data;
 }
 
-export const ORDERS_QUERY = `query MisOrders($cursor: String, $q: String!) {
+export const ORDERS_QUERY = `query RkeOrders($cursor: String, $q: String!) {
   orders(first: 100, after: $cursor, query: $q, sortKey: CREATED_AT) {
     pageInfo { hasNextPage endCursor }
     nodes {

@@ -1,11 +1,11 @@
 /*
  * Capability presentation: labels and orderings shared by the public
  * capability page and the in-app "why not" lists. The truth itself always
- * comes from @make-it-social/providers (CAPABILITY_CATALOG for a network,
+ * comes from @rocketease/providers (CAPABILITY_CATALOG for a network,
  * the channel's own stored capabilities for a connected account).
  */
-import type { Capabilities, CapabilityPath } from "@make-it-social/providers/client";
-import { capabilitySupported, reasonFor } from "@make-it-social/providers/client";
+import type { Capabilities, CapabilityPath } from "@rocketease/providers/client";
+import { capabilitySupported, reasonFor } from "@rocketease/providers/client";
 import type { CapabilityItem } from "@/components/shared/why-not";
 
 export const CAPABILITY_COLUMNS: { path: CapabilityPath; label: string; group: string }[] = [

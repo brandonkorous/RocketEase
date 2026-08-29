@@ -2,7 +2,7 @@
 
 ## Direction
 
-Make It Social owns **black, white, and structure**. Social networks bring color. The application uses a black sidebar and white workspace so navigation feels like a stable product frame and the work remains visually dominant.
+RocketEase owns **black, white, and structure**. Social networks bring color. The application uses a black sidebar and white workspace so navigation feels like a stable product frame and the work remains visually dominant.
 
 Do not use gradients, eyebrow headings, editorial compositions, decorative giant type, glass effects, neon, arbitrary accent colors, generic SaaS illustration, excessive card grids, or decoration without product meaning.
 

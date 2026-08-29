@@ -18,7 +18,7 @@ import { DEFAULT_SCOPES, googleBusinessOAuth } from "./oauth";
 type GbpAccount = { name?: string; accountName?: string; type?: string; verificationState?: string };
 type GbpLocation = { name?: string; title?: string; storeCode?: string; storefrontAddress?: { locality?: string; administrativeArea?: string } };
 
-const NO_PUBLISH = "Make It Social does not publish to Google Business Profile; a location is connected for reviews only.";
+const NO_PUBLISH = "RocketEase does not publish to Google Business Profile; a location is connected for reviews only.";
 
 async function listAccounts(cred: Credential): Promise<GbpAccount[]> {
   const res = await gbp<{ accounts?: GbpAccount[] }>("/accounts", cred.accessToken, { base: ACCOUNTS, query: { pageSize: "100" } });

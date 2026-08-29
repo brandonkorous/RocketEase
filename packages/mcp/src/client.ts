@@ -1,15 +1,15 @@
 /*
- * Thin REST client for the Make It Social public API. Every call carries the
+ * Thin REST client for the RocketEase public API. Every call carries the
  * workspace-scoped key; the server decides what that key may do.
  */
 export type ClientOptions = { baseUrl: string; apiKey: string };
 
-export class MisApiError extends Error {
+export class RkeApiError extends Error {
   readonly code: string;
   readonly status: number;
   constructor(status: number, code: string, message: string) {
     super(message);
-    this.name = "MisApiError";
+    this.name = "RkeApiError";
     this.status = status;
     this.code = code;
   }
@@ -23,7 +23,7 @@ type RequestInput = {
   idempotencyKey?: string;
 };
 
-export class MisClient {
+export class RkeClient {
   private readonly baseUrl: string;
   private readonly apiKey: string;
 
@@ -44,7 +44,7 @@ export class MisClient {
     const parsed: unknown = text ? safeJson(text) : null;
     if (!res.ok) {
       const err = (parsed as { error?: { code?: string; message?: string } } | null)?.error;
-      throw new MisApiError(res.status, err?.code ?? "http_error", err?.message ?? `${res.status} ${res.statusText}`);
+      throw new RkeApiError(res.status, err?.code ?? "http_error", err?.message ?? `${res.status} ${res.statusText}`);
     }
     return parsed as T;
   }
@@ -58,9 +58,9 @@ function safeJson(text: string): unknown {
   }
 }
 
-/** Client from the environment: MIS_API_URL (default localhost) + MIS_API_KEY. */
-export function clientFromEnv(env: NodeJS.ProcessEnv = process.env): MisClient {
-  const apiKey = env.MIS_API_KEY;
-  if (!apiKey) throw new Error("MIS_API_KEY is not set. Create a key in Make It Social → Settings → API keys.");
-  return new MisClient({ baseUrl: env.MIS_API_URL ?? "http://localhost:5001/api/v1", apiKey });
+/** Client from the environment: RKE_API_URL (default localhost) + RKE_API_KEY. */
+export function clientFromEnv(env: NodeJS.ProcessEnv = process.env): RkeClient {
+  const apiKey = env.RKE_API_KEY;
+  if (!apiKey) throw new Error("RKE_API_KEY is not set. Create a key in RocketEase → Settings → API keys.");
+  return new RkeClient({ baseUrl: env.RKE_API_URL ?? "http://localhost:5001/api/v1", apiKey });
 }

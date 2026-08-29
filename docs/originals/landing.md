@@ -1,15 +1,15 @@
-# Make It Social — Landing Page Design & Implementation Specification
+# RocketEase — Landing Page Design & Implementation Specification
 
 **Version:** 1.0  
 **Status:** Canonical landing-page direction  
-**Domain:** `make-it-social.com`  
-**Primary positioning:** **Everything social. One workflow.**
+**Domain:** `rocketease.com`  
+**Primary positioning:** **Effortless Launch. Better by Design.**
 
 ---
 
 # 1. Brand Idea
 
-Make It Social is the operating layer behind a business's social presence.
+RocketEase is the operating layer behind a business's social presence.
 
 The social platforms already own strong visual identities:
 
@@ -22,7 +22,7 @@ The social platforms already own strong visual identities:
 - X
 - future networks
 
-Make It Social should not compete with those identities.
+RocketEase should not compete with those identities.
 
 The visual system should therefore be primarily:
 
@@ -30,13 +30,13 @@ The visual system should therefore be primarily:
 
 Platform colors only appear where they communicate platform identity, data, or state.
 
-The result should make Make It Social feel like the neutral system connecting everything together.
+The result should make RocketEase feel like the neutral system connecting everything together.
 
 ---
 
 # 2. Core Brand Principles
 
-## Everything social. One workflow.
+## Effortless Launch. Better by Design.
 
 The product connects the complete lifecycle:
 
@@ -44,7 +44,7 @@ The product connects the complete lifecycle:
 
 Future product capabilities such as paid media, CRM context, attribution, campaign management, and automation should fit naturally within this model rather than create a collection of disconnected tools.
 
-## Make It Social provides the structure
+## RocketEase provides the structure
 
 The interface should remain neutral.
 
@@ -56,7 +56,7 @@ Examples:
 - LinkedIn icon uses LinkedIn blue.
 - YouTube icon uses YouTube red.
 - Analytics series may use corresponding network colors.
-- Make It Social navigation, controls, cards, typography, and surfaces remain monochrome.
+- RocketEase navigation, controls, cards, typography, and surfaces remain monochrome.
 
 ## Product before decoration
 
@@ -119,14 +119,15 @@ The site should look designed, not generated.
 
 ## Primary Icon
 
-Use the approved **tuned-proportions Make It Social conversation mark**.
+Use the approved **RocketEase rocket mark** (`images/icon.png`; vector source in
+`packages/ui/src/icons.tsx` as `Mark`).
 
 Characteristics:
 
-- thick rounded outer conversation shape
-- slightly wide horizontal proportions
-- integrated lower speech tail
-- two circular conversation dots
+- a single solid form rising left-to-right on a consistent diagonal
+- a notched hook cut into the lower left, reading as both rocket fin and motion
+- a detached ellipsis-like shard trailing below, echoing the same diagonal
+- softly rounded corners on the outer extremities; the inner notch stays crisp
 - solid black canonical version
 - solid white reversed version
 
@@ -142,17 +143,22 @@ No:
 
 Preferred:
 
-`[icon] Make It Social`
+`[icon] RocketEase`
 
-Wordmark weight should visually match the confidence of the icon without overpowering it.
+The wordmark is set in two weights: **Rocket** carries the confidence of the icon,
+**Ease** drops back so the name reads as one word rather than two.
 
-Suggested weight:
+Suggested weights:
 
-**700–750**
+- `Rocket` — **700–750**
+- `Ease` — **400**
+
+Never set the whole wordmark at one weight, and never insert a space, hyphen, or
+capital-letter break other than the internal `E`.
 
 ## Clear Space
 
-Maintain at least the equivalent of one conversation-dot diameter around the icon.
+Maintain at least the equivalent of the trailing shard's width around the icon.
 
 For the horizontal lockup, maintain at least that same unit around the complete mark.
 
@@ -172,20 +178,20 @@ Icon:
 ## Core
 
 ```css
---mis-black: #0a0a0a;
---mis-white: #ffffff;
+--rke-black: #0a0a0a;
+--rke-white: #ffffff;
 
---mis-gray-950: #111111;
---mis-gray-900: #181818;
---mis-gray-800: #262626;
---mis-gray-700: #404040;
---mis-gray-600: #595959;
---mis-gray-500: #737373;
---mis-gray-400: #a3a3a3;
---mis-gray-300: #d4d4d4;
---mis-gray-200: #e5e5e5;
---mis-gray-100: #f5f5f5;
---mis-gray-50: #fafafa;
+--rke-gray-950: #111111;
+--rke-gray-900: #181818;
+--rke-gray-800: #262626;
+--rke-gray-700: #404040;
+--rke-gray-600: #595959;
+--rke-gray-500: #737373;
+--rke-gray-400: #a3a3a3;
+--rke-gray-300: #d4d4d4;
+--rke-gray-200: #e5e5e5;
+--rke-gray-100: #f5f5f5;
+--rke-gray-50: #fafafa;
 ```
 
 ## Default Page
@@ -232,7 +238,7 @@ Examples:
 - inbox source
 - content previews
 
-Never use Instagram pink, Facebook blue, TikTok cyan, etc. as general Make It Social branding.
+Never use Instagram pink, Facebook blue, TikTok cyan, etc. as general RocketEase branding.
 
 ---
 
@@ -271,11 +277,11 @@ font-weight: 700
 
 The phrase should visually break:
 
-**Everything**  
-**social.**  
-One workflow.
+**Effortless**  
+**Launch.**  
+Better by Design.
 
-The first statement may use bold weight while **One workflow.** may use a slightly lighter weight.
+The first statement may use bold weight while **Better by Design.** may use a slightly lighter weight.
 
 ### H2
 
@@ -519,7 +525,7 @@ Container:
 
 Left:
 
-**Make It Social logo**
+**RocketEase logo**
 
 Center/right navigation:
 
@@ -594,9 +600,9 @@ Hero bottom spacing:
 
 Canonical:
 
-# Everything social.
+# Effortless Launch.
 
-# One workflow.
+# Better by Design.
 
 Do not place a label above it.
 
@@ -721,7 +727,7 @@ Logo treatment:
 
 Supporting idea:
 
-> Make It Social brings your entire social marketing workflow together so nothing falls through the cracks.
+> RocketEase brings your entire social marketing workflow together so nothing falls through the cracks.
 
 ## Four Stages
 
@@ -949,11 +955,11 @@ Desktop composition:
 
 Left visual:
 
-Make It Social icon surrounded by connected network icons.
+RocketEase icon surrounded by connected network icons.
 
 Right:
 
-# Ready to make your marketing social?
+# Ready to make launching effortless?
 
 Supporting copy:
 
@@ -969,7 +975,7 @@ Actions:
 
 The network icons provide the color.
 
-The Make It Social icon remains black and white.
+The RocketEase icon remains black and white.
 
 This visually communicates the entire product strategy.
 
@@ -997,7 +1003,7 @@ Border:
 
 Suggested columns:
 
-## Make It Social
+## RocketEase
 
 Short product statement.
 
@@ -1226,7 +1232,7 @@ chart line may draw once.
 
 Final CTA:
 
-network nodes may subtly connect to the Make It Social mark.
+network nodes may subtly connect to the RocketEase mark.
 
 ## Timing
 
@@ -1274,7 +1280,7 @@ Carry into the application:
 - subtle gray borders
 - monochrome controls
 - platform color only for platform context
-- the Make It Social conversation icon
+- the RocketEase conversation icon
 - restrained radius
 - strong typography
 
@@ -1404,7 +1410,7 @@ Simple and restrained.
 
 ## 02 — Hero
 
-**Everything social. One workflow.**
+**Effortless Launch. Better by Design.**
 
 Full product demonstration.
 
@@ -1436,7 +1442,7 @@ Human credibility.
 
 ## 08 — Final CTA
 
-**Ready to make your marketing social?**
+**Ready to make launching effortless?**
 
 ## 09 — Footer
 
@@ -1488,7 +1494,7 @@ Visitors should gradually understand the system without needing to read a comple
 - create decorative AI imagery
 - overuse shadows
 - over-round everything
-- introduce a Make It Social accent color merely because SaaS products traditionally have one
+- introduce a RocketEase accent color merely because SaaS products traditionally have one
 - compete visually with the social platforms
 
 ---
@@ -1497,7 +1503,7 @@ Visitors should gradually understand the system without needing to read a comple
 
 Every major design choice should answer:
 
-> **Does this make Make It Social feel like the calm operating layer behind every social platform?**
+> **Does this make RocketEase feel like the calm operating layer behind every social platform?**
 
 If the design begins competing with the networks, adding unnecessary decoration, or looking more like a marketing template than a product, simplify it.
 
@@ -1507,9 +1513,9 @@ If the design begins competing with the networks, adding unnecessary decoration,
 
 The core narrative should remain:
 
-# Everything social.
+# Effortless Launch.
 
-# One workflow.
+# Better by Design.
 
 **Plan.**
 
@@ -1527,17 +1533,17 @@ Bring conversations together.
 
 Understand what works and do more of it.
 
-Make It Social should feel less like another social media tool and more like **the place where social marketing runs.**
+RocketEase should feel less like another social media tool and more like **the place where social marketing runs.**
 
 ---
 
 # 36. Final Production Principle
 
-Make It Social does not need to visually overpower Instagram, Facebook, TikTok, LinkedIn, YouTube, or any other network.
+RocketEase does not need to visually overpower Instagram, Facebook, TikTok, LinkedIn, YouTube, or any other network.
 
 It exists to make all of them manageable.
 
 The landing page should communicate that before the visitor finishes the first screen:
 
 > **All the noise belongs to social media.  
-> Make It Social brings the order.**
+> RocketEase brings the order.**

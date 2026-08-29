@@ -1,4 +1,4 @@
-# Make It Social — Implementation Plan
+# RocketEase — Implementation Plan
 
 **Status:** living document. Sequenced from `docs/originals/roadmap.md` and the P0/P1 IDs in `docs/originals/requirements.md`. Update this file when scope or order changes; it is the source of truth for "what's next".
 
@@ -175,11 +175,75 @@ Positioning: **the honest social OS** — never a duplicate or phantom failure, 
 
 ---
 
+## Milestone 10 — Brand hub (started 2026-08-28)
+
+Brand was a single voice form at `settings/brand`. It is the input every generated post, ad, and image reads from, so it became a first-level area at `/app/:workspaceId/brand` (navigation.md and pages.md updated; `settings/brand` redirects).
+
+| # | Item | Status |
+|---|---|---|
+| 10.1 | Brand kit model — `workspace.settings.brandKit`, tolerant read, per-section zod, audited section saves (`lib/brand`, `lib/actions/brand`) | ✅ |
+| 10.2 | Identity, voice (+ banned words, emoji/spelling/CTA rules), messaging with dated offers, audiences, compliance rules, channel presence | ✅ |
+| 10.3 | Visual identity — 8 logo variants via presigned upload, palette, typography with licence note, imagery direction | ✅ |
+| 10.4 | Brand assets — library assets flagged as brand assets (rights/scan unchanged) plus external media references | ✅ |
+| 10.5 | Wiring — kit in every copy prompt (concepts, ads, captions, repurpose, inbox replies) and appended to every image prompt; expired offers filtered against the workspace timezone | ✅ |
+| 10.6 | Overview as a card grid (one card per section, showing what is actually in it), completeness meter, stale-offer/licence warnings, onboarding step, library brand-kit panel. Card empty states name what each gap costs. Cards follow `components/overview-card.tsx`, shared with Home | ✅ |
+
+Not built: brand-kit export for clients, copy-brand-from-another-workspace, a pre-publish lint that blocks on banned words (rules reach the model, not the composer's publish check).
+
+---
+
+## Milestone 11 — Public site & legal (started 2026-08-29)
+
+`apps/web` was a single landing page whose footer linked to 20 routes that all 404'd, and the missing
+privacy/terms pages were a hard blocker on every provider app review (Meta needs a Privacy Policy URL
+to leave dev mode; TikTok needs domain-verified ToS + Privacy URLs to submit at all).
+
+| # | Item | Status |
+|---|---|---|
+| 11.1 | Site foundation — `lib/site.ts` (entity, contacts, URLs), `lib/nav.ts`, `PageShell`/`PageHeader`, dropdown nav + mobile nav, 5-column footer with a Legal column, `not-found`, `sitemap.ts`, `robots.ts` | ✅ |
+| 11.2 | Legal document system — `content/legal/*` as typed block data (`Block`/`LegalSection`/`LegalDoc`), rendered by `components/legal/*` with a table of contents; `/legal` index | ✅ |
+| 11.3 | 12 legal documents — privacy, terms, acceptable use, DPA, subprocessors, copyright/DMCA, cookies, data deletion, security, subscription & refunds, accessibility, your privacy choices | ✅ |
+| 11.4 | Marketing pages — features, integrations (honest per-provider status), pricing (prices from `NEXT_PUBLIC_PRICE_*`, never in the repo), 4 solutions + index, about, contact, demo, developers, help, status, changelog, roadmap; honest empty states for blog/guides/templates/careers/partners | ✅ |
+| 11.5 | **Provider deauthorize + data-deletion endpoints** — `parseSignedRequest` on the adapter contract (Meta HMAC-SHA256 impl, tested), `provider_deletion_request` table (migration 0016), `provider.deletion` queue + worker handler, `POST /api/connect/[provider]/{deauthorize,data-deletion}` returning Meta's `{url, confirmation_code}`, public `/data-deletion/[code]` status page | ✅ |
+
+Still to do before provider submission: DNS for `app.rocketease.com`; TikTok URL domain verification;
+set `NEXT_PUBLIC_PRICE_MONTHLY`/`NEXT_PUBLIC_PRICE_YEARLY` as Docker build args; register the DMCA
+designated agent with the U.S. Copyright Office (renewable every 3 years — the policy page alone does
+not confer safe harbour); paste the Meta callback URLs into the app dashboard.
+
+---
+
 ## Continuous tracks (every milestone)
 
 Accessibility review (WCAG 2.2 AA), threat model updates, privacy/retention, performance budgets (P75 nav < 2.5s), i18n-ready strings, connector maintenance, docs/ADRs.
 
 ---
+
+
+### Deferred — revisit before launch
+
+- **Transactional email (Mailgun) — deferred 2026-08-29.** `SMTP-URL` was moved from the deploy
+  job's `required` list to `optional` (`.github/workflows/ci.yml`, "Read secrets from Key Vault")
+  so the platform could ship before a mail provider existed.
+
+  Nothing fails at boot: `requireEmailVerification` is false, so signup and sign-in are unaffected,
+  and `lib/mail.ts` logs each message instead of sending it. What silently does **not** work is every
+  transactional mail — verification, **password reset**, invitations, approval requests and scheduled
+  reports. Password reset is the one that strands a real user with no way back into their account, so
+  this must not reach a paying customer. Every deploy run carries a `::warning::` until it is set.
+
+  **To close it:** add `rocketease.com` as a Mailgun sending domain — it must match `MAIL_FROM`,
+  pinned to `RocketEase <hello@rocketease.com>` in the production overlay. Publish Mailgun's SPF and
+  DKIM records in Cloudflare, **merging** `include:mailgun.org` into any existing SPF record rather
+  than adding a second one (two SPF records is a permerror that fails all mail). Then:
+
+  ```bash
+  az keyvault secret set --vault-name kv-rocketease-prod-cus --name SMTP-URL     --value 'smtp://postmaster%40rocketease.com:PASSWORD@smtp.mailgun.org:587'
+  ```
+
+  Percent-encode the `@` in the username as `%40` — it is a URL, and an unencoded `@` makes
+  nodemailer parse the host wrong. Finally move `SMTP_URL` back to the `required` list so a future
+  deploy cannot silently lose it.
 
 ## Decisions to make before the milestone that needs them
 
@@ -209,7 +273,7 @@ Four agent-run streams with disjoint file ownership; the lead integrates, genera
 M0–M6 are built and verified against the mock provider. What remains before a real launch:
 
 1. **Credentials & app review** — Meta (Facebook/Instagram + Marketing API), LinkedIn Community Management (partner-gated), TikTok Business. Every real adapter is written but untested live; `packages/providers/README.md` lists scopes and prerequisites.
-2. **Deploy** — containers exist (`Dockerfile`, `Dockerfile.worker`, `deploy/k8s`); wire into the sparx.works Terraform / AKS cluster (needs the Terraform repo path), Key Vault for `TOKEN_MASTER_KEY`, Azure Blob (S3 API) for storage, OTLP endpoint.
+2. **Deploy** — ✅ infrastructure applied 2026-08-29 (`deploy/README.md`): own Postgres 18 flexible server, Key Vault, storage account and CI identity on the sparx AKS cluster, via `sparx.works/terraform/{envs/azure,bootstrap-azure}/rocketease.tf`. Storage is a native **Azure Blob** driver (`lib/storage/azure.ts`) — Azure has no S3-compatible API, so the old "Azure Blob (S3 API)" note was wrong. Routing is the shared Caddy, not an Ingress. Remaining: set `SMTP-URL` (see below), first push to `main`, make the three GHCR packages public, verify pods, then flip `rocketease_dns_enabled` for the DNS cutover.
 3. ~~Hardening leftovers~~ — ✅ done 2026-08-28: step-up re-auth (password/TOTP, 5-min window) before paid spend, structural comment-reply reconciliation (no text markers), field/asset-anchored approval comments, composer UTM prefill, e2e hardened for dev compile latency (note: `auth` and `inbox` specs still flake under `next dev` when run as a full suite — every step passes in isolation; CI runs the production build).
 4. **M7** — ✅ best-time analysis + explainable recommendations (`lib/recommendations`), ✅ automation rules with approval gates (Settings → Automations), ✅ YouTube/Pinterest/X adapters (untested live; see providers README for tier/quota gates). ✅ conversion tracking sources (GA4 / Shopify / signed webhook — GA4 and Shopify untested live; `docs/tracking.md`). ✅ white-label agency reporting (branded documents, agency branding, `/r/:token` share links, double-opt-in client recipients, agency roll-up). ✅ SSO/SCIM (SCIM curl-proven; IdP untested live; SAML ForceAuthn unavailable upstream). Remaining before launch: provider/IdP/GA4/Shopify credentials, AKS deploy (Terraform path needed), Chromium for PDF reports.
 

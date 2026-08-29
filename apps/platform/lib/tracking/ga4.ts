@@ -12,7 +12,7 @@
  *
  * UNTESTED AGAINST A LIVE PROPERTY: no Google Analytics credentials exist yet.
  */
-import { googleAuthorizeUrl, googleTokenCall, httpJson, mapGoogleError, ProviderError, type GoogleError } from "@make-it-social/providers";
+import { googleAuthorizeUrl, googleTokenCall, httpJson, mapGoogleError, ProviderError, type GoogleError } from "@rocketease/providers";
 import { cleanDimension, fromCompactDay, isSocialRow, meaningful, type ConversionRow } from "./normalize";
 
 export const GA4_DATA = "https://analyticsdata.googleapis.com/v1beta";

@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 /** Recognisable prefix so a leaked token can be spotted in logs and revoked. */
-export const SCIM_TOKEN_PREFIX = "mis_scim_";
+export const SCIM_TOKEN_PREFIX = "rke_scim_";
 
 export const hashScimToken = (raw: string) => createHash("sha256").update(raw, "utf8").digest("hex");
 

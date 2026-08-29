@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button, Textarea } from "@wizeworks/silicaui-react";
-import { SendIcon } from "@make-it-social/ui/icons";
+import { SendIcon } from "@rocketease/ui/icons";
 import { createDraft, saveDraft } from "@/lib/actions/content";
 import { workspacePath } from "@/lib/nav";
 import { useActionFeedback } from "@/lib/use-action-feedback";

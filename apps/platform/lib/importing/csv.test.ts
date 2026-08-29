@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Capabilities } from "@make-it-social/providers";
+import type { Capabilities } from "@rocketease/providers";
 import { checkRow, csvTemplate, MAX_IMPORT_ROWS, parsePostsCsv, resolveChannels, rowBlocked, splitCsv, type ImportChannel } from "./csv";
 
 const caps = (over: Partial<Capabilities["limits"]> = {}): Capabilities =>

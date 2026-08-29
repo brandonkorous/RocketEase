@@ -49,7 +49,7 @@ export async function deliverReport(input: DeliveryInput): Promise<{ delivered: 
     const url = await presignGet(input.objectKey, 7 * 86_400, `${input.run.name}.${input.extension}`);
     await db.transaction(async (tx) => {
       for (const to of recipients.members) {
-        const data = { name: to, title: `Report "${input.run.name}" (${input.period})`, body: "Your scheduled Make It Social report is ready. The download link is valid for 7 days.", url };
+        const data = { name: to, title: `Report "${input.run.name}" (${input.period})`, body: "Your scheduled RocketEase report is ready. The download link is valid for 7 days.", url };
         await emit(tx, "mail.send", { to, template: "notification", data, organizationId: ws.organizationId }, { organizationId: ws.organizationId, workspaceId: ws.id });
       }
     });

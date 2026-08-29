@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import type { Capabilities } from "@make-it-social/providers";
+import type { Capabilities } from "@rocketease/providers";
 import { AI_UNCONFIGURED } from "./messages";
 import { EMPTY_BRAND_VOICE } from "./brand-voice";
 import { captionDrafts, repurposeDrafts, replyDrafts, type DraftChannel, type Generator } from "./drafts";

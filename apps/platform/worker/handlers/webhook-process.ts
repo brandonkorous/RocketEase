@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { WebhookEvent } from "@make-it-social/providers";
+import type { WebhookEvent } from "@rocketease/providers";
 import { db } from "@/db";
 import { webhookReceipt } from "@/db/schema/connections";
 import { ingestItems } from "@/lib/engagement/ingest";

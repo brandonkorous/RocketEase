@@ -14,7 +14,7 @@ import { TEMPLATES, type MailTemplate, type Rendered } from "./mail/templates";
 
 export type { MailTemplate };
 
-const FROM = process.env.MAIL_FROM ?? "Make It Social <no-reply@make-it-social.local>";
+const FROM = process.env.MAIL_FROM ?? "RocketEase <no-reply@rocketease.local>";
 
 export function renderMail<T extends MailTemplate>(template: T, data: Parameters<(typeof TEMPLATES)[T]>[0]): Rendered {
   return (TEMPLATES[template] as (d: unknown) => Rendered)(data);

@@ -12,7 +12,7 @@ export const WORKSPACE_TEMPLATES = {
   }),
   notification: (d: { name: string; title: string; body: string; url: string }) => ({
     subject: d.title,
-    html: layout(d.title, `<p>Hi ${esc(d.name) || "there"},</p><p>${esc(d.body)}</p>${button(d.url, "Open in Make It Social")}`),
+    html: layout(d.title, `<p>Hi ${esc(d.name) || "there"},</p><p>${esc(d.body)}</p>${button(d.url, "Open in RocketEase")}`),
     text: `${d.title}\n\n${d.body}\n\n${d.url}`,
   }),
 } as const;

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonClasses } from "@wizeworks/silicaui-react/server";
-import { Mark } from "@make-it-social/ui/icons";
+import { Mark } from "@rocketease/ui/icons";
+import { Wordmark } from "@rocketease/ui/brand";
 import { db } from "@/db";
 import { getSession } from "@/lib/session";
 import { AcceptInviteButton } from "@/components/accept-invite-button";
@@ -24,9 +25,9 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="page-container flex h-16 items-center">
-        <Link href="/" className="flex items-center gap-2.5 font-bold" aria-label="Make It Social">
+        <Link href="/" className="flex items-center gap-2.5 font-bold" aria-label="RocketEase">
           <Mark size={28} />
-          <span>Make It Social</span>
+          <Wordmark />
         </Link>
       </header>
       <main className="flex flex-1 justify-center px-5 pt-10 pb-16 md:pt-16">

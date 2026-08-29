@@ -1,5 +1,5 @@
 import { buttonClasses } from "@wizeworks/silicaui-react/server";
-import type { Platform } from "@make-it-social/ui/icons";
+import type { Platform } from "@rocketease/ui/icons";
 
 export const primaryCta = buttonClasses({ color: "primary" });
 export const textCta = buttonClasses({ color: "neutral", variant: "ghost" });

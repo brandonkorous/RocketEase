@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
-import { ProviderError } from "@make-it-social/providers";
+import { ProviderError } from "@rocketease/providers";
 import { db } from "@/db";
 import { trackingSource, type TrackingSource } from "@/db/schema/tracking";
 import { audit } from "@/lib/audit";

@@ -16,15 +16,15 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_USER: mis
-          POSTGRES_PASSWORD: mis
-          POSTGRES_DB: make_it_social
+          POSTGRES_USER: rke
+          POSTGRES_PASSWORD: rke
+          POSTGRES_DB: rocketease
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U mis -d make_it_social"
+          --health-cmd "pg_isready -U rke -d rocketease"
           --health-interval 5s --health-timeout 3s --health-retries 10
     env:
-      DATABASE_URL: postgres://mis:mis@localhost:5432/make_it_social
+      DATABASE_URL: postgres://rke:rke@localhost:5432/rocketease
       BETTER_AUTH_SECRET: ci-only-secret-not-for-production-0000
       BETTER_AUTH_URL: http://localhost:5001
       NEXT_PUBLIC_APP_URL: http://localhost:5001
@@ -58,21 +58,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      DATABASE_URL: postgres://mis:mis@localhost:5050/make_it_social
+      DATABASE_URL: postgres://rke:rke@localhost:5050/rocketease
       BETTER_AUTH_SECRET: ci-only-secret-not-for-production-0000
       BETTER_AUTH_URL: http://localhost:5001
       NEXT_PUBLIC_APP_URL: http://localhost:5001
       NEXT_TELEMETRY_DISABLED: 1
       SMTP_URL: smtp://localhost:5025
-      MAIL_FROM: Make It Social <no-reply@make-it-social.local>
+      MAIL_FROM: RocketEase <no-reply@rocketease.local>
       TOKEN_MASTER_KEY: Y2ktb25seS10b2tlbi1tYXN0ZXIta2V5LTMyLWJ5dGVzISE=
       PROVIDERS_ENABLE_MOCK: 1
+      STORAGE_DRIVER: s3
       STORAGE_ENDPOINT: http://localhost:5090
       STORAGE_PUBLIC_ENDPOINT: http://localhost:5090
       STORAGE_REGION: us-east-1
-      STORAGE_BUCKET: mis-media
-      STORAGE_ACCESS_KEY: mis
-      STORAGE_SECRET_KEY: mis-minio-secret
+      STORAGE_BUCKET: rke-media
+      STORAGE_ACCESS_KEY: rke
+      STORAGE_SECRET_KEY: rke-minio-secret
       STORAGE_FORCE_PATH_STYLE: 1
     steps:
       - uses: actions/checkout@v4
@@ -114,6 +115,20 @@ jobs:
             apps/platform/e2e/.results
           retention-days: 7
 
+
+  # ---------------------------------------------------------------------------
+  # Build & push the three cluster images to GHCR.
+  #
+  # NAMES ARE LOWERCASE AND HYPHENATED. A Docker reference may not contain
+  # uppercase, and this repository is `brandonkorous/RocketEase` — so the usual
+  # `ghcr.io/<repository>/web` form is invalid twice: the case, and a slash
+  # addressing a nested package that does not exist. Both fail the pull later
+  # with a 401 that reads like a missing tag.
+  #
+  # The packages must be PUBLIC: the cluster pulls anonymously and no manifest
+  # carries an imagePullSecret. A new GHCR package is private until changed once,
+  # by hand, after the first push (deploy/README.md).
+  # ---------------------------------------------------------------------------
   images:
     needs: [verify, e2e]
     if: github.ref == 'refs/heads/main'
@@ -133,14 +148,349 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      # Swap registry/login for the sparx ACR when wiring into the sparx.works Terraform.
+      # NEXT_PUBLIC_* is inlined into the client bundle HERE, at build time — a
+      # ConfigMap cannot supply it later. The web and worker Dockerfiles ignore
+      # these. They are repository VARIABLES, not secrets: every one is served to
+      # the browser by definition, and treating a public identifier as a secret
+      # only makes a failed build harder to read.
       - uses: docker/build-push-action@v6
         with:
           context: .
           file: ${{ matrix.file }}
           push: true
+          provenance: false
           tags: |
-            ghcr.io/${{ github.repository }}/${{ matrix.name }}:${{ github.sha }}
-            ghcr.io/${{ github.repository }}/${{ matrix.name }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ghcr.io/brandonkorous/rocketease-${{ matrix.name }}:sha-${{ github.sha }}
+            ghcr.io/brandonkorous/rocketease-${{ matrix.name }}:latest
+          build-args: |
+            NEXT_PUBLIC_APP_URL=https://app.rocketease.com
+            NEXT_PUBLIC_AUTH_SOCIAL=${{ vars.NEXT_PUBLIC_AUTH_SOCIAL }}
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+            NEXT_PUBLIC_AI_ENABLED=${{ vars.NEXT_PUBLIC_AI_ENABLED }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }},ignore-error=true
+
+  # ---------------------------------------------------------------------------
+  # Deploy to the shared sparx AKS cluster.
+  #
+  # Ordered infrastructure -> secrets -> data -> containers, so each stage is
+  # already true when the next one needs it.
+  #
+  # Auth is workload identity federation: Azure trusts a GitHub OIDC token whose
+  # subject is `repo:brandonkorous/RocketEase:ref:refs/heads/main`. The AZURE_*
+  # values are repository VARIABLES — public identifiers, not secrets.
+  # ---------------------------------------------------------------------------
+  deploy:
+    needs: [images]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions: { contents: read, id-token: write }
+    concurrency: { group: deploy-rocketease-prod, cancel-in-progress: false }
+    env:
+      RESOURCE_GROUP: rg-sparx-prod-cus
+      CLUSTER: aks-sparx-prod-cus
+      NAMESPACE: rocketease
+      REGISTRY: ghcr.io/brandonkorous
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get cluster credentials
+        run: az aks get-credentials --resource-group "$RESOURCE_GROUP" --name "$CLUSTER" --overwrite-existing
+
+      # -----------------------------------------------------------------------
+      # Key Vault -> Kubernetes Secrets. Vault names allow only alphanumerics and
+      # hyphens, so DATABASE_URL is stored as DATABASE-URL and mapped back here.
+      #
+      # A MISSING REQUIRED SECRET FAILS THE RELEASE. Every name in `required` has
+      # a failure that looks fine from outside: no AZURE_STORAGE_KEY is an upload
+      # that 500s only when a user tries one; no TOKEN_MASTER_KEY is a provider
+      # connect that fails at the moment someone connects an account.
+      #
+      # SMTP_URL IS OPTIONAL, AND THAT IS A DELIBERATE, TEMPORARY CHOICE so the
+      # platform can ship before a mail provider exists. Without it the app still
+      # works: requireEmailVerification is false, so signup and sign-in are
+      # unaffected, and lib/mail.ts logs each message instead of sending it.
+      # What silently does NOT work is every transactional mail — verification,
+      # PASSWORD RESET, invitations, approval requests, scheduled reports.
+      # Password reset is the one that strands a real user, so the absence is
+      # annotated on the run rather than left for a customer to discover.
+      # Tracked in docs/IMPLEMENTATION_PLAN.md — deferred, not forgotten.
+      #
+      # The rest of the optional list is optional by design: each missing entry
+      # costs exactly one feature, and the product says so in the UI.
+      # -----------------------------------------------------------------------
+      - name: Read secrets from Key Vault
+        env:
+          VAULT: ${{ vars.AZURE_KEY_VAULT_NAME }}
+        run: |
+          set -euo pipefail
+          umask 077
+          : > /tmp/platform.env
+
+          required=(
+            DATABASE_URL
+            BETTER_AUTH_SECRET
+            TOKEN_MASTER_KEY
+            AZURE_STORAGE_ACCOUNT
+            AZURE_STORAGE_KEY
+          )
+
+          # DATABASE_ADMIN_URL is read separately below: it belongs to the Jobs
+          # and must never reach the running app, which connects as the
+          # restricted `rocketease_app` role.
+          optional=(
+            # TEMPORARY. Move back to `required` once Mailgun is configured.
+            SMTP_URL
+            GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET
+            APPLE_CLIENT_ID APPLE_CLIENT_SECRET APPLE_APP_BUNDLE_IDENTIFIER
+            META_APP_ID META_APP_SECRET META_WEBHOOK_VERIFY_TOKEN
+            LINKEDIN_CLIENT_ID LINKEDIN_CLIENT_SECRET
+            TIKTOK_CLIENT_KEY TIKTOK_CLIENT_SECRET
+            YOUTUBE_CLIENT_ID YOUTUBE_CLIENT_SECRET
+            PINTEREST_APP_ID PINTEREST_APP_SECRET
+            X_CLIENT_ID X_CLIENT_SECRET
+            GOOGLE_BUSINESS_CLIENT_ID GOOGLE_BUSINESS_CLIENT_SECRET
+            GA4_CLIENT_ID GA4_CLIENT_SECRET
+            SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET
+            ANTHROPIC_API_KEY AI_MODEL AI_PRICES_JSON
+            OPENAI_API_KEY AI_IMAGE_MODEL
+            STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET
+            STRIPE_PRICE_WORKSPACE_MONTHLY STRIPE_PRICE_WORKSPACE_YEARLY
+            STRIPE_METER_AI_CREDITS STRIPE_PRICE_AI_CREDIT_OVERAGE
+            BILLING_INCLUDED_AI_CREDITS BILLING_TRIAL_DAYS
+            CLAMAV_URL REPORT_CHROMIUM_PATH
+            OTEL_EXPORTER_OTLP_ENDPOINT OTEL_SERVICE_NAME
+          )
+
+          missing=()
+          for name in "${required[@]}"; do
+            kv="${name//_/-}"
+            if value=$(az keyvault secret show --vault-name "$VAULT" --name "$kv" --query value -o tsv 2>/dev/null); then
+              printf '%s=%s\n' "$name" "$value" >> /tmp/platform.env
+            else
+              missing+=("$kv")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets in $VAULT: ${missing[*]}"
+            echo "Set one with: az keyvault secret set --vault-name $VAULT --name <NAME> --value 'x'"
+            exit 1
+          fi
+
+          for name in "${optional[@]}"; do
+            kv="${name//_/-}"
+            if value=$(az keyvault secret show --vault-name "$VAULT" --name "$kv" --query value -o tsv 2>/dev/null); then
+              printf '%s=%s\n' "$name" "$value" >> /tmp/platform.env
+              echo "optional secret present: $name"
+            fi
+          done
+
+          # Loud on purpose: a missing mail provider is invisible from outside.
+          if ! grep -q '^SMTP_URL=' /tmp/platform.env; then
+            echo "::warning::SMTP_URL is not set: signup still works, but every transactional email is logged instead of sent, including PASSWORD RESET. Set it with: az keyvault secret set --vault-name $VAULT --name SMTP-URL --value <url>"
+          fi
+
+          # printf %s with command substitution, NOT a plain redirect: `az -o tsv`
+          # appends a newline and `--from-file` stores bytes verbatim, which would
+          # produce a trailing newline after sslmode=require and fail psql with
+          # `invalid sslmode value`. The same bug in the app password is quieter
+          # and worse — the role Job would set a password one byte different from
+          # the one inside DATABASE-URL, and every pod would fail to authenticate
+          # against a value that looks identical in every log and dashboard.
+          printf '%s' "$(az keyvault secret show --vault-name "$VAULT" \
+            --name DATABASE-ADMIN-URL --query value -o tsv)" > /tmp/admin-url
+          printf '%s' "$(az keyvault secret show --vault-name "$VAULT" \
+            --name ROCKETEASE-APP-PASSWORD --query value -o tsv)" > /tmp/app-password
+
+      - name: Apply namespace and secrets
+        run: |
+          set -euo pipefail
+          kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic platform-env -n "$NAMESPACE" \
+            --from-env-file=/tmp/platform.env \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # Migration credentials, deliberately in a SEPARATE Secret that no
+          # Deployment mounts. Handing the owner URL to the app through
+          # platform-env would silently undo the restricted role.
+          kubectl create secret generic db-admin -n "$NAMESPACE" \
+            --from-file=DATABASE_ADMIN_URL=/tmp/admin-url \
+            --from-file=ROCKETEASE_APP_PASSWORD=/tmp/app-password \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          rm -f /tmp/platform.env /tmp/admin-url /tmp/app-password
+
+      # -----------------------------------------------------------------------
+      # The application role.
+      #
+      # Azure runs no `docker/init/*.sql` equivalent, so without this step
+      # `rocketease_app` does not exist and every pod crashloops on what reads
+      # like a wrong password. CREATE-then-ALTER keeps it idempotent.
+      #
+      # THE pgboss SCHEMA IS OWNED BY THE APP ROLE, and that is not a loosening
+      # by accident. pg-boss v12 issues CREATE SCHEMA, CREATE TABLE and
+      # CREATE TABLE ... PARTITION OF at runtime — boss.start() plus one
+      # createQueue per queue, in both the platform and the worker. A role with
+      # no DDL anywhere cannot run the queue at all. Scoping ownership to
+      # `pgboss` keeps the protection that matters: the app still cannot alter or
+      # drop anything drizzle owns in `public`.
+      #
+      # The dollar-quote tag is $do$, not the doubled form: Kubernetes collapses
+      # a doubled dollar to a single one when expanding $(VAR) in args, so a
+      # plain block reaches psql as `DO $` and fails with a syntax error that
+      # reads like a bash quoting bug. A named tag has nothing to rewrite.
+      # -----------------------------------------------------------------------
+      - name: Ensure the application role
+        run: |
+          set -euo pipefail
+          kubectl delete job db-role -n "$NAMESPACE" --ignore-not-found
+          kubectl apply -n "$NAMESPACE" -f - <<'JOBSPEC'
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: db-role
+          spec:
+            backoffLimit: 1
+            ttlSecondsAfterFinished: 600
+            template:
+              spec:
+                restartPolicy: Never
+                enableServiceLinks: false
+                containers:
+                  - name: psql
+                    image: postgres:18-alpine
+                    command: ['sh', '-c']
+                    args:
+                      - |
+                        cat <<'SQL' | psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -v app_password="$ROCKETEASE_APP_PASSWORD"
+                        DO $do$
+                        BEGIN
+                          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'rocketease_app') THEN
+                            CREATE ROLE rocketease_app LOGIN;
+                          END IF;
+                        END
+                        $do$;
+                        ALTER ROLE rocketease_app LOGIN PASSWORD :'app_password';
+                        GRANT CONNECT ON DATABASE rocketease TO rocketease_app;
+                        GRANT USAGE ON SCHEMA public TO rocketease_app;
+                        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO rocketease_app;
+                        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rocketease_app;
+                        -- Tables created by FUTURE migrations, which run as the
+                        -- owner. Without this every new table is invisible to the
+                        -- app until re-granted by hand — a failure that appears
+                        -- one deploy after the migration that caused it.
+                        ALTER DEFAULT PRIVILEGES IN SCHEMA public
+                          GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rocketease_app;
+                        ALTER DEFAULT PRIVILEGES IN SCHEMA public
+                          GRANT USAGE, SELECT ON SEQUENCES TO rocketease_app;
+                        -- pg-boss manages its own schema at runtime; see the note
+                        -- on this step. Owning it is what makes that possible.
+                        CREATE SCHEMA IF NOT EXISTS pgboss AUTHORIZATION rocketease_app;
+                        SQL
+                    env:
+                      - name: DATABASE_ADMIN_URL
+                        valueFrom:
+                          secretKeyRef: { name: db-admin, key: DATABASE_ADMIN_URL }
+                      - name: ROCKETEASE_APP_PASSWORD
+                        valueFrom:
+                          secretKeyRef: { name: db-admin, key: ROCKETEASE_APP_PASSWORD }
+          JOBSPEC
+
+          if ! kubectl wait --for=condition=complete job/db-role -n "$NAMESPACE" --timeout=180s; then
+            echo "::error::Role job did not complete. Logs follow."
+            kubectl logs job/db-role -n "$NAMESPACE" --tail=100 || true
+            exit 1
+          fi
+
+      # -----------------------------------------------------------------------
+      # Migrations, as a Job INSIDE the cluster.
+      #
+      # THIS CANNOT RUN ON THE RUNNER. The Postgres server has
+      # public_network_access_enabled = false and sits in a delegated subnet, so
+      # a GitHub-hosted runner cannot reach it with any connection string or
+      # firewall rule. A pod is inside the VNet.
+      #
+      # Runs the WORKER image at this SHA — it carries drizzle-kit and the
+      # migrations, so the schema applied is by construction the one the code
+      # being deployed expects. backoffLimit 0: the migrator is idempotent, but a
+      # migration that failed part way deserves a human, not a second attempt.
+      # -----------------------------------------------------------------------
+      - name: Migrate the schema
+        run: |
+          set -euo pipefail
+          kubectl delete job db-migrate -n "$NAMESPACE" --ignore-not-found
+          kubectl apply -n "$NAMESPACE" -f - <<JOBSPEC
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: db-migrate
+          spec:
+            backoffLimit: 0
+            ttlSecondsAfterFinished: 600
+            template:
+              spec:
+                restartPolicy: Never
+                enableServiceLinks: false
+                containers:
+                  - name: migrate
+                    image: ${REGISTRY}/rocketease-worker:sha-${GITHUB_SHA}
+                    command: ['pnpm', 'exec', 'drizzle-kit', 'migrate']
+                    env:
+                      # The migrator reads DATABASE_URL, so the OWNER credential
+                      # is injected under that name here and only here. The
+                      # running Deployments get the restricted role under the
+                      # same variable.
+                      - name: DATABASE_URL
+                        valueFrom:
+                          secretKeyRef: { name: db-admin, key: DATABASE_ADMIN_URL }
+          JOBSPEC
+
+          if ! kubectl wait --for=condition=complete job/db-migrate -n "$NAMESPACE" --timeout=600s; then
+            echo "::error::Migration job did not complete. Logs follow."
+            kubectl logs job/db-migrate -n "$NAMESPACE" --tail=200 || true
+            exit 1
+          fi
+          kubectl logs job/db-migrate -n "$NAMESPACE" --tail=50
+
+      # Containers last, so everything above is already true.
+      - name: Pin image tags and apply
+        working-directory: deploy/k8s/overlays/production
+        run: |
+          set -euo pipefail
+          sed -i "s|newTag: latest|newTag: sha-${GITHUB_SHA}|g" kustomization.yaml
+          echo "--- resolved images ---"
+          kubectl kustomize . | grep 'image:'
+          kubectl apply -k .
+
+      - name: Wait for rollout
+        run: |
+          set -euo pipefail
+          failed=0
+          for svc in web platform worker; do
+            if ! kubectl rollout status -n "$NAMESPACE" "deploy/$svc" --timeout=600s; then
+              echo "::error::Rollout of $svc did not complete."
+              kubectl describe deploy "$svc" -n "$NAMESPACE" || true
+              kubectl logs -n "$NAMESPACE" "deploy/$svc" --tail=100 || true
+              failed=1
+            fi
+          done
+          exit "$failed"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### RocketEase deployment"
+            echo
+            echo '```'
+            kubectl -n "$NAMESPACE" get deploy,svc,job 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { ProviderError, type PublishResult } from "@make-it-social/providers";
+import { ProviderError, type PublishResult } from "@rocketease/providers";
 import { db } from "@/db";
 import { postVariant, publishJob, type VariantError } from "@/db/schema/content";
 import { mediaForAssets, resolveVariant, validateVariant } from "@/lib/content";

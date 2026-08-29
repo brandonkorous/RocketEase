@@ -10,7 +10,7 @@ spec:
     spec:
       containers:
         - name: platform
-          image: make-it-social/platform:latest
+          image: rocketease/platform:latest
           ports: [{ containerPort: 3000 }]
           envFrom:
             # DATABASE_URL, BETTER_AUTH_SECRET, SMTP_URL, TOKEN_MASTER_KEY, provider client secrets

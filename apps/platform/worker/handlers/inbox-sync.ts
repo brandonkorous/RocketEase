@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { ProviderError } from "@make-it-social/providers";
+import { ProviderError } from "@rocketease/providers";
 import { db } from "@/db";
 import { syncCursor } from "@/db/schema/connections";
 import { ingestItems, wakeSnoozed } from "@/lib/engagement/ingest";

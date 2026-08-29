@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNotNull, lt } from "drizzle-orm";
-import { ProviderError } from "@make-it-social/providers";
+import { ProviderError } from "@rocketease/providers";
 import { db } from "@/db";
 import { channel, providerConnection } from "@/db/schema/connections";
 import type { JobPayloads } from "@/lib/jobs/queues";

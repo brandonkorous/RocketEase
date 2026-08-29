@@ -102,7 +102,7 @@ function PostConfig({ action, options, onChange }: Props) {
         </span>
       );
     case "campaign.pause_promotion":
-      return <span className="text-xs text-secondary/70">Pauses only ad campaigns Make It Social created for this post.</span>;
+      return <span className="text-xs text-secondary/70">Pauses only ad campaigns RocketEase created for this post.</span>;
     case "campaign.pause_ads":
       return <span className="text-xs text-secondary/70">Always asks for approval before spend stops.</span>;
     default:

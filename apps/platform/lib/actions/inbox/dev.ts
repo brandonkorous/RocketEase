@@ -1,7 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import type { InboxItem, InboxItemKind, WebhookEvent } from "@make-it-social/providers";
+import type { InboxItem, InboxItemKind, WebhookEvent } from "@rocketease/providers";
 import { db } from "@/db";
 import { webhookReceipt } from "@/db/schema/connections";
 import { enqueue } from "@/lib/jobs/boss";

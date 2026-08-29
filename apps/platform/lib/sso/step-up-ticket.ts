@@ -1,7 +1,7 @@
 import { STEP_UP_PURPOSES, type StepUpPurpose } from "@/lib/step-up";
 
 /** Short-lived, httpOnly cookie that ties an IdP round trip to one step-up request. */
-export const STEP_UP_COOKIE = "mis_sso_stepup";
+export const STEP_UP_COOKIE = "rke_sso_stepup";
 export const STEP_UP_TICKET_SECONDS = 600;
 
 /** `forced` records whether the IdP was actually asked to re-prompt (OIDC only). */

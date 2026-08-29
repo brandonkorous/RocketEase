@@ -42,7 +42,7 @@ export async function track(event: ProductEventName, input: TrackInput = {}): Pr
       userId: input.userId ?? null,
       organizationId: input.organizationId ?? null,
       workspaceId: input.workspaceId ?? null,
-      surface: input.surface ?? (process.env.MIS_PROCESS ?? "web"),
+      surface: input.surface ?? (process.env.RKE_PROCESS ?? "web"),
       outcome: input.outcome ?? "ok",
       latencyMs: input.latencyMs ?? null,
       props: sanitize(input.props),

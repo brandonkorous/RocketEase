@@ -5,7 +5,7 @@
  * always AI-assisted; it only becomes synthetic media when an image was
  * generated for it, and only then does any network need a label.
  */
-import type { Capabilities } from "@make-it-social/providers/client";
+import type { Capabilities } from "@rocketease/providers/client";
 import { previewFor } from "@/lib/disclosure";
 import type { DisclosureSuggestion } from "./types";
 

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { ProviderError, type ChannelDescriptor } from "@make-it-social/providers";
+import { ProviderError, type ChannelDescriptor } from "@rocketease/providers";
 import { db } from "@/db";
 import { channel, providerConnection } from "@/db/schema/connections";
 import { audit } from "@/lib/audit";

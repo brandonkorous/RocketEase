@@ -82,7 +82,7 @@ export async function fetchPaidInsights(cfg: ProviderConfig, cred: Credential, a
 }
 
 const OBJECTIVE: Record<PromotionRequest["objective"], { objective: string; goal: string }> = { engagement: { objective: "OUTCOME_ENGAGEMENT", goal: "POST_ENGAGEMENT" }, traffic: { objective: "OUTCOME_TRAFFIC", goal: "LINK_CLICKS" }, awareness: { objective: "OUTCOME_AWARENESS", goal: "REACH" }, leads: { objective: "OUTCOME_LEADS", goal: "LEAD_GENERATION" }, conversions: { objective: "OUTCOME_SALES", goal: "OFFSITE_CONVERSIONS" } };
-const tag = (key: string) => `[mis:${key}]`;
+const tag = (key: string) => `[rke:${key}]`;
 
 type Tagged = { campaign: Node; adset?: Node; ad?: Node };
 async function findTagged(cfg: ProviderConfig, cred: Credential, a: AdAccountDescriptor, key: string): Promise<Tagged | null> {

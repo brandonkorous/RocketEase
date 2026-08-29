@@ -24,7 +24,7 @@ export function overageCredits(used: number, allowance: number): number {
 
 /** Stable per (subscription, workspace, period, running total) — safe to resend. */
 export function meterIdentifier(subscriptionId: string, workspaceId: string, periodStart: Date, total: number): string {
-  return `mis-${subscriptionId}-${workspaceId}-${periodStart.getTime()}-${total}`;
+  return `rke-${subscriptionId}-${workspaceId}-${periodStart.getTime()}-${total}`;
 }
 
 /** Statuses whose usage is still billable; a canceled subscription reports nothing further. */

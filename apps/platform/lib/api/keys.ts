@@ -6,7 +6,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { CAPABILITIES, capabilitiesOf, type Capability, type Principal } from "@/lib/authz";
 
 /** Recognisable prefix so a leaked key is greppable in logs and revocable. */
-export const API_KEY_PREFIX = "mis_";
+export const API_KEY_PREFIX = "rke_";
 
 export const hashApiKey = (raw: string) => createHash("sha256").update(raw, "utf8").digest("hex");
 

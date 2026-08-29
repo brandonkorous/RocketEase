@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Multi-stage build for apps/platform. Build from the monorepo root:
-#   docker build -f apps/platform/Dockerfile -t make-it-social/platform .
+#   docker build -f apps/platform/Dockerfile -t rocketease/platform .
 FROM node:24-alpine AS base
 RUN corepack enable && corepack prepare pnpm@10.9.0 --activate
 WORKDIR /repo
@@ -9,15 +9,29 @@ FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/platform/package.json apps/platform/
 COPY packages/ui/package.json packages/ui/
-RUN pnpm install --frozen-lockfile --filter @make-it-social/platform...
+RUN pnpm install --frozen-lockfile --filter @rocketease/platform...
 
 FROM deps AS build
 COPY packages/ui packages/ui
 COPY apps/platform apps/platform
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# NEXT_PUBLIC_* IS INLINED INTO THE CLIENT BUNDLE AT BUILD TIME, so these cannot
+# be supplied by a ConfigMap at runtime. Omitting one does not error: the browser
+# simply gets `undefined`, and social sign-in, One Tap and the AI controls all
+# quietly never render against a deploy that otherwise looks healthy.
+# They are public identifiers by definition — passed as repo variables, not secrets.
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_AUTH_SOCIAL
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
+ARG NEXT_PUBLIC_AI_ENABLED
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_AUTH_SOCIAL=$NEXT_PUBLIC_AUTH_SOCIAL
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
+ENV NEXT_PUBLIC_AI_ENABLED=$NEXT_PUBLIC_AI_ENABLED
 # DATABASE_URL is only read at runtime; a placeholder keeps the build from throwing.
 ENV DATABASE_URL=postgres://build:build@localhost:5432/build
-RUN pnpm --filter @make-it-social/platform build
+RUN pnpm --filter @rocketease/platform build
 
 FROM node:24-alpine AS runner
 WORKDIR /app

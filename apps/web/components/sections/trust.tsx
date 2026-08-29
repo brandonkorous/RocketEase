@@ -1,4 +1,4 @@
-import { PLATFORM_NAMES, PlatformIcon } from "@make-it-social/ui/icons";
+import { PLATFORM_NAMES, PlatformIcon } from "@rocketease/ui/icons";
 import { LAUNCH_PLATFORMS } from "./shared";
 
 export function TrustStrip() {

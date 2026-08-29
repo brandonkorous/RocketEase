@@ -4,7 +4,7 @@
  * A reusable, workspace-scoped group of tags the composer inserts into the
  * shared text or the first comment. `channelKinds` is advisory — it only says
  * which networks a set was written for. The real ceiling is always the
- * channel's own `limits.hashtagsMax` from @make-it-social/providers.
+ * channel's own `limits.hashtagsMax` from @rocketease/providers.
  */
 import { sql } from "drizzle-orm";
 import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";

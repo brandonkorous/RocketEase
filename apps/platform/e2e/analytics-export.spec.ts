@@ -11,7 +11,7 @@ test.describe("analytics export", () => {
     expect(res.headers()["content-disposition"]).toMatch(/attachment; filename="analytics_.*\.csv"/);
     const csv = await res.text();
     const lines = csv.split("\n");
-    expect(lines[0]).toBe("# Make It Social analytics export");
+    expect(lines[0]).toBe("# RocketEase analytics export");
     expect(lines.find((l) => l.startsWith("# workspace,"))).toContain(userA.workspaceId);
     expect(lines.some((l) => l.startsWith("# generated_at,"))).toBe(true);
     expect(lines.some((l) => l.startsWith("# period,"))).toBe(true);

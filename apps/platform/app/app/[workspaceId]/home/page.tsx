@@ -4,6 +4,7 @@ import { and, count, desc, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { Badge } from "@wizeworks/silicaui-react";
 import { buttonClasses } from "@wizeworks/silicaui-react/server";
 import { NetMark } from "@/components/library-screen";
+import { OverviewCard as Card, OverviewEmpty as Empty } from "@/components/overview-card";
 import { GenerateLink } from "@/components/generator/entry";
 import { db } from "@/db";
 import { contentItem, postVariant } from "@/db/schema/content";
@@ -44,7 +45,7 @@ export default async function HomePage({ params }: { params: Promise<{ workspace
     <div className="mx-auto w-full max-w-360 px-6 py-5 lg:px-8">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="app-title">{allDone ? `Good to see you, ${firstName}.` : `Welcome to Make It Social, ${firstName}! 👋`}</h1>
+          <h1 className="app-title">{allDone ? `Good to see you, ${firstName}.` : `Welcome to RocketEase, ${firstName}! 👋`}</h1>
           <p className="mt-1 text-base text-secondary">{allDone ? `${workspace.name} · ${tz}` : "Let's get you set up to plan, publish, and grow your brand."}</p>
         </div>
         {canCreate && (
@@ -109,29 +110,8 @@ export default async function HomePage({ params }: { params: Promise<{ workspace
 
       <section className="mt-5 flex flex-col gap-3 rounded-box border border-base-300 bg-base-200 p-5 md:flex-row md:items-center md:justify-between" aria-label="Help">
         <div><h2 className="text-base font-semibold">Need help getting started?</h2><p className="text-sm text-secondary">Explore guides, watch tutorials, or chat with our support team.</p></div>
-        <div className="flex flex-wrap gap-2"><a href="https://make-it-social.com/help" className={buttonClasses({ variant: "outline", color: "neutral", size: "sm" })}>View help center</a><a href="mailto:support@make-it-social.com" className={buttonClasses({ variant: "outline", color: "neutral", size: "sm" })}>Contact support</a></div>
+        <div className="flex flex-wrap gap-2"><a href="https://rocketease.com/help" className={buttonClasses({ variant: "outline", color: "neutral", size: "sm" })}>View help center</a><a href="mailto:support@rocketease.com" className={buttonClasses({ variant: "outline", color: "neutral", size: "sm" })}>Contact support</a></div>
       </section>
-    </div>
-  );
-}
-
-function Card({ title, href, linkLabel, children }: { title: string; href: string; linkLabel: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-box border border-base-300 p-5" aria-label={title}>
-      <div className="flex items-center justify-between"><h2 className="text-base font-semibold">{title}</h2><Link href={href} className="text-xs font-medium hover:underline">{linkLabel}</Link></div>
-      <div className="mt-4">{children}</div>
-    </section>
-  );
-}
-
-function Empty({ title, body, cta, href, learn }: { title: string; body: string; cta: string; href: string; learn?: string }) {
-  return (
-    <div className="flex flex-col items-center py-4 text-center">
-      <div className="h-14 w-20 rounded-lg border border-dashed border-base-300" aria-hidden="true" />
-      <h3 className="mt-3 text-sm font-semibold">{title}</h3>
-      <p className="mt-1 max-w-65 text-xs leading-normal text-secondary">{body}</p>
-      <Link href={href} className={`${buttonClasses({ color: "primary", size: "sm" })} mt-3`}>{cta}</Link>
-      {learn && <span className="mt-2 text-xs text-secondary/70">{learn} →</span>}
     </div>
   );
 }

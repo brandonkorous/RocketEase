@@ -1,5 +1,5 @@
 {
-  "name": "@make-it-social/web",
+  "name": "@rocketease/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -15,7 +15,7 @@
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "@make-it-social/ui": "workspace:*"
+    "@rocketease/ui": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",

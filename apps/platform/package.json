@@ -1,5 +1,5 @@
 {
-  "name": "@make-it-social/platform",
+  "name": "@rocketease/platform",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -21,10 +21,9 @@
     "@anthropic-ai/sdk": "^0.122.0",
     "@aws-sdk/client-s3": "^3.1120.0",
     "@aws-sdk/s3-request-presigner": "^3.1120.0",
+    "@azure/storage-blob": "^12.33.0",
     "@better-auth/drizzle-adapter": "^1.7.2",
     "@better-auth/sso": "1.7.2",
-    "@make-it-social/providers": "workspace:*",
-    "@make-it-social/ui": "workspace:*",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/exporter-trace-otlp-http": "^0.221.0",
     "@opentelemetry/instrumentation-http": "^0.221.0",
@@ -33,6 +32,8 @@
     "@opentelemetry/sdk-node": "^0.221.0",
     "@opentelemetry/sdk-trace-node": "^2.10.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
+    "@rocketease/providers": "workspace:*",
+    "@rocketease/ui": "workspace:*",
     "@wizeworks/silicaui": "^0.55.0",
     "@wizeworks/silicaui-react": "^0.55.0",
     "better-auth": "^1.7.2",

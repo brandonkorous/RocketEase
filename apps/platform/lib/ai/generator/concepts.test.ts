@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Capabilities } from "@make-it-social/providers/client";
+import type { Capabilities } from "@rocketease/providers/client";
 import { EMPTY_BRAND_VOICE } from "../brand-voice";
 import type { DraftChannel } from "../drafts";
 import { conceptsForChannel } from "./concepts";

@@ -1,6 +1,6 @@
-# @make-it-social/mcp
+# @rocketease/mcp
 
-Model Context Protocol server for Make It Social — **the trusted publishing layer under any AI agent**.
+Model Context Protocol server for RocketEase — **the trusted publishing layer under any AI agent**.
 
 An agent can plan, draft, and read through this server. It cannot publish, send a reply, or spend
 money. Every write goes through the same gates as the app: capability checks, the workspace's
@@ -23,13 +23,13 @@ An unavailable metric comes back with a reason and a `null` value. It is never r
 
 ## Setup
 
-1. In Make It Social: **Settings → API keys → New API key**. Name it after the agent, tick only the
+1. In RocketEase: **Settings → API keys → New API key**. Name it after the agent, tick only the
    scopes it needs, and copy the key — it is shown once.
 2. Install and build (from the repo root):
 
    ```bash
    pnpm install
-   pnpm --filter @make-it-social/mcp build
+   pnpm --filter @rocketease/mcp build
    ```
 
 3. Point your client at it.
@@ -41,12 +41,12 @@ An unavailable metric comes back with a reason and a `null` value. It is never r
 ```json
 {
   "mcpServers": {
-    "make-it-social": {
+    "rocketease": {
       "command": "node",
-      "args": ["/absolute/path/to/make-it-social/packages/mcp/dist/index.js"],
+      "args": ["/absolute/path/to/rocketease/packages/mcp/dist/index.js"],
       "env": {
-        "MIS_API_KEY": "mis_…",
-        "MIS_API_URL": "https://app.makeitsocial.example/api/v1"
+        "RKE_API_KEY": "rke_…",
+        "RKE_API_URL": "https://app.rocketease.example/api/v1"
       }
     }
   }
@@ -56,29 +56,29 @@ An unavailable metric comes back with a reason and a `null` value. It is never r
 ### Claude Code
 
 ```bash
-claude mcp add make-it-social \
-  --env MIS_API_KEY=mis_… \
-  --env MIS_API_URL=https://app.makeitsocial.example/api/v1 \
-  -- node /absolute/path/to/make-it-social/packages/mcp/dist/index.js
+claude mcp add rocketease \
+  --env RKE_API_KEY=rke_… \
+  --env RKE_API_URL=https://app.rocketease.example/api/v1 \
+  -- node /absolute/path/to/rocketease/packages/mcp/dist/index.js
 ```
 
 ### Streamable HTTP
 
 ```bash
-MIS_API_KEY=mis_… MIS_API_URL=https://app.makeitsocial.example/api/v1 \
+RKE_API_KEY=rke_… RKE_API_URL=https://app.rocketease.example/api/v1 \
   node packages/mcp/dist/index.js --http     # POST/GET http://localhost:5010/mcp
 ```
 
-`MIS_MCP_PORT` overrides the port. The server is stateless: it holds one API key and one workspace,
+`RKE_MCP_PORT` overrides the port. The server is stateless: it holds one API key and one workspace,
 so give each workspace its own server entry rather than sharing one.
 
 ## Environment
 
 | Variable | Required | Default |
 | --- | --- | --- |
-| `MIS_API_KEY` | yes | — |
-| `MIS_API_URL` | no | `http://localhost:5001/api/v1` |
-| `MIS_MCP_PORT` | no | `5010` |
+| `RKE_API_KEY` | yes | — |
+| `RKE_API_URL` | no | `http://localhost:5001/api/v1` |
+| `RKE_MCP_PORT` | no | `5010` |
 
 ## Notes
 

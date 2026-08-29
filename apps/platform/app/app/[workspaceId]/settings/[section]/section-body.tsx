@@ -1,14 +1,11 @@
 import Link from "next/link";
 import { ApprovalPolicies } from "@/components/approval-policies";
 import { SecurityPanel } from "@/components/security-panel";
-import { AiUsageMeter } from "@/components/ai/usage-meter";
 import { ApiKeys } from "@/components/settings/api-keys";
 import { BillingSettings } from "@/components/settings/billing";
 import { AutomationsSettings } from "@/components/settings/automations";
 import { HashtagSetsSettings } from "@/components/settings/hashtag-sets";
 import { RecyclingSettings } from "@/components/settings/recycling";
-import { AiDisclosureSettings } from "@/components/settings/ai-disclosure-settings";
-import { BrandVoiceSettings } from "@/components/settings/brand-voice-settings";
 import { InboxSettings } from "@/components/settings/inbox-settings";
 import { NotificationSettings } from "@/components/settings/notification-settings";
 import { RightsGrants } from "@/components/settings/rights-grants";
@@ -39,14 +36,6 @@ export function SectionBody({ section, label, ctx, data }: Props) {
         <>
           <p className="mt-1 text-sm text-secondary">Members and roles are managed on the <Link href={workspacePath(workspace.id, "team")} className="font-medium underline underline-offset-2">Team</Link> page.</p>
           <ApprovalPolicies workspaceId={workspace.id} policies={data.policies} channels={data.channels} canEdit={canEdit} />
-        </>
-      );
-    case "brand":
-      return (
-        <>
-          <BrandVoiceSettings workspaceId={workspace.id} initial={data.brandVoice} canEdit={canEdit} aiEnabled={data.aiEnabled} />
-          <AiDisclosureSettings workspaceId={workspace.id} initial={data.requireAiDisclosure} canEdit={canEdit} />
-          {data.aiEnabled && <AiUsageMeter workspaceId={workspace.id} />}
         </>
       );
     case "inbox":

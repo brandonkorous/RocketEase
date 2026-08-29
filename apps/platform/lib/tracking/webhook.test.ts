@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { eventsToRows, MAX_SKEW_SECONDS, newWebhookSecret, parseWebhookBody, signPayload, verifyWebhook } from "./webhook";
 import { dimensionHash, isPaidMedium, networkForSource, sourceTokensForNetwork } from "./normalize";
 
-const SECRET = "mis_whsec_test";
+const SECRET = "rke_whsec_test";
 const NOW = 1_800_000_000;
 
 describe("verifyWebhook", () => {
@@ -28,7 +28,7 @@ describe("verifyWebhook", () => {
 
   it("mints distinct secrets", () => {
     expect(newWebhookSecret()).not.toBe(newWebhookSecret());
-    expect(newWebhookSecret().startsWith("mis_whsec_")).toBe(true);
+    expect(newWebhookSecret().startsWith("rke_whsec_")).toBe(true);
   });
 });
 

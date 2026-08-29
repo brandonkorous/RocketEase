@@ -2,9 +2,9 @@
 
 ## Definition
 
-Make It Social is the operating system for social marketing. It gives businesses and agencies one workspace to plan content, publish across networks, handle conversations, coordinate approvals, manage paid promotion, and understand organic and paid outcomes together.
+RocketEase is the operating system for social marketing. It gives businesses and agencies one workspace to plan content, publish across networks, handle conversations, coordinate approvals, manage paid promotion, and understand organic and paid outcomes together.
 
-**Positioning:** Everything social. One workflow.
+**Positioning:** Effortless Launch. Better by Design.
 
 The category is larger than social scheduling. The differentiating promise is a connected operating model: content can become a post, a winning post can become an ad, responses retain customer context, and performance returns to planning.
 
@@ -16,7 +16,7 @@ The category is larger than social scheduling. The differentiating promise is a 
 4. Organic and paid belong together. Users can compare and promote without reconstructing a campaign in another system.
 5. Collaboration is in the work. Comments, decisions, assignees, versions, and deadlines attach to the affected object.
 6. Complexity appears progressively. New users see the next useful action; experts retain dense controls and shortcuts.
-7. Neutral product identity. Make It Social supplies black, white, and structure; platform color appears only for platform identity or data.
+7. Neutral product identity. RocketEase supplies black, white, and structure; platform color appears only for platform identity or data.
 
 ## Target outcomes
 

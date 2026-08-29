@@ -1,10 +1,11 @@
 {
-  "name": "@make-it-social/ui",
+  "name": "@rocketease/ui",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": {
-    "./icons": "./src/icons.tsx"
+    "./icons": "./src/icons.tsx",
+    "./brand": "./src/brand.tsx"
   },
   "peerDependencies": {
     "react": ">=19"

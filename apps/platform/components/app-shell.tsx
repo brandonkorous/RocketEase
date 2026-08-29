@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { AppShell, AppShellMain, AppShellSidebar, Badge, Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarHeaderBrand, SidebarItem } from "@wizeworks/silicaui-react";
-import { Mark } from "@make-it-social/ui/icons";
+import { Mark } from "@rocketease/ui/icons";
+import { Wordmark } from "@rocketease/ui/brand";
 import { MANAGE_NAV, PRIMARY_NAV, workspacePath, type NavKey } from "@/lib/nav";
 import type { WorkspaceSummary } from "@/lib/session";
 import { AccountMenu, type ShellUser } from "./shell/account-menu";
@@ -30,10 +31,10 @@ export function WorkspaceShell({ workspace, workspaces, user, badges = {}, unrea
   return (
     <AppShell className="min-h-dvh">
       <AppShellSidebar className="hidden md:block">
-        <div data-theme="mis-dark" className="flex h-full w-64 flex-col bg-base-100 text-base-content">
+        <div data-theme="rke-dark" className="flex h-full w-64 flex-col bg-base-100 text-base-content">
           <Sidebar className="h-full w-full border-0 bg-transparent">
             <SidebarHeader className="flex-col items-stretch gap-3 px-3 pt-4 pb-2">
-              <SidebarHeaderBrand><Link href="/" className="flex items-center gap-2 px-1 font-bold" aria-label="Make It Social"><Mark size={24} /><span>Make It Social</span></Link></SidebarHeaderBrand>
+              <SidebarHeaderBrand><Link href="/" className="flex items-center gap-2 px-1 font-bold" aria-label="RocketEase"><Mark size={24} /><Wordmark /></Link></SidebarHeaderBrand>
               {switcher}
             </SidebarHeader>
             <SidebarContent className="px-2">

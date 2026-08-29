@@ -1,6 +1,6 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
-import type { ProviderKey } from "@make-it-social/providers";
+import type { ProviderKey } from "@rocketease/providers";
 import { db } from "@/db";
 import { oauthState } from "@/db/schema/connections";
 
@@ -16,7 +16,7 @@ export const callbackUrl = (provider: ProviderKey) => `${appUrl()}/api/connect/$
  * produce the verifier. base64url of an HMAC is 43 unreserved characters,
  * exactly the shape RFC 7636 asks for.
  */
-const pkceSecret = () => process.env.BETTER_AUTH_SECRET ?? "mis-dev-pkce";
+const pkceSecret = () => process.env.BETTER_AUTH_SECRET ?? "rke-dev-pkce";
 export const codeVerifierFor = (state: string) => createHmac("sha256", pkceSecret()).update(`pkce:${state}`).digest("base64url");
 export const codeChallengeFor = (state: string) => createHash("sha256").update(codeVerifierFor(state)).digest("base64url");
 

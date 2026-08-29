@@ -15,7 +15,7 @@ export default async function GeneratePage({ params }: { params: Promise<{ works
   if (r.kind === "no_capability") return <NoCapability workspaceId={workspaceId} />;
   if (r.kind === "no_channels") return <NoChannels workspaceId={workspaceId} />;
   if (r.kind === "unconfigured") return <Unconfigured workspaceId={workspaceId} />;
-  return <GeneratorScreen workspaceId={workspaceId} channels={r.channels} savedBriefs={r.savedBriefs} imagesEnabled={r.imagesEnabled} />;
+  return <GeneratorScreen workspaceId={workspaceId} channels={r.channels} savedBriefs={r.savedBriefs} imagesEnabled={r.imagesEnabled} brand={r.brand} />;
 }
 
 /** Honest, not hidden: the feature exists and is switched off, and we say so. */

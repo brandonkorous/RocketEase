@@ -11,7 +11,7 @@ spec:
       terminationGracePeriodSeconds: 30 # pg-boss graceful stop waits up to 15s
       containers:
         - name: worker
-          image: make-it-social/worker:latest
+          image: rocketease/worker:latest
           envFrom:
             - secretRef: { name: platform-env }
             - configMapRef: { name: platform-config }

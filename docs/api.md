@@ -11,7 +11,7 @@ The MCP server in `packages/mcp` wraps exactly these endpoints.
 ## Authentication
 
 ```
-Authorization: Bearer mis_…
+Authorization: Bearer rke_…
 ```
 
 Keys are created in **Settings → API keys** (capability `workspace.settings`) and shown once; only

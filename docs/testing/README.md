@@ -41,6 +41,14 @@ on push to `main` and takes roughly 15 minutes.
 | Brand kit | Built from jotacular.com, **86% complete**. Logos and brand assets still empty (need real files). |
 | Cluster | `kubectl` works against namespace `rocketease`. Pod logs are how F-013 was found. |
 
+### Fixed, not yet verified live
+
+**F-021** — Meta's successor metric names are mapped (`8687e7a`): `page_media_view`,
+`page_total_media_view_unique`, `page_follows` and the post equivalents, with the unique one landing
+on a new canonical **Viewers** rather than Reach. The names come from Meta's docs, not from a live
+call, so the next insights sync is what settles it — read the analytics source-health disclosure: if
+it names a metric, that name is wrong.
+
 ### Closed, verified live
 
 F-013 (P0 connection exhaustion) · F-003 (composer upload) · F-005 (draft titles) · F-006 (Meta
@@ -49,15 +57,12 @@ insights) · F-007 (degraded disclosure) · F-008 (Channel mix zero) · F-009 (c
 
 ### Open, ranked
 
-1. **F-021** — Meta retired 7 Page metric names, so Reach / Impressions / Link clicks / Followers have
-   no source on Facebook. Needs the successor names mapped plus an M8.3 definition break. *The biggest
-   remaining product gap.*
-2. **F-014** — `/api/health` stayed green through the whole P0 outage; unfit to gate a readiness probe.
-3. **F-002** — scanning is honest now but **no scanner is deployed**. Needs ClamAV + `CLAMAV_URL`, then
+1. **F-014** — `/api/health` stayed green through the whole P0 outage; unfit to gate a readiness probe.
+2. **F-002** — scanning is honest now but **no scanner is deployed**. Needs ClamAV + `CLAMAV_URL`, then
    `REQUIRE_ASSET_SCAN=1`.
-4. **F-012** — Approvals and Inbox empty states are thin next to Brand's.
-5. **F-001** — marketing price args need a Dockerfile change, not a setting.
-6. **F-015** — AI entirely unconfigured in production, so M8.8/M9.3/M10.5 are untestable.
+3. **F-012** — Approvals and Inbox empty states are thin next to Brand's.
+4. **F-001** — marketing price args need a Dockerfile change, not a setting.
+5. **F-015** — AI entirely unconfigured in production, so M8.8/M9.3/M10.5 are untestable.
 
 ### Not yet tested at all
 

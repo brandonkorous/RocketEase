@@ -19,7 +19,7 @@ Started 2026-08-30. One row per finding. IDs are sequential and never reused.
 | Production stability | **2** → **9** | 1 | F-013 ✅ **fixed + verified live** (`19a987b`) |
 | Health checking | **3** | 1 | F-014 — still open |
 | Analytics data pipeline (Meta) | **3** → **9** | 1 | F-006 ✅ fixed + verified live (`b1fdc0c`) |
-| Facebook metric coverage | **4** | 2 | F-021 — Meta retired 7 metric names; reach/impressions/followers have no source |
+| Facebook metric coverage | **4** → ? | 2 | F-021 ✅ successors mapped (`8687e7a`); score held until a live sync confirms the names |
 | Connection health accuracy | **3** → **9** | 1 | F-009 ✅ fixed (`b1fdc0c`) |
 | Composer media flow | **4** → **9** | 2 | F-003 ✅ fixed + verified live (`22aa8cd`) — user-raised |
 | Analytics failure disclosure | **4** → **9** | 2 | F-007 ✅ fixed + verified live (`b1fdc0c`) |
@@ -743,15 +743,55 @@ This is precisely what M8.3 anticipated: "Meta reach → 'viewers' retirement: d
 break annotations". The **metric registry** knows about the retirement; the **adapter's metric map**
 was never updated to the successor names.
 
-**Fix** Map the replacements (the `views`/`viewers` family and the current follower-count field)
-against Graph v21+, and record a definition break at the changeover date so old and new are never one
-line on a chart — the M8.3 machinery for that already exists.
-
 **Why it is P1 and not P0:** nothing is wrong or misleading on screen; the numbers are correctly
 absent with a stated reason. But four headline metrics being permanently blank on the one live
 provider is not a shippable analytics story.
 
-**Score** Facebook metric coverage: **4/10** · Stage 2
-**Status** open
+#### Fixed (`8687e7a`)
+
+Meta's published deprecation table names the successors, and it also corrected our dates — this was
+**two** waves, not one:
+
+| Wave | Retired | Successor |
+|---|---|---|
+| 15 Nov 2025 | `page_impressions`, `post_impressions` | `page_media_view`, `post_media_view` |
+| 15 Nov 2025 | `page_fans` | `page_follows` |
+| 15 Nov 2025 | `page_fan_adds` | **none** — net growth is now follows − unfollows |
+| 15 Jun 2026 | `page_impressions_unique`, `post_impressions_unique` | `page_total_media_view_unique`, `post_total_media_view_unique` |
+| — | `page_consumptions_by_consumption_type` | **none** — Facebook link clicks come from posts only |
+
+The unique metric lands on a **new canonical `viewers`**, never on `reach`. Reach counted accounts
+the content was *delivered* to; viewers counts accounts that *played or displayed* the media. Summed
+across 15 June they would make one series that silently means two things — the exact thing the break
+registry exists to prevent. So Reach ends on Meta at 2026-06-14 and Viewers begins, and the scorecard
+shows whichever a workspace's channels actually report: Viewers alone for a Meta-only workspace, both
+where both exist, and never a tile that is blank by construction.
+
+`page_fan_adds` has no successor, so follower growth is now follows minus unfollows. If Meta hands us
+only the gross half, we report **nothing** rather than pass gross adds off as net.
+
+Four further defects fell out of the same reading:
+
+- The break was dated from vendor migration notes that put the whole retirement in June 2026. Meta's
+  own changelog dates two waves; impressions and followers moved seven months earlier.
+- `video_views` carried a break that never happened — `page_video_views` and `post_video_views`
+  survived both waves.
+- `viewers` declared a static `unavailable`, which pins a metric's value to `null` forever in
+  `metric-values.ts`. It could never have displayed a number.
+- Page-level link clicks are gone with no successor. The caveat now says so, instead of letting a
+  Facebook channel's missing Page clicks read as nothing worth mentioning.
+
+The sync message no longer claims a provider "no longer reports" a name. That is only true when we
+asked with a name it used to have; after this change a rejection more likely means we asked with a
+name it never had, so it now reads "rejected these metric names".
+
+**Residual risk, stated plainly:** the successor names come from Meta's documentation, not from a
+live call. The per-metric fallback shipped in F-006 makes a wrong name safe — it is dropped, named in
+the disclosure, and everything else still ingests — but *whether* they are right is what live
+verification has to settle. Instagram's `impressions` → `views` swap is in the same change and
+**cannot** be verified at all until an IG channel is connected.
+
+**Score** Facebook metric coverage: **4/10** → pending live verification · Stage 2
+**Status** fixed, awaiting the post-deploy sync
 
 ---

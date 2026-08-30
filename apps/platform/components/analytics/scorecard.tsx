@@ -29,7 +29,7 @@ export function MetricInfo({ m, freshness }: { m: MetricContract; freshness: str
 
 export function Scorecards({ cards, compareLabel, freshness }: { cards: ScoreCard[]; compareLabel: string | null; freshness: string | null }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+    <div className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-4 ${cards.length > 7 ? "xl:grid-cols-8" : "xl:grid-cols-7"}`}>
       {cards.map((c) => (
         <div key={c.contract.key} className="rounded-box border border-base-300 p-4">
           <div className="flex items-center text-sm text-secondary">{c.contract.name}<MetricInfo m={c.contract} freshness={freshness} /></div>

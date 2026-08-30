@@ -12,7 +12,7 @@ export type Period = { from: string; to: string };
 /** `revenue` and `sessions` come from conversion tracking sources (M7), not from a provider's insights. */
 export type Totals = Partial<Record<CanonicalMetric | "revenue" | "sessions", number>>;
 
-const SUMMED: CanonicalMetric[] = ["impressions", "reach", "video_views", "reactions", "comments", "shares", "saves", "engagement", "link_clicks", "follower_gain", "watch_time_minutes", "spend", "conversions"];
+const SUMMED: CanonicalMetric[] = ["impressions", "reach", "viewers", "video_views", "reactions", "comments", "shares", "saves", "engagement", "link_clicks", "follower_gain", "watch_time_minutes", "spend", "conversions"];
 
 /** Deterministic campaign attribution (analytics.md): the campaign's published posts and its linked ad campaigns. */
 const campaignPostIds = (campaignId: string) => db.select({ id: remotePublication.remoteId }).from(remotePublication).innerJoin(postVariant, eq(postVariant.id, remotePublication.variantId)).innerJoin(campaignContent, eq(campaignContent.contentItemId, postVariant.contentItemId)).where(eq(campaignContent.campaignId, campaignId));

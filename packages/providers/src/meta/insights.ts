@@ -2,6 +2,12 @@
  * Meta organic insights → canonical daily facts. Page insights via
  * /{page}/insights (period=day), IG via /{ig}/insights (metric list differs),
  * post insights per remote id. Metric names are kept as provenance.
+ *
+ * Meta retired its whole impressions/reach/fans family in two waves —
+ * 15 Nov 2025 (impressions, page fans) and 15 Jun 2026 (the *_unique family) —
+ * and replaced it with media views. The successor names below are Meta's own,
+ * from its published deprecation table. What the change means to a reader
+ * lives in the platform's metric registry, not here.
  */
 import type { CanonicalMetric, InsightFact, InsightsPage, InsightsRequest } from "../insights-types";
 import { ProviderError, type ChannelDescriptor, type Credential, type ProviderConfig } from "../types";
@@ -12,10 +18,21 @@ const token = (cred: Credential, ch: ChannelDescriptor) => ch.channelToken ?? cr
 const dayOf = (endTime: string | undefined, fallback: string) => (endTime ? new Date(new Date(endTime).getTime() - 1).toISOString().slice(0, 10) : fallback);
 const num = (v: number | Record<string, number>) => (typeof v === "number" ? v : Object.values(v).reduce((s, x) => s + x, 0));
 
-const PAGE_MAP: Record<string, CanonicalMetric> = { page_impressions: "impressions", page_impressions_unique: "reach", page_post_engagements: "engagement", page_video_views: "video_views", page_fans: "followers", page_fan_adds: "follower_gain", page_consumptions_by_consumption_type: "link_clicks" };
-const IG_MAP: Record<string, CanonicalMetric> = { impressions: "impressions", reach: "reach", follower_count: "follower_gain", website_clicks: "link_clicks" };
-const POST_FB_MAP: Record<string, CanonicalMetric> = { post_impressions: "impressions", post_impressions_unique: "reach", post_reactions_by_type_total: "reactions", post_clicks: "link_clicks", post_video_views: "video_views" };
-const POST_IG_MAP: Record<string, CanonicalMetric> = { impressions: "impressions", reach: "reach", likes: "reactions", comments: "comments", shares: "shares", saved: "saves", video_views: "video_views" };
+/*
+ * A media view is not an impression and a media viewer is not reach, so the
+ * unique one lands on `viewers`, never on `reach`. Meta gave page-level link
+ * clicks (page_consumptions_by_consumption_type) no successor at all; post
+ * clicks still carry it.
+ */
+const PAGE_MAP: Record<string, CanonicalMetric> = { page_media_view: "impressions", page_total_media_view_unique: "viewers", page_post_engagements: "engagement", page_video_views: "video_views", page_follows: "followers" };
+const POST_FB_MAP: Record<string, CanonicalMetric> = { post_media_view: "impressions", post_total_media_view_unique: "viewers", post_reactions_by_type_total: "reactions", post_clicks: "link_clicks", post_video_views: "video_views" };
+/** IG dropped `impressions` for media created after 1 Jul 2024; `views` is its replacement. Untested live — no IG channel is connected yet. */
+const IG_MAP: Record<string, CanonicalMetric> = { views: "impressions", reach: "reach", follower_count: "follower_gain", website_clicks: "link_clicks" };
+const POST_IG_MAP: Record<string, CanonicalMetric> = { views: "impressions", reach: "reach", likes: "reactions", comments: "comments", shares: "shares", saved: "saves", video_views: "video_views" };
+
+/** page_fan_adds was retired with no replacement. Net growth is follows − unfollows; gross follows alone is a different number. */
+const FOLLOWS = "page_daily_follows_unique";
+const UNFOLLOWS = "page_daily_unfollows_unique";
 
 function toFacts(series: Series[], map: Record<string, CanonicalMetric>, entity: InsightFact["entity"], remoteId: string | undefined, fallbackDay: string): InsightFact[] {
   const out: InsightFact[] = [];
@@ -27,11 +44,23 @@ function toFacts(series: Series[], map: Record<string, CanonicalMetric>, entity:
   return out;
 }
 
+/** Net daily follower growth. Both halves or neither: gross adds reported as net would be a different metric wearing its name. */
+function netFollowerGain(series: Series[], fallbackDay: string): InsightFact[] {
+  const adds = series.find((s) => s.name === FOLLOWS);
+  const removes = series.find((s) => s.name === UNFOLLOWS);
+  if (!adds || !removes) return [];
+  const lost = new Map((removes.values ?? []).map((v) => [dayOf(v.end_time, fallbackDay), num(v.value)]));
+  return (adds.values ?? []).map((v) => {
+    const day = dayOf(v.end_time, fallbackDay);
+    return { entity: "channel" as const, metric: "follower_gain" as const, day, value: num(v.value) - (lost.get(day) ?? 0), source: `meta.${FOLLOWS}-${UNFOLLOWS}` };
+  });
+}
+
 /** Code 100 on an insights call means a metric name in the list is not valid for this object. */
 const isRetiredMetric = (e: unknown) => e instanceof ProviderError && e.category === "validation" && (e.providerCode ?? "").startsWith("100");
 
 /**
- * Meta rejects the WHOLE request when any one metric name has been retired, so a
+ * Meta rejects the WHOLE request when any one metric name is not valid, so a
  * single dead name silently zeroes out every other metric. On that error we ask
  * for each metric on its own, keep what still works, and name what does not.
  */
@@ -56,8 +85,10 @@ async function seriesFor(cfg: ProviderConfig, t: string, path: string, metrics: 
 async function channelSeries(cfg: ProviderConfig, t: string, ch: ChannelDescriptor, req: InsightsRequest): Promise<{ facts: InsightFact[]; unsupported: string[] }> {
   const ig = ch.kind === "instagram_business";
   const map = ig ? IG_MAP : PAGE_MAP;
-  const { series, unsupported } = await seriesFor(cfg, t, `/${ch.remoteId}/insights`, Object.keys(map), { period: "day", since: req.since, until: req.until });
+  const ask = ig ? Object.keys(map) : [...Object.keys(map), FOLLOWS, UNFOLLOWS];
+  const { series, unsupported } = await seriesFor(cfg, t, `/${ch.remoteId}/insights`, ask, { period: "day", since: req.since, until: req.until });
   const facts = toFacts(series, map, "channel", undefined, req.until);
+  if (!ig) facts.push(...netFollowerGain(series, req.until));
   if (ig) {
     const acct = await graph<{ followers_count?: number }>(`/${ch.remoteId}`, cfg, t, { params: { fields: "followers_count" } }).catch(() => ({ followers_count: undefined }));
     if (acct.followers_count != null) facts.push({ entity: "channel", metric: "followers", day: req.until, value: acct.followers_count, source: "meta.followers_count" });

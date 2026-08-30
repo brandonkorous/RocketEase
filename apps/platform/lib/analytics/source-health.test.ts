@@ -21,7 +21,7 @@ describe("explainSyncError", () => {
   });
 
   it("passes our own plain sentence through unchanged", () => {
-    const ours = "Jotacular: facebook no longer reports page_video_views. Every other metric is up to date.";
+    const ours = "Jotacular: facebook rejected these metric names — page_video_views. Every other metric is up to date.";
     expect(explainSyncError(ours)).toEqual({ headline: ours, action: null });
   });
 

@@ -4,7 +4,7 @@
  */
 import type { ReportFilters } from "@/db/schema/analytics";
 import { derived } from "@/lib/analytics/derive";
-import { METRICS, PAID_METRICS, SCORECARD, formatMetric } from "@/lib/analytics/metrics";
+import { METRICS, PAID_METRICS, scorecardKeys, formatMetric } from "@/lib/analytics/metrics";
 import { comparisonPeriod, delta, periodLabel } from "@/lib/analytics/periods";
 import { channelMix, freshness, revisedFactsInPeriod, seriesByNetwork, topPosts, totals, type Totals } from "@/lib/analytics/queries";
 import { conversionState, type ConversionState } from "@/lib/tracking/conversions";
@@ -45,7 +45,7 @@ export async function resolveBrand(ws: ReportWorkspace): Promise<ReportBrand> {
 }
 
 function scorecardRows(cur: Totals, prev: Totals, paid: Totals, hasData: boolean, compared: boolean, conversions: ConversionState): ScoreRow[] {
-  return SCORECARD.map((key) => {
+  return scorecardKeys((m) => (cur as Record<string, number | undefined>)[m] != null).map((key) => {
     const m = METRICS[key];
     // Conversion metrics answer for themselves from the tracking sources; the rest keep the paid/organic rule.
     const tracking = trackingUnavailable(key, conversions, paid);

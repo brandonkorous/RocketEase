@@ -50,13 +50,14 @@ export async function insightsIngest(data: JobPayloads["insights.ingest"], ctx: 
     const page = await adapter.fetchInsights(cred, toDescriptor(ch), { since: dayStr(since), until: dayStr(until), postRemoteIds: posts.map((p) => p.remoteId) });
     const { inserted, revised } = await upsertFacts(ch, page.facts);
     // A partial page is a success, not a failure: the rest of the metrics are
-    // real. Say which ones the network has retired instead of leaving a gap.
-    const retired = page.unsupportedMetrics?.length ? `${ch.name}: ${ch.network} no longer reports ${page.unsupportedMetrics.join(", ")}. Every other metric is up to date.` : null;
+    // real. Name what the network turned down — that is true whether it retired
+    // the metric or we asked under a name it never had.
+    const retired = page.unsupportedMetrics?.length ? `${ch.name}: ${ch.network} rejected these metric names — ${page.unsupportedMetrics.join(", ")}. Every other metric is up to date.` : null;
     await db
       .insert(syncCursor)
       .values({ channelId: ch.id, resource: RESOURCE, freshAt: until, lastSuccessAt: until, lastError: retired, attempts: 0 })
       .onConflictDoUpdate({ target: [syncCursor.channelId, syncCursor.resource], set: { freshAt: until, lastSuccessAt: until, lastError: retired, attempts: 0, updatedAt: until } });
-    if (retired) l.warn("insights metrics retired by provider", { unsupported: page.unsupportedMetrics });
+    if (retired) l.warn("insights metric names rejected by provider", { unsupported: page.unsupportedMetrics });
     l.info("insights ingested", { facts: page.facts.length, inserted, revised, posts: posts.length });
   } catch (err) {
     const msg = err instanceof ProviderError ? `${err.category}: ${err.message}` : String(err);

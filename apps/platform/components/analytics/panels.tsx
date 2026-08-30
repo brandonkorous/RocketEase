@@ -90,8 +90,6 @@ function SourceAttribution({ data }: { data: AnalyticsData }) {
   );
 }
 
-const TREND_OPTIONS: AnalyticsData["trendMetric"][] = ["engagement", "reach", "impressions"];
-
 export function TrendPanel({ data }: { data: AnalyticsData }) {
   const router = useRouter();
   const networks = [...new Set(data.trend.map((p) => p.network))];
@@ -101,7 +99,7 @@ export function TrendPanel({ data }: { data: AnalyticsData }) {
       <div className="flex items-center justify-between gap-2">
         <h2 className="flex items-center text-sm font-semibold">Cross-channel trend<MetricInfo m={METRICS[data.trendMetric]} freshness={null} /></h2>
         <select className="select select-xs w-auto" value={data.trendMetric} onChange={(e) => router.push(`${base}&trend=${e.target.value}`)} aria-label="Trend metric">
-          {TREND_OPTIONS.map((k) => (<option key={k} value={k}>{METRICS[k].name}</option>))}
+          {data.trendOptions.map((k) => (<option key={k} value={k}>{METRICS[k].name}</option>))}
         </select>
       </div>
       <div className="mt-3"><Legend networks={networks} /></div>

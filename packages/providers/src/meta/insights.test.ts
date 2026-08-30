@@ -26,6 +26,52 @@ beforeEach(() => {
   graph.mockReset();
 });
 
+/** One graph() reply carrying whichever of `named` the call asked for. */
+const replyWith = (named: Record<string, number[]>) => async (...args: unknown[]) => ({
+  data: askedIn(args)
+    .filter((m) => named[m])
+    .map((m) => ({ name: m, values: named[m].map((value, i) => ({ value, end_time: `2026-08-0${i + 2}T07:00:00+0000` })) })),
+});
+
+describe("fetchInsights — Meta's successor metric names", () => {
+  it("asks for the names Meta still has, and for none it retired", async () => {
+    graph.mockImplementation(replyWith({}));
+
+    await fetchInsights(cfg, cred, page, req);
+
+    const asked = askedIn(graph.mock.calls[0]);
+    for (const dead of ["page_impressions", "page_impressions_unique", "page_fans", "page_fan_adds", "page_consumptions_by_consumption_type"]) {
+      expect(asked, dead).not.toContain(dead);
+    }
+    expect(asked).toEqual(expect.arrayContaining(["page_media_view", "page_total_media_view_unique", "page_follows"]));
+  });
+
+  it("lands unique media views on viewers, never on reach", async () => {
+    graph.mockImplementation(replyWith({ page_total_media_view_unique: [40] }));
+
+    const out = await fetchInsights(cfg, cred, page, req);
+
+    expect(out.facts.map((f) => f.metric)).toEqual(["viewers"]);
+    expect(out.facts[0].source).toBe("meta.page_total_media_view_unique");
+  });
+
+  it("reports follower growth net of unfollows", async () => {
+    graph.mockImplementation(replyWith({ page_daily_follows_unique: [10, 4], page_daily_unfollows_unique: [3, 6] }));
+
+    const out = await fetchInsights(cfg, cred, page, req);
+
+    expect(out.facts.filter((f) => f.metric === "follower_gain").map((f) => f.value)).toEqual([7, -2]);
+  });
+
+  it("reports no growth at all rather than passing gross follows off as net", async () => {
+    graph.mockImplementation(replyWith({ page_daily_follows_unique: [10] }));
+
+    const out = await fetchInsights(cfg, cred, page, req);
+
+    expect(out.facts.some((f) => f.metric === "follower_gain")).toBe(false);
+  });
+});
+
 describe("fetchInsights — a retired Meta metric", () => {
   it("does not let one dead name zero out the others", async () => {
     graph.mockImplementation(async (...args: unknown[]) => {
@@ -38,14 +84,14 @@ describe("fetchInsights — a retired Meta metric", () => {
     const out = await fetchInsights(cfg, cred, page, req);
 
     const sources = out.facts.map((f) => f.source);
-    expect(sources).toContain("meta.page_impressions");
+    expect(sources).toContain("meta.page_media_view");
     expect(sources).toContain("meta.page_post_engagements");
     expect(sources).not.toContain("meta.page_video_views");
     expect(out.unsupportedMetrics).toEqual(["page_video_views"]);
   });
 
   it("asks for the whole list in one call when nothing is retired", async () => {
-    graph.mockResolvedValue({ data: [{ name: "page_impressions", values: [{ value: 3, end_time: "2026-08-02T07:00:00+0000" }] }] });
+    graph.mockResolvedValue({ data: [{ name: "page_media_view", values: [{ value: 3, end_time: "2026-08-02T07:00:00+0000" }] }] });
 
     const out = await fetchInsights(cfg, cred, page, req);
 

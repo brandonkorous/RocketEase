@@ -6,6 +6,12 @@
 export type CanonicalMetric =
   | "impressions"
   | "reach"
+  /**
+   * Meta's successor to reach from June 2026: unique accounts that VIEWED the
+   * media, not unique accounts the content was delivered to. A separate metric
+   * on purpose — the two must never be summed or charted as one series.
+   */
+  | "viewers"
   | "video_views"
   | "reactions"
   | "comments"

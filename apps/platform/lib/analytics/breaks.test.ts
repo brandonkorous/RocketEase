@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { METRICS, DEFINITIONS_VERSION } from "./metrics";
+import { METRICS, DEFINITIONS_VERSION, SCORECARD, scorecardKeys } from "./metrics";
 import { allBreaks, breaksInRange, definitionChangeNotes, isValidDay, PROVIDER_LABEL, PROVIDER_NETWORKS, seriesBreakMarkers, splitAtBreaks } from "./breaks";
 
 const days = (from: string, n: number) => Array.from({ length: n }, (_, i) => new Date(Date.parse(`${from}T00:00:00Z`) + i * 86_400_000).toISOString().slice(0, 10));
@@ -7,10 +7,18 @@ const days = (from: string, n: number) => Array.from({ length: n }, (_, i) => ne
 describe("definition break registry", () => {
   const breaks = allBreaks();
 
-  it("declares at least the Meta June 2026 retirement", () => {
+  it("declares both waves of Meta's retirement, on Meta's own dates", () => {
     expect(breaks.length).toBeGreaterThan(0);
-    expect(breaks.some((b) => b.entry.provider === "meta" && b.entry.effectiveFrom === "2026-06-15")).toBe(true);
-    expect(DEFINITIONS_VERSION).toBe("2026.08.2");
+    // Impressions and page fans went on 15 Nov 2025; the *_unique family on 15 Jun 2026.
+    expect(breaks.some((b) => b.metric === "impressions" && b.entry.effectiveFrom === "2025-11-15")).toBe(true);
+    expect(breaks.some((b) => b.metric === "followers" && b.entry.effectiveFrom === "2025-11-15")).toBe(true);
+    expect(breaks.some((b) => b.metric === "reach" && b.entry.effectiveFrom === "2026-06-15")).toBe(true);
+    expect(DEFINITIONS_VERSION).toBe("2026.08.3");
+  });
+
+  it("claims no break for a metric Meta never changed", () => {
+    // page_video_views and post_video_views survived both waves.
+    expect(METRICS.video_views.breaks ?? []).toHaveLength(0);
   });
 
   it("references only metrics that exist in the registry", () => {
@@ -40,11 +48,39 @@ describe("definition break registry", () => {
   });
 
   it("maps Meta's viewers metric and refuses comparability with reach", () => {
-    expect(METRICS.viewers.providers.meta).toBeTruthy();
+    expect(METRICS.viewers.providers.meta).toMatch(/media_view/);
     expect(METRICS.viewers.caveat).toMatch(/not comparable to reach/i);
-    expect(METRICS.viewers.unavailable).toBeTruthy();
-    expect(METRICS.reach.providers.meta).toMatch(/retiring/i);
+    // A static `unavailable` would pin the value to null forever (metric-values.ts).
+    expect(METRICS.viewers.unavailable).toBeUndefined();
+    expect(METRICS.reach.providers.meta).toMatch(/ended 2026-06-14/);
     expect(METRICS.reach.breaks?.[0].effectiveFrom).toBe("2026-06-15");
+  });
+
+  it("names Meta's successor metric for every canonical metric it broke", () => {
+    for (const key of ["impressions", "reach", "followers", "follower_gain"] as const) {
+      const b = METRICS[key].breaks?.find((x) => x.provider === "meta");
+      expect(b, key).toBeDefined();
+      expect(b!.previous.name).not.toBe(b!.next.name);
+    }
+  });
+});
+
+describe("scorecardKeys", () => {
+  it("is the plain scorecard when nothing reports viewers", () => {
+    expect(scorecardKeys(() => false)).toEqual(SCORECARD);
+  });
+
+  it("shows Viewers in place of Reach when only Meta reports", () => {
+    const keys = scorecardKeys((m) => m === "viewers");
+    expect(keys).toContain("viewers");
+    expect(keys).not.toContain("reach");
+    expect(keys).toHaveLength(SCORECARD.length);
+  });
+
+  it("shows both when a workspace has a Meta channel and a channel that still reports reach", () => {
+    const keys = scorecardKeys((m) => m === "viewers" || m === "reach");
+    expect(keys.slice(0, 2)).toEqual(["reach", "viewers"]);
+    expect(keys).toHaveLength(SCORECARD.length + 1);
   });
 });
 

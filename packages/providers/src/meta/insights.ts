@@ -4,7 +4,7 @@
  * post insights per remote id. Metric names are kept as provenance.
  */
 import type { CanonicalMetric, InsightFact, InsightsPage, InsightsRequest } from "../insights-types";
-import type { ChannelDescriptor, Credential, ProviderConfig } from "../types";
+import { ProviderError, type ChannelDescriptor, type Credential, type ProviderConfig } from "../types";
 import { graph } from "./graph";
 
 type Series = { name: string; period?: string; values?: { value: number | Record<string, number>; end_time?: string }[] };
@@ -27,29 +27,62 @@ function toFacts(series: Series[], map: Record<string, CanonicalMetric>, entity:
   return out;
 }
 
-async function channelSeries(cfg: ProviderConfig, t: string, ch: ChannelDescriptor, req: InsightsRequest): Promise<InsightFact[]> {
+/** Code 100 on an insights call means a metric name in the list is not valid for this object. */
+const isRetiredMetric = (e: unknown) => e instanceof ProviderError && e.category === "validation" && (e.providerCode ?? "").startsWith("100");
+
+/**
+ * Meta rejects the WHOLE request when any one metric name has been retired, so a
+ * single dead name silently zeroes out every other metric. On that error we ask
+ * for each metric on its own, keep what still works, and name what does not.
+ */
+async function seriesFor(cfg: ProviderConfig, t: string, path: string, metrics: string[], params: Record<string, string>): Promise<{ series: Series[]; unsupported: string[] }> {
+  try {
+    const res = await graph<{ data?: Series[] }>(path, cfg, t, { params: { ...params, metric: metrics.join(",") } });
+    return { series: res.data ?? [], unsupported: [] };
+  } catch (err) {
+    if (!isRetiredMetric(err)) throw err;
+    if (metrics.length === 1) return { series: [], unsupported: metrics };
+    const series: Series[] = [];
+    const unsupported: string[] = [];
+    for (const m of metrics) {
+      const one = await seriesFor(cfg, t, path, [m], params);
+      series.push(...one.series);
+      unsupported.push(...one.unsupported);
+    }
+    return { series, unsupported };
+  }
+}
+
+async function channelSeries(cfg: ProviderConfig, t: string, ch: ChannelDescriptor, req: InsightsRequest): Promise<{ facts: InsightFact[]; unsupported: string[] }> {
   const ig = ch.kind === "instagram_business";
-  const metrics = Object.keys(ig ? IG_MAP : PAGE_MAP).join(",");
-  const res = await graph<{ data?: Series[] }>(`/${ch.remoteId}/insights`, cfg, t, { params: { metric: metrics, period: "day", since: req.since, until: req.until } });
-  const facts = toFacts(res.data ?? [], ig ? IG_MAP : PAGE_MAP, "channel", undefined, req.until);
+  const map = ig ? IG_MAP : PAGE_MAP;
+  const { series, unsupported } = await seriesFor(cfg, t, `/${ch.remoteId}/insights`, Object.keys(map), { period: "day", since: req.since, until: req.until });
+  const facts = toFacts(series, map, "channel", undefined, req.until);
   if (ig) {
     const acct = await graph<{ followers_count?: number }>(`/${ch.remoteId}`, cfg, t, { params: { fields: "followers_count" } }).catch(() => ({ followers_count: undefined }));
     if (acct.followers_count != null) facts.push({ entity: "channel", metric: "followers", day: req.until, value: acct.followers_count, source: "meta.followers_count" });
   }
-  return facts;
+  return { facts, unsupported };
 }
 
 /** Post insights are lifetime totals on Meta; we store them on the day fetched and let revisions track growth. */
-async function postFacts(cfg: ProviderConfig, t: string, ch: ChannelDescriptor, postId: string, day: string): Promise<InsightFact[]> {
+async function postFacts(cfg: ProviderConfig, t: string, ch: ChannelDescriptor, postId: string, day: string): Promise<{ facts: InsightFact[]; unsupported: string[] }> {
   const ig = ch.kind === "instagram_business";
   const map = ig ? POST_IG_MAP : POST_FB_MAP;
-  const res = await graph<{ data?: Series[] }>(`/${postId}/insights`, cfg, t, { params: { metric: Object.keys(map).join(",") } }).catch(() => ({ data: [] as Series[] }));
-  return toFacts(res.data ?? [], map, "post", postId, day);
+  const r = await seriesFor(cfg, t, `/${postId}/insights`, Object.keys(map), {}).catch(() => ({ series: [] as Series[], unsupported: [] as string[] }));
+  return { facts: toFacts(r.series, map, "post", postId, day), unsupported: r.unsupported };
 }
 
 export async function fetchInsights(cfg: ProviderConfig, cred: Credential, ch: ChannelDescriptor, req: InsightsRequest): Promise<InsightsPage> {
   const t = token(cred, ch);
-  const facts = await channelSeries(cfg, t, ch, req);
-  for (const id of req.postRemoteIds ?? []) facts.push(...(await postFacts(cfg, t, ch, id, req.until)));
-  return { facts, timezone: "America/Los_Angeles" }; // Meta reports Page insights in Pacific time
+  const channel = await channelSeries(cfg, t, ch, req);
+  const facts = channel.facts;
+  const unsupported = new Set(channel.unsupported);
+  for (const id of req.postRemoteIds ?? []) {
+    const post = await postFacts(cfg, t, ch, id, req.until);
+    facts.push(...post.facts);
+    for (const m of post.unsupported) unsupported.add(m);
+  }
+  // Meta reports Page insights in Pacific time.
+  return { facts, timezone: "America/Los_Angeles", unsupportedMetrics: unsupported.size ? [...unsupported] : undefined };
 }

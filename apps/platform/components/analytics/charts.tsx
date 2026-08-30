@@ -114,17 +114,17 @@ export function StackedBars({ points, height = 160 }: { points: SeriesPoint[]; h
   );
 }
 
-/** Donut with a total in the middle. */
-export function Donut({ slices, total }: { slices: { network: string; value: number }[]; total: number }) {
+/** Donut with a total in the middle. `total: null` is unknown, never drawn as a zero. */
+export function Donut({ slices, total }: { slices: { network: string; value: number }[]; total: number | null }) {
   const R = 44;
   const C = 2 * Math.PI * R;
   let offset = 0;
   return (
     <svg viewBox="0 0 120 120" className="h-40 w-40 shrink-0" role="img" aria-label="Share by network">
       {slices.map((s, i) => { const frac = total ? s.value / total : 0; const dash = `${(frac * C).toFixed(2)} ${(C - frac * C).toFixed(2)}`; const el = <circle key={i} cx="60" cy="60" r={R} fill="none" stroke={color(s.network)} strokeWidth="18" strokeDasharray={dash} strokeDashoffset={-offset * C} transform="rotate(-90 60 60)" />; offset += frac; return el; })}
-      {total === 0 && <circle cx="60" cy="60" r={R} fill="none" className="stroke-base-300" strokeWidth="18" />}
-      <text x="60" y="58" textAnchor="middle" fontSize="15" fontWeight="700" className="fill-base-content">{short(total)}</text>
-      <text x="60" y="72" textAnchor="middle" fontSize="8" className="fill-secondary">Total</text>
+      {!total && <circle cx="60" cy="60" r={R} fill="none" className="stroke-base-300" strokeWidth="18" />}
+      <text x="60" y="58" textAnchor="middle" fontSize="15" fontWeight="700" className="fill-base-content">{total === null ? "—" : short(total)}</text>
+      <text x="60" y="72" textAnchor="middle" fontSize="8" className="fill-secondary">{total === null ? "Unavailable" : "Total"}</text>
     </svg>
   );
 }

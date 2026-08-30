@@ -11,6 +11,7 @@ import type { Channel, ProviderConnection } from "@/db/schema/connections";
 import type { TrackingKind, TrackingStatus } from "@/db/schema/tracking";
 import { workspacePath } from "@/lib/nav";
 import { CHANNEL_STATUS, agoLabel, channelAccess, stampLabel } from "./format";
+import { surfaceDowngrade, type SurfaceState } from "./surface-health";
 import type { IntegrationRow, StatusTone } from "./types";
 
 const sync = (at: Date | null, tz: string) => ({ syncRelative: at ? agoLabel(at, tz) : null, syncAbsolute: at ? stampLabel(at, tz) : null });
@@ -18,11 +19,14 @@ const sync = (at: Date | null, tz: string) => ({ syncRelative: at ? agoLabel(at,
 const reconnectHref = (provider: string, workspaceId: string, connectionId: string) =>
   `/api/connect/${provider}/start?workspaceId=${workspaceId}&reconnect=${connectionId}`;
 
-export function socialRow(ch: Channel, conn: ProviderConnection, quota: ChannelQuota | null, tz: string, workspaceId: string, canManage: boolean): IntegrationRow {
+export function socialRow(ch: Channel, conn: ProviderConnection, quota: ChannelQuota | null, tz: string, workspaceId: string, canManage: boolean, surfaces: SurfaceState[] = []): IntegrationRow {
   const st = CHANNEL_STATUS[ch.status] ?? CHANNEL_STATUS.degraded;
   // A dead connection outranks a channel that still looks healthy in its own row.
-  const tone: StatusTone = conn.status === "expired" || conn.status === "revoked" ? "error" : st.tone;
-  const detail = conn.status === "expired" ? "Token expired" : conn.status === "revoked" ? "Access revoked at the network" : (ch.health.message ?? st.detail);
+  const base: StatusTone = conn.status === "expired" || conn.status === "revoked" ? "error" : st.tone;
+  // "Full access" is about permissions; the status is about things actually working.
+  const down = surfaceDowngrade(base, surfaces);
+  const tone: StatusTone = down?.tone ?? base;
+  const detail = conn.status === "expired" ? "Token expired" : conn.status === "revoked" ? "Access revoked at the network" : (down?.detail ?? ch.health.message ?? st.detail);
   const caps = ch.capabilities;
   return {
     id: ch.id,
@@ -36,9 +40,15 @@ export function socialRow(ch: Channel, conn: ProviderConnection, quota: ChannelQ
     action: canManage
       ? { label: tone === "error" ? "Re-authenticate" : "Reconnect", href: reconnectHref(conn.provider, workspaceId, conn.id), emphasis: tone === "error" }
       : null,
-    detail: { capabilities: channelCapabilityItems(caps), quota, message: ch.health.message ?? null, scopes: conn.scopes },
+    detail: { capabilities: channelCapabilityItems(caps), quota, message: surfaceMessage(ch.health.message, surfaces), scopes: conn.scopes },
     managerUrl: null,
   };
+}
+
+/** The expanded row says what actually failed, in the provider's own words. */
+function surfaceMessage(health: string | null | undefined, surfaces: SurfaceState[]): string | null {
+  const failing = surfaces.filter((s) => s.lastError).map((s) => `${s.resource}: ${s.lastError}`);
+  return [health, ...failing].filter(Boolean).join(" · ") || null;
 }
 
 const PROVIDER_ADS_LABEL: Record<string, string> = { meta: "Meta", linkedin: "LinkedIn", tiktok: "TikTok", pinterest: "Pinterest", x: "X", mock: "Demo" };

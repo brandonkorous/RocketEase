@@ -49,10 +49,14 @@ export async function insightsIngest(data: JobPayloads["insights.ingest"], ctx: 
     const posts = await db.select({ remoteId: remotePublication.remoteId }).from(remotePublication).where(and(eq(remotePublication.channelId, ch.id), eq(remotePublication.state, "published"), gte(remotePublication.publishedAt, new Date(since.getTime() - 30 * 86_400_000))));
     const page = await adapter.fetchInsights(cred, toDescriptor(ch), { since: dayStr(since), until: dayStr(until), postRemoteIds: posts.map((p) => p.remoteId) });
     const { inserted, revised } = await upsertFacts(ch, page.facts);
+    // A partial page is a success, not a failure: the rest of the metrics are
+    // real. Say which ones the network has retired instead of leaving a gap.
+    const retired = page.unsupportedMetrics?.length ? `${ch.name}: ${ch.network} no longer reports ${page.unsupportedMetrics.join(", ")}. Every other metric is up to date.` : null;
     await db
       .insert(syncCursor)
-      .values({ channelId: ch.id, resource: RESOURCE, freshAt: until, lastSuccessAt: until, lastError: null, attempts: 0 })
-      .onConflictDoUpdate({ target: [syncCursor.channelId, syncCursor.resource], set: { freshAt: until, lastSuccessAt: until, lastError: null, attempts: 0, updatedAt: until } });
+      .values({ channelId: ch.id, resource: RESOURCE, freshAt: until, lastSuccessAt: until, lastError: retired, attempts: 0 })
+      .onConflictDoUpdate({ target: [syncCursor.channelId, syncCursor.resource], set: { freshAt: until, lastSuccessAt: until, lastError: retired, attempts: 0, updatedAt: until } });
+    if (retired) l.warn("insights metrics retired by provider", { unsupported: page.unsupportedMetrics });
     l.info("insights ingested", { facts: page.facts.length, inserted, revised, posts: posts.length });
   } catch (err) {
     const msg = err instanceof ProviderError ? `${err.category}: ${err.message}` : String(err);

@@ -8,6 +8,7 @@ import { filtersToQuery, type AnalyticsFilters } from "@/lib/analytics/periods";
 import { workspacePath } from "@/lib/nav";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 import type { AnalyticsData } from "@/lib/analytics/screen";
+import { SourceHealth } from "./source-health";
 
 export function AnalyticsFilterBar({ data }: { data: AnalyticsData }) {
   const router = useRouter();
@@ -43,7 +44,7 @@ export function AnalyticsFilterBar({ data }: { data: AnalyticsData }) {
         <span>{data.periodLabel}{data.compareLabel ? ` · compared with ${data.compareLabel}` : ""} · {data.timezone}</span>
         <span className="flex items-center gap-2">
           {data.refreshedLabel ? `Data refreshed ${data.refreshedLabel}` : "No insights ingested yet"}
-          {data.stale.length > 0 && <span className="text-warning" title={data.stale.map((s) => `${s.name}: ${s.lastError ?? "no recent sync"}`).join("\n")}>· {data.stale.length} source{data.stale.length > 1 ? "s" : ""} degraded</span>}
+          <SourceHealth workspaceId={data.workspaceId} stale={data.stale} />
           {/* Info-level findings (e.g. a definition break) are notes, not problems: they never colour the header. */}
           {data.quality.open > 0 && <span className={data.quality.issues.some((i) => i.severity !== "info") ? "text-warning" : undefined} title={data.quality.issues.map((i) => `${i.severity}: ${i.message}`).join("\n")}>· {data.quality.open} data quality note{data.quality.open > 1 ? "s" : ""}</span>}
           <Button size="xs" variant="ghost" color="neutral" loading={pending} onClick={() => run(() => refreshInsightsNow(data.workspaceId))}>Refresh</Button>

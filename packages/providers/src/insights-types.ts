@@ -41,4 +41,14 @@ export type InsightsRequest = {
   postRemoteIds?: string[];
 };
 
-export type InsightsPage = { facts: InsightFact[]; /** Provider-side timezone the days are bucketed in. */ timezone?: string };
+export type InsightsPage = {
+  facts: InsightFact[];
+  /** Provider-side timezone the days are bucketed in. */
+  timezone?: string;
+  /**
+   * Provider metric names the API rejected as no longer valid for this object.
+   * The rest of the page is still good — surfaced so the platform can say which
+   * numbers are missing and why, instead of showing an empty chart.
+   */
+  unsupportedMetrics?: string[];
+};

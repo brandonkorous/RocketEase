@@ -175,14 +175,19 @@ export function AudiencePanel({ data }: { data: AnalyticsData }) {
 }
 
 export function ChannelMixPanel({ data }: { data: AnalyticsData }) {
-  const total = data.mix.reduce((s, m) => s + m.value, 0);
+  // Engagement unknown must not render as 0 here while the scorecard above calls
+  // it Unavailable — same metric, same period, so it gets the same answer.
+  const unavailable = data.scorecard.find((s) => s.contract.key === "engagement")?.unavailable ?? null;
+  const known = !unavailable && data.mix.length > 0;
+  const total = known ? data.mix.reduce((s, m) => s + m.value, 0) : null;
   return (
     <Panel title="Channel mix (by engagement)" info="engagement">
       <div className="flex flex-wrap items-center gap-4">
-        <Donut slices={data.mix} total={total} />
+        <Donut slices={known ? data.mix : []} total={total} />
         <ul className="flex flex-col gap-1.5 text-sm">
-          {data.mix.map((m) => (<li key={m.channelId} className="flex items-center gap-2"><NetMark network={m.network} size={14} /><span className="min-w-0 flex-1 truncate">{m.name}</span><span className="font-semibold">{formatMetric(METRICS.engagement, m.value)}</span><span className="text-xs text-secondary/70">({total ? ((m.value / total) * 100).toFixed(1) : "0.0"}%)</span></li>))}
-          {data.mix.length === 0 && <li className="text-xs text-secondary/70">No engagement recorded yet.</li>}
+          {known &&
+            data.mix.map((m) => (<li key={m.channelId} className="flex items-center gap-2"><NetMark network={m.network} size={14} /><span className="min-w-0 flex-1 truncate">{m.name}</span><span className="font-semibold">{formatMetric(METRICS.engagement, m.value)}</span><span className="text-xs text-secondary/70">({total ? ((m.value / total) * 100).toFixed(1) : "0.0"}%)</span></li>))}
+          {!known && <li className="max-w-60 text-xs text-secondary/70">{unavailable ?? "No engagement recorded on any channel in this period."}</li>}
         </ul>
       </div>
     </Panel>

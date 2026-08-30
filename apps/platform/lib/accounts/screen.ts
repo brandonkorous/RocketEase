@@ -1,8 +1,8 @@
 import "server-only";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { adAccount } from "@/db/schema/campaigns";
-import { channel, providerConnection } from "@/db/schema/connections";
+import { channel, providerConnection, syncCursor } from "@/db/schema/connections";
 import { channelQuotas } from "@/lib/channel-quota";
 import { providers } from "@/lib/providers";
 import { conversionState } from "@/lib/tracking/conversions";
@@ -11,6 +11,7 @@ import type { WorkspaceContext } from "@/lib/session";
 import { hasCapability } from "@/lib/session";
 import { adsRow, connectionManagesAds, socialRow, trackingRow } from "./rows";
 import { railLists } from "./rail";
+import type { SurfaceState } from "./surface-health";
 import type { AccountsData, IntegrationRow } from "./types";
 
 /** Everything the Connected accounts screen renders, in one workspace-scoped read. */
@@ -30,13 +31,19 @@ export async function accountsData(ctx: WorkspaceContext): Promise<AccountsData>
     conversionState(workspaceId),
   ]);
   const quotas = await channelQuotas(workspaceId, tz, chans);
+  // Per-surface sync state, so a channel that cannot ingest stops claiming "All systems go".
+  const cursorRows = chans.length
+    ? await db.select({ channelId: syncCursor.channelId, resource: syncCursor.resource, lastError: syncCursor.lastError }).from(syncCursor).where(inArray(syncCursor.channelId, chans.map((c) => c.id)))
+    : [];
+  const surfacesByChannel = new Map<string, SurfaceState[]>();
+  for (const c of cursorRows) surfacesByChannel.set(c.channelId, [...(surfacesByChannel.get(c.channelId) ?? []), { resource: c.resource, lastError: c.lastError }]);
 
   const byConnection = new Map(conns.map((c) => [c.id, c]));
   const live = chans.filter((ch) => ch.status !== "disconnected");
   const rows: IntegrationRow[] = live.flatMap((ch) => {
     const conn = byConnection.get(ch.connectionId);
     if (!conn || conn.status === "selecting") return [];
-    return [socialRow(ch, conn, quotas.find((q) => q.channelId === ch.id) ?? null, tz, workspaceId, canManage)];
+    return [socialRow(ch, conn, quotas.find((q) => q.channelId === ch.id) ?? null, tz, workspaceId, canManage, surfacesByChannel.get(ch.id) ?? [])];
   });
 
   for (const { a, network } of ads) {

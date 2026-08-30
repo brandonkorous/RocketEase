@@ -6,23 +6,23 @@ Started 2026-08-30. One row per finding. IDs are sequential and never reused.
 
 | Severity | Open | Closed |
 |---|---|---|
-| **P0** | **1** | 0 |
-| P1 | 5 | 0 |
+| **P0** | 0 | **1** |
+| P1 | 6 | 0 |
 | P2 | 4 | 0 |
-| P3 | 0 | 0 |
-| UX | 3 | 0 |
+| P3 | 1 | 0 |
+| UX | 2 | 1 |
 
 ### Surface scores (1–10, below 9 = fix now)
 
 | Surface | Score | Stage | Note |
 |---|---|---|---|
-| Production stability | **2** | 1 | F-013 - connection exhaustion, Home/Analytics/Reports 500 |
+| Production stability | **2** → **9** | 1 | F-013 ✅ **fixed + verified live** (`19a987b`) |
 | Health checking | **3** | 1 | F-014 - green while pages 500 |
 | Analytics data pipeline (Meta) | **3** | 1 | F-006 - insights ingest fails on every run |
 | Connection health accuracy | **3** | 1 | F-009 - "All systems go" while degraded |
 | Composer media flow | **4** | 2 | F-003 - user-raised; ~9 clicks, no inline upload |
 | Analytics failure disclosure | **4** | 2 | F-007 - raw API string in a `title` tooltip |
-| Draft identity | **5** | 3 | F-005 - every draft is "Untitled post" |
+| Draft identity | **5** → **9** | 2 | F-005 ✅ **fixed** (`4da12cc`) |
 | Content Library navigation | **6** | 2 | F-004 - "Drafts" jumps to Calendar |
 | Analytics honesty consistency | **6** | 2 | F-008 - Channel mix shows 0 for Unavailable |
 | Approvals / Inbox empty states | **6** | 3 | F-012 |
@@ -31,8 +31,10 @@ Started 2026-08-30. One row per finding. IDs are sequential and never reused.
 | Billing settings | **9** | - | Honest unconfigured state, clear credit model |
 | Campaigns | **9** | - | Clear empty state and attribution footnote |
 | Tenant isolation | **9** | - | Non-member workspace redirects, no existence leak |
+| **Publish loop (Facebook, text)** | **10** | - | 3 rapid clicks, 1 attempt, 1 post (F-019) |
 | Publish receipts / post detail | **9** | - | States the no-duplicate guarantee plainly |
-| **Brand hub** | **10** | - | Every empty card names what the gap costs |
+| Deploy-time resilience | **4** | 2 | F-018 - rolling deploy crashes the page, drops the action |
+| **Brand hub** | **10** | - | Empty cards name what each gap costs; verified with a real kit (F-017) |
 
 **Suites run:** 01 partial (public site, tenancy), 02 partial (accounts, library, composer),
 03 partial (inbox, approvals surfaces), 04 partial (analytics, campaigns), 05 partial (brand, AI),
@@ -160,8 +162,21 @@ Finding your way back to a specific draft (F-003 step 6) is a recognition task t
 harder than it needs to. An internal title field, or an auto-title derived from the first line of the
 body, fixes it.
 
-**Score** Draft identity: **5/10** · Stage 3
-**Status** open
+**Score** Draft identity: **5/10** before, **9/10** after · Stage 2
+
+**Status** ✅ **FIXED** — commit `4da12cc`. Independently re-reported by the user during round 1,
+which is why it moved from Stage 3 to Stage 2.
+
+A draft is now named after its own first line, in `lib/content-title.ts` (`deriveTitle`), applied both
+at creation and on every autosave. The name stays in sync as the text changes but never overwrites one
+a person or the public API set explicitly: `isAutoTitle()` treats a title as ours only while it still
+equals what we would derive from the text we last saw. That also stops an auto-name freezing on the
+first word typed.
+
+Existing drafts heal on their next save. Already-published posts keep the old title, because published
+posts cannot be edited — the one live post from F-019 is still called "Untitled post".
+
+9 unit tests added; full platform suite 718 passing, typecheck clean.
 
 ---
 
@@ -416,9 +431,19 @@ The media worker is starving too, so the M12.1 pipeline is affected, not just pa
   acquisition and a designed error state.
 - **`/api/health` returned `ok` the entire time.** See F-014.
 
-**Score** Production stability: **2/10** - **Stage 1**
-**Status** open - **blocks the rest of round 1 from being trusted**: any intermittent failure seen
-elsewhere in this round may be this.
+**Score** Production stability: **2/10** before, **9/10** after - **Stage 1**
+
+**Status** ✅ **FIXED AND VERIFIED IN PRODUCTION** - commit `19a987b`, deployed 2026-08-30.
+
+Pool sizes are now `DB_POOL_MAX` (default 5) and `PGBOSS_POOL_MAX` (default 3): 8 per process, 32 of
+50 across four processes. `deploy/README.md` gained a section carrying the multiplication to redo
+before any new DB-connected Deployment or replica increase.
+
+Verified against the live deployment after the roll:
+
+- **48 concurrent requests** across 12 routes - **0 failures**, all 200.
+- **0** `remaining connection slots` errors across all four pods since the new revision started
+  (previously 10 on one platform replica and 5 on the media worker in an hour).
 
 ---
 
@@ -463,5 +488,128 @@ inbox reply drafts, and every brand-kit-grounded prompt - are **untestable and u
 `NEXT_PUBLIC_AI_ENABLED` is separate and **build-time** (W5) - setting the key alone may not be enough.
 
 **Status** open - config, not code - needed before AI can be tested at all
+
+---
+
+### F-016 - P3 - Two copy bugs on the Brand overview cards
+
+**Where** Brand overview - Voice card
+**Found by** dogfooding the Brand hub with a real kit, 2026-08-30
+
+1. **"Written for People who have already abandoned three note apps."** The card concatenates a
+   sentence prefix with the Audience field verbatim, so a user-entered value that starts with a
+   capital letter lands mid-sentence. Lowercase the first character of the interpolated value, or
+   render the audience as a separate line.
+2. **"6 dos - 7 don't - 3 examples - 12 banned words."** The counts are pluralized except this one:
+   it should be **"7 don'ts"**.
+
+Both are small, and they sit on the one screen in the product that is otherwise a 10.
+
+**Status** open - Stage 3
+
+---
+
+### F-017 - note - Brand hub verified end to end with a real brand kit
+
+Not a defect. Recorded because it is the strongest evidence in round 1.
+
+The Jotacular kit was built from https://jotacular.com and taken from **0% to 86% complete**. Six
+sections saved cleanly, each with a green toast: Identity, Voice, Messaging, Audiences, Rules, Visual
+identity, Channel presence.
+
+What held up under real data:
+
+- The completeness meter moved correctly and names what is still missing.
+- Overview cards summarise real content rather than showing a generic tick: the Voice card counts
+  "6 dos - 7 don'ts - 3 examples - 12 banned words"; Identity shows "Website set - 2 links".
+- The **typography card renders its specimen in the actual webfonts** (Nunito and DM Sans), pulled
+  live. A genuinely nice touch.
+- The colour palette renders real swatches with hex values.
+- **Channel presence listed only Facebook** - the one connected channel - instead of a wall of
+  networks the workspace does not have.
+- The framing text is honest throughout, e.g. Identity: *"an empty field is a field a post will not
+  mention"*, and Voice: *"Drafting is turned off for this deployment. Voice is saved and used as soon
+  as it is enabled."*
+
+Still empty and needing real files from the client: **Logos** (8 slots) and **Brand assets**.
+
+**Two things to confirm with the owner**, both recorded here so they are not mistaken for facts:
+
+- **Spelling is set to US, but the site is mixed.** jotacular.com uses "Don't organize it" (US) in its
+  headline and "in its own colour" (UK) in the body. US was chosen because the entity is a California
+  LLC and the headline is the most prominent copy. The site should be made consistent either way.
+- **Emoji is set to "One at most, where it earns it."** The site itself uses none at all, so
+  "Never use emoji" is the stricter reading of the evidence. Inferred, not stated.
+
+Live offers was deliberately left **empty** - Jotacular has no dated offer, and inventing one would
+break the kit's own rule.
+
+---
+
+### F-018 - P1 - A deploy mid-session hard-crashes the page and silently drops the action
+
+**Where** any page during a rolling deploy
+**Found by** live test, 2026-08-30 - triggered accidentally by our own deploy landing mid-click
+
+Clicking **Publish now** produced an unstyled *"Application error: a client-side exception has
+occurred"* page. The console gives the cause exactly:
+
+```
+UnrecognizedActionError: Server Action "4091362518a7a94cb407d7707e15329396e4c35f50"
+was not found on the server.
+```
+
+This is the standard Next.js rolling-deploy failure: the browser holds the previous build's Server
+Action ids, the new pods do not have them, and the action 404s. Confirmed by the timing - the pods
+rolled to `platform-5b8cc778d8` seconds before the click, and CI reported success in the same window.
+
+**The good part, and it is worth stating:** the dropped action was *atomic*. The post stayed a clean
+**Draft** - no partial publish, no phantom send, no orphaned variant. Nothing had to be reconciled.
+
+**The bad part:** the user sees a raw white error page with no styling, no explanation, and no
+indication that the thing they just clicked did not happen. On a Publish button that is a bad moment
+to be ambiguous, even though the underlying state was correct.
+
+**Fix** Set a stable `deploymentId` in `next.config` so action ids survive a rebuild, and/or catch
+`UnrecognizedActionError` in the error boundary and show a designed "this page updated, reload and try
+again" state instead of the default crash screen. A `maxUnavailable: 0` rollout plus the same-version
+pinning shortens the window further.
+
+**Score** Deploy-time resilience: **4/10** - Stage 2
+**Status** open
+
+---
+
+### F-019 - PASS - The publish loop works end to end on a real Facebook Page, and never duplicates
+
+Not a defect. The single most important result of round 1, recorded in full.
+
+**Test** (suite 02, PUB-01 + PUB-06): compose a text post, select Publish now, and **click the publish
+button three times in rapid succession**.
+
+**Result: one post.** Verified on all three surfaces:
+
+| Surface | Evidence |
+|---|---|
+| Post detail | `Published` - "1 attempt" |
+| Publish receipt | Validated (ruleset 2026-08-28.1) → Sent to Facebook (**Attempt 1**, idempotency key `b03b4be8...`) → Confirmed by Facebook (id `1332...`) |
+| Versions / Activity | One `v1 - publish`, one `content publish`, one `publish succeeded` |
+| **Facebook Page feed** | **Exactly one post**, "Published by RocketEase - 1m" |
+
+The receipt reads well to a non-engineer, states the guarantee in plain language at the top - *"When a
+network answers ambiguously we ask what exists before retrying, so a retry never duplicates a post"* -
+and shows the network id with a working deep link.
+
+Also checked and **not** a bug: the deep link is built as `facebook.com/{pageId}_{postId}`, which
+looks malformed but is a format Facebook resolves, redirecting to the canonical `permalink.php`. It
+opens the right post.
+
+**Score** Publish loop (Facebook, text): **10/10**
+
+Still untested from suite 02 §J: image and carousel publish, scheduled firing, forced failure and
+retry-reconciliation (PUB-09/10/12), and the Facebook-side deletion divergence (PUB-11).
+
+**Live post left on the Page:** "Filing was never what made a note worth keeping. Finding it again
+was." - real Jotacular copy, safe to leave up or delete.
 
 ---

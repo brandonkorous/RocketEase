@@ -128,8 +128,22 @@ The deploy job runs, in this order, and fails the release at any step:
 2. **`db-role` Job** — creates/updates `rocketease_app` and the `pgboss` schema.
 3. **`db-migrate` Job** — `drizzle-kit migrate` in the worker image at this SHA,
    as the owner. Migrations are forward-compatible, so old pods keep serving.
-4. **Containers** — image tags pinned to the SHA, then `kubectl apply -k`, then
-   `kubectl rollout status` on all three.
+4. **Containers** — image tags pinned to the SHA and a hash of `platform-env`
+   written into the `platform`/`worker` pod templates, then `kubectl apply -k`,
+   then `kubectl rollout status` on all three.
+
+### Rotating a credential
+
+Set it in Key Vault, then re-run the deploy. That is enough — but only because
+of the hash in step 4.
+
+`envFrom.secretRef` is read once, at pod start, so applying a changed Secret
+restarts nothing on its own. Before 2026-08-29 a rotation could therefore land
+in the cluster and never be read: `kubectl get secret platform-env` showed the
+new value while every pod still held the old one, and the app behaved as though
+the credential were unset. The annotation `rocketease.works/env-hash` makes the
+pod spec depend on the secret's contents, so the rollout happens when the
+content changes and not otherwise.
 
 Steps 2 and 3 **must** run in the cluster: the Postgres server has
 `public_network_access_enabled = false` and sits in a delegated subnet, so a

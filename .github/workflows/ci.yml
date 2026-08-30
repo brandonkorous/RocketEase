@@ -322,6 +322,18 @@ jobs:
             --from-file=ROCKETEASE_APP_PASSWORD=/tmp/app-password \
             --dry-run=client -o yaml | kubectl apply -f -
 
+          # Fingerprint of platform-env, carried into the pod template below.
+          # Kubernetes resolves `envFrom.secretRef` ONCE, when the pod starts:
+          # applying a changed Secret restarts nothing, so a rotated credential
+          # would sit in the cluster unread until something else forced a new
+          # ReplicaSet. Feeding this hash into an annotation makes the pod spec
+          # change exactly when the secret content changes — and only then, so
+          # ordinary deploys still roll once rather than twice.
+          #
+          # The file is written in a fixed order (required[] then optional[]),
+          # so identical content always hashes identically.
+          echo "ENV_HASH=$(sha256sum /tmp/platform.env | cut -c1-16)" >> "$GITHUB_ENV"
+
           rm -f /tmp/platform.env /tmp/admin-url /tmp/app-password
 
       # -----------------------------------------------------------------------
@@ -470,8 +482,20 @@ jobs:
         run: |
           set -euo pipefail
           sed -i "s|newTag: latest|newTag: sha-${GITHUB_SHA}|g" kustomization.yaml
+          sed -i "s|__ENV_HASH__|${ENV_HASH}|g" kustomization.yaml
+
+          # A surviving placeholder would apply the literal string as the
+          # annotation: the pod spec would then be byte-identical on every run
+          # and secret rotations would go unread again, silently. Fail instead.
+          if grep -q '__ENV_HASH__' kustomization.yaml; then
+            echo "::error::ENV_HASH was never substituted; refusing to apply."
+            exit 1
+          fi
+
           echo "--- resolved images ---"
           kubectl kustomize . | grep 'image:'
+          echo "--- env-hash annotation ---"
+          kubectl kustomize . | grep 'env-hash:'
           kubectl apply -k .
 
       - name: Wait for rollout

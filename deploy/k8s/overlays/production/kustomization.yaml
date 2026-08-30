@@ -51,5 +51,28 @@ configMapGenerator:
       disableNameSuffixHash: true
 
 # Secret `platform-env` (app config) and `db-admin` (migration credentials, Jobs
-# only) are created by .github/workflows/deploy.yml from Key Vault. Not generated
-# here — a secret in git is a secret leaked.
+# only) are created by the `deploy` job in .github/workflows/ci.yml from Key
+# Vault. Not generated here — a secret in git is a secret leaked.
+
+# Restart pods when platform-env changes.
+#
+# `envFrom.secretRef` is resolved once, at pod start. Applying a changed Secret
+# does not restart anything, so a credential rotated in Key Vault would reach
+# the cluster and never be read — the symptom is an app that behaves as if the
+# secret were still unset, with a Secret that plainly contains it. That is
+# exactly what happened with the provider credentials on 2026-08-29.
+#
+# The deploy job rewrites the placeholder with a hash of the secret's contents,
+# so the pod template changes when — and only when — that content changes.
+# `web` is absent deliberately: it mounts no secret.
+patches:
+  - target: { kind: Deployment, name: platform }
+    patch: |-
+      - op: add
+        path: /spec/template/metadata/annotations
+        value: { rocketease.works/env-hash: "__ENV_HASH__" }
+  - target: { kind: Deployment, name: worker }
+    patch: |-
+      - op: add
+        path: /spec/template/metadata/annotations
+        value: { rocketease.works/env-hash: "__ENV_HASH__" }

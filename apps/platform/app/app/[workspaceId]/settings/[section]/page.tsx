@@ -24,7 +24,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   const current = SETTINGS_SECTIONS.find((s) => s.slug === section);
   if (!current) notFound();
   const ctx = await requireWorkspace(workspaceId);
-  const data = await loadSection(section, ctx);
+  const data = await loadSection(section, ctx, sp);
 
   return (
     <AppPage>

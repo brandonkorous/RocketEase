@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ApprovalPolicies } from "@/components/approval-policies";
 import { SecurityPanel } from "@/components/security-panel";
 import { ApiKeys } from "@/components/settings/api-keys";
+import { AuditLog } from "@/components/settings/audit-log";
 import { BillingSettings } from "@/components/settings/billing";
 import { AutomationsSettings } from "@/components/settings/automations";
 import { HashtagSetsSettings } from "@/components/settings/hashtag-sets";
@@ -58,6 +59,8 @@ export function SectionBody({ section, label, ctx, data }: Props) {
       return <SsoSettings workspaceId={workspace.id} data={data.sso} />;
     case "notifications":
       return <NotificationSettings workspaceId={workspace.id} prefs={data.prefs} email={session.user.email} />;
+    case "audit":
+      return <AuditLog data={data.audit} timezone={workspace.timezone} />;
     default:
       return (
         <p className="mt-3 max-w-140 text-sm leading-relaxed text-secondary">

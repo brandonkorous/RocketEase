@@ -13,6 +13,7 @@ import { inboxSettings, savedReply } from "@/db/schema/engagement";
 import { automationsData, EMPTY_AUTOMATIONS, type AutomationsData } from "@/lib/automations/queries";
 import { ssoSectionData, EMPTY_SSO, type SsoSectionData } from "@/lib/sso/queries";
 import { apiKeysData, EMPTY_API_KEYS, type ApiKeysData } from "@/lib/api/queries";
+import { auditLogData, parseAuditFilters, EMPTY_AUDIT, type AuditLogData } from "@/lib/audit/queries";
 import { billingData, EMPTY_BILLING, type BillingData } from "@/lib/billing/queries";
 import { readGoals, readRecycling, readTracking, type GoalKey, type TrackingSettings } from "@/lib/actions/settings/catalog";
 import { listHashtagSets, type HashtagSetRow } from "@/lib/actions/hashtag-sets";
@@ -24,7 +25,7 @@ import { trackingKindEnabled } from "@/lib/tracking/sources";
 import { trackingWebhookUrl } from "@/lib/tracking/oauth-state";
 import type { TrackingSourcesProps } from "@/components/settings/tracking-sources";
 import { auth } from "@/lib/auth";
-import type { WorkspaceContext } from "@/lib/session";
+import { hasCapability, type WorkspaceContext } from "@/lib/session";
 import { formatInZone } from "@/lib/time";
 
 export type SectionData = {
@@ -44,9 +45,10 @@ export type SectionData = {
   hashtagSets: HashtagSetRow[];
   recycling: RecyclingData;
   billing: BillingData;
+  audit: AuditLogData;
 };
 
-const EMPTY: SectionData = { policies: [], channels: [], sessions: [], inbox: { minutes: 60, replies: [] }, tracking: readTracking({}), sources: [], sourceKinds: { ga4: false, shopify: false }, goals: [], prefs: {}, automations: EMPTY_AUTOMATIONS, sso: EMPTY_SSO, apiKeys: EMPTY_API_KEYS, grants: [], hashtagSets: [], recycling: EMPTY_RECYCLING, billing: EMPTY_BILLING };
+const EMPTY: SectionData = { policies: [], channels: [], sessions: [], inbox: { minutes: 60, replies: [] }, tracking: readTracking({}), sources: [], sourceKinds: { ga4: false, shopify: false }, goals: [], prefs: {}, automations: EMPTY_AUTOMATIONS, sso: EMPTY_SSO, apiKeys: EMPTY_API_KEYS, grants: [], hashtagSets: [], recycling: EMPTY_RECYCLING, billing: EMPTY_BILLING, audit: EMPTY_AUDIT };
 
 /** Conversion sources as the settings list renders them (freshness in the workspace timezone). */
 async function trackingSourceRows(workspaceId: string, tz: string): Promise<SectionData["sources"]> {
@@ -65,9 +67,13 @@ async function trackingSourceRows(workspaceId: string, tz: string): Promise<Sect
 }
 
 /** Loads only what the requested section renders. */
-export async function loadSection(section: string, ctx: WorkspaceContext): Promise<SectionData> {
+export async function loadSection(section: string, ctx: WorkspaceContext, sp: Record<string, string | string[] | undefined> = {}): Promise<SectionData> {
   const workspaceId = ctx.workspace.id;
   const data: SectionData = { ...EMPTY };
+  if (section === "audit") {
+    const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
+    data.audit = await auditLogData(workspaceId, parseAuditFilters({ action: one("action"), actor: one("actor"), from: one("from"), to: one("to") }), one("cursor"), hasCapability(ctx.workspace, "reports.export"));
+  }
   if (section === "team") {
     const rows = await db.select().from(approvalPolicy).where(eq(approvalPolicy.workspaceId, workspaceId)).orderBy(approvalPolicy.createdAt);
     data.policies = rows.map((p) => ({ id: p.id, name: p.name, enabled: p.enabled, channelIds: p.rule.channelIds ?? [], authorRoles: p.rule.authorRoles ?? [], approverRoles: p.approverRoles, separationOfDuty: p.separationOfDuty, dueHours: p.dueHours }));

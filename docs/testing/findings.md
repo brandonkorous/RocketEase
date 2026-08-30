@@ -7,7 +7,7 @@ Started 2026-08-30. One row per finding. IDs are sequential and never reused.
 | Severity | Open | Closed |
 |---|---|---|
 | **P0** | 0 | **1** |
-| P1 | 6 | 0 |
+| P1 | 7 | 0 |
 | P2 | 4 | 0 |
 | P3 | 1 | 0 |
 | UX | 2 | 1 |
@@ -23,6 +23,7 @@ Started 2026-08-30. One row per finding. IDs are sequential and never reused.
 | Composer media flow | **4** | 2 | F-003 - user-raised; ~9 clicks, no inline upload |
 | Analytics failure disclosure | **4** | 2 | F-007 - raw API string in a `title` tooltip |
 | Draft identity | **5** → **9** | 2 | F-005 ✅ **fixed** (`4da12cc`) |
+| Audit log | **2** | 2 | F-020 — the page is a placeholder; no reader exists |
 | Content Library navigation | **6** | 2 | F-004 - "Drafts" jumps to Calendar |
 | Analytics honesty consistency | **6** | 2 | F-008 - Channel mix shows 0 for Unavailable |
 | Approvals / Inbox empty states | **6** | 3 | F-012 |
@@ -40,9 +41,15 @@ Started 2026-08-30. One row per finding. IDs are sequential and never reused.
 03 partial (inbox, approvals surfaces), 04 partial (analytics, campaigns), 05 partial (brand, AI),
 06 partial (billing, settings shell).
 
-**Not yet run:** signup/auth/2FA/onboarding from scratch, a real publish to Facebook, inbox ingestion
-with real messages, approvals end-to-end, reports and share links, API keys, audit log, agency,
-keyboard/a11y, mobile (interrupted by F-013).
+**Done since:** a real text publish to Facebook including the double-click idempotency test (F-019),
+the mobile pass (Home, quick compose, Inbox at 390px — all fine; the earlier mobile "crash" was
+F-013, not a layout problem), Reports, Audit log (F-020), and a full Brand kit built from a real
+client site (F-017).
+
+**Not yet run:** signup / auth / 2FA / onboarding from scratch, image and carousel publish, a
+scheduled post firing, forced-failure and retry-reconciliation (PUB-09/10/12), inbox ingestion with
+real Facebook comments, approvals end to end, report share links, API keys, agency roll-up,
+keyboard-only and formal a11y.
 
 ---
 
@@ -611,5 +618,42 @@ retry-reconciliation (PUB-09/10/12), and the Facebook-side deletion divergence (
 
 **Live post left on the Page:** "Filing was never what made a note worth keeping. Finding it again
 was." - real Jotacular copy, safe to leave up or delete.
+
+---
+
+### F-020 · P1 · There is no audit log — the Audit log page is a placeholder
+
+**Where** Settings → Audit log · `app/app/[workspaceId]/settings/[section]/section-body.tsx`
+**Found by** live test, 2026-08-30
+
+The page renders one sentence and nothing else:
+
+> "Audit log settings arrive with the feature they govern. Changes here will show explicit save and
+> impact feedback, and every change is recorded in the audit log."
+
+No table, no rows, no filters, no export. `section-body.tsx` has a real component for **14 of the 15**
+settings sections; `audit` is the only one that falls through to the generic `default` placeholder.
+`grep` confirms `auditEvent` is read in exactly one place in the whole UI — the per-post Activity
+panel on post detail.
+
+The data is definitely there. Round 1 generated audit rows and watched them appear on post detail
+(`content create`, `content disclosure set`, `content publish`, `publish succeeded`), and every brand
+section save was audited. So `audit_event` is being written correctly and simply has no reader.
+
+Why this is P1 rather than a missing nice-to-have:
+
+- `docs/originals/permissions.md` specifies a list of actions that must be audited, and
+  `IMPLEMENTATION_PLAN.md` M0.4 marks `audit_event` ✅ done — which reads as "auditing is finished".
+- The agency and client-trust positioning depends on being able to answer "who changed this". An
+  owner currently cannot, for anything except a single post.
+- The placeholder text is self-refuting on this page in particular: it tells you changes are recorded
+  in the audit log while being the audit log, showing nothing.
+
+**Fix** Build the reader: a paginated `audit_event` list scoped to the workspace, with actor, action,
+target, timestamp, filters, and CSV export (suite 06 §AA-01..04). The rows are append-only already, so
+this is read-side only. Until then, the nav item overstates what the product does.
+
+**Score** Audit log: **2/10** · **Stage 2**
+**Status** open
 
 ---

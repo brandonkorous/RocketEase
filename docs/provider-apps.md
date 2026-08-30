@@ -48,7 +48,7 @@ Shopify for conversion tracking; Bluesky adapter. Waiting on reviewers: LinkedIn
 
 | Platform | App / project | Credentials in `.env` | State |
 |---|---|---|---|
-| Meta (Facebook, Instagram, Messenger) | RocketEase — App ID `1488577546410666` | ✅ `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN` | Configured, **Unpublished**. Webhooks not yet set up. |
+| Meta (Facebook, Instagram, Messenger) | RocketEase — App ID `1488577546410666` | ✅ `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN` | Configured, **Unpublished**. All 15 adapter scopes `Ready for testing` (fixed 2026-08-30). Dev-mode connect works for app-role users. Webhooks not yet subscribed. |
 | Threads | separate App ID `1558790839312850` | ❌ none | Use case enabled on the Meta app, **no adapter exists**. |
 | LinkedIn (member + identity) | RocketEase — client `86fk181ipt6rb5` (app `263549053`) | ✅ `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | Company-verified. *Sign In with OpenID Connect* provisioned. |
 | LinkedIn (organization) | RocketEase Community Management — client `86jcpr1hj2u7hi` (app `263545132`) | — (throwaway app) | **Development Tier form submitted 2026-08-29.** Awaiting Microsoft Vetting Services. |
@@ -142,6 +142,14 @@ B1 is cleared and the endpoint answers. Then configure webhooks and submit for r
 
 ## Console gotchas worth remembering
 
+- **Adding a Meta use case does NOT add its permissions.** The use case appears configured while most of
+  its permissions sit at `Add` rather than `Ready for testing`, and the login dialog then fails with
+  *Invalid Scopes* naming exactly those. Open each use case → Permissions and add every scope the adapter
+  requests. Adding one often pulls in its dependents (`instagram_basic` brought in content_publish,
+  manage_comments and manage_insights); a scope shared with another use case shows a confirmation modal
+  first. Verify by loading the authorize URL directly — a good dialog shows "Continue as …", not an error.
+- **Synthetic `.click()` does not work in the Meta console** (as in Google Cloud). Compute coordinates from
+  `getBoundingClientRect()` and click for real, or the Add silently does nothing.
 - **Meta silently discards `http://localhost` redirect URIs.** Enforce HTTPS is locked on; the page
   still says "Changes saved" and the URI is simply gone on reload. Use the mock provider locally, or an
   HTTPS tunnel.

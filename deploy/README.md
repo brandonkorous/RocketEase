@@ -62,24 +62,32 @@ Repository **variables** (public identifiers, deliberately not secrets):
 one of them fails silently at runtime rather than at boot:
 
     DATABASE-URL  BETTER-AUTH-SECRET  TOKEN-MASTER-KEY
-    AZURE-STORAGE-ACCOUNT  AZURE-STORAGE-KEY
+    AZURE-STORAGE-ACCOUNT  AZURE-STORAGE-KEY  SMTP-URL
 
 Everything else (provider OAuth pairs, Stripe, Anthropic/OpenAI, GA4, Shopify,
 ClamAV, OTel) is optional: each missing entry costs exactly one feature, and the
 product says so in the UI rather than pretending.
 
-### SMTP-URL is temporarily optional
+### Mail goes through Google Workspace SMTP relay
 
-It was moved out of `required` on 2026-08-29 so the platform could ship before a
-mail provider existed. Nothing fails at boot — `requireEmailVerification` is
-false, so signup and sign-in work, and `lib/mail.ts` logs each message instead of
-sending it. What silently does **not** work is every transactional mail:
-verification, **password reset**, invitations, approval requests and scheduled
-reports. Password reset strands a real user with no way back into their account,
-so this must not reach paying customers. Every deploy annotates the run with a
-`::warning::` until it is set. Tracked in `docs/IMPLEMENTATION_PLAN.md`
-("Deferred — revisit before launch"), which carries the Mailgun steps and the
-reminder to move it back to `required`.
+`SMTP-URL` authenticates as `noreply@rocketease.com` — a dedicated service account,
+not a person — against `smtp-relay.gmail.com:587` with a Google **App Password**
+(16 lowercase letters; an account password is rejected outright, whatever the 2FA
+state). The `@` in the username must be percent-encoded as `%40`.
+
+The relay, rather than `smtp.gmail.com`, because it decouples the authenticating
+account from the `From` address: `MAIL_FROM` is the `hello@rocketease.com` GROUP,
+which cannot authenticate at all. On `smtp.gmail.com` Gmail would rewrite `From` to
+the authenticating user unless it were a verified alias.
+
+The domain is already aligned — SPF includes `_spf.google.com`, DKIM is published at
+`google._domainkey`, and DMARC is `p=quarantine` with relaxed alignment — so mail is
+both SPF-aligned and DKIM-signed.
+
+To verify a credential BEFORE deploying, run `verify()` from inside the cluster: a
+bad one deploys green and only fails when a real person asks for a password reset.
+Google rejects the relay from most residential IPs with `421 ... (EHLO)`, so testing
+from a laptop proves nothing either way.
 
 ### TOKEN-MASTER-KEY is set once, by hand, and never by Terraform
 

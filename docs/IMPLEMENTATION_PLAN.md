@@ -222,28 +222,17 @@ Accessibility review (WCAG 2.2 AA), threat model updates, privacy/retention, per
 
 ### Deferred — revisit before launch
 
-- **Transactional email (Mailgun) — deferred 2026-08-29.** `SMTP-URL` was moved from the deploy
-  job's `required` list to `optional` (`.github/workflows/ci.yml`, "Read secrets from Key Vault")
-  so the platform could ship before a mail provider existed.
+- ~~**Transactional email**~~ — ✅ **closed 2026-08-30.** Google Workspace SMTP relay,
+  authenticating as the `noreply@rocketease.com` service account with an App Password;
+  `MAIL_FROM` stays the `hello@` group. Mailgun was the original plan and was dropped:
+  the domain is already on Workspace with SPF/DKIM/DMARC aligned, so the relay needed no
+  new vendor. `SMTP_URL` is back on the deploy job's `required` list.
 
-  Nothing fails at boot: `requireEmailVerification` is false, so signup and sign-in are unaffected,
-  and `lib/mail.ts` logs each message instead of sending it. What silently does **not** work is every
-  transactional mail — verification, **password reset**, invitations, approval requests and scheduled
-  reports. Password reset is the one that strands a real user with no way back into their account, so
-  this must not reach a paying customer. Every deploy run carries a `::warning::` until it is set.
-
-  **To close it:** add `rocketease.com` as a Mailgun sending domain — it must match `MAIL_FROM`,
-  pinned to `RocketEase <hello@rocketease.com>` in the production overlay. Publish Mailgun's SPF and
-  DKIM records in Cloudflare, **merging** `include:mailgun.org` into any existing SPF record rather
-  than adding a second one (two SPF records is a permerror that fails all mail). Then:
-
-  ```bash
-  az keyvault secret set --vault-name kv-rocketease-prod-cus --name SMTP-URL     --value 'smtp://postmaster%40rocketease.com:PASSWORD@smtp.mailgun.org:587'
-  ```
-
-  Percent-encode the `@` in the username as `%40` — it is a URL, and an unencoded `@` makes
-  nodemailer parse the host wrong. Finally move `SMTP_URL` back to the `required` list so a future
-  deploy cannot silently lose it.
+  What Mailgun would still buy, if this is revisited: bounce and complaint handling,
+  a suppression list, delivery webhooks, and a sending SUBDOMAIN with its own DKIM key.
+  Workspace gives none of those — a bounced password reset is invisible — and it cannot
+  isolate subdomain reputation, because it signs with the registered domain's key
+  regardless of the From subdomain. The relay ceiling is ~10,000 recipients/day.
 
 ## Decisions to make before the milestone that needs them
 

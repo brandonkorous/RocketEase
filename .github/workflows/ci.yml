@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Manual trigger, so a config-only change (a Key Vault secret, a repo variable
+  # baked in as a build arg) can be rolled out without an empty commit.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -215,15 +218,11 @@ jobs:
       # that 500s only when a user tries one; no TOKEN_MASTER_KEY is a provider
       # connect that fails at the moment someone connects an account.
       #
-      # SMTP_URL IS OPTIONAL, AND THAT IS A DELIBERATE, TEMPORARY CHOICE so the
-      # platform can ship before a mail provider exists. Without it the app still
-      # works: requireEmailVerification is false, so signup and sign-in are
-      # unaffected, and lib/mail.ts logs each message instead of sending it.
-      # What silently does NOT work is every transactional mail — verification,
-      # PASSWORD RESET, invitations, approval requests, scheduled reports.
-      # Password reset is the one that strands a real user, so the absence is
-      # annotated on the run rather than left for a customer to discover.
-      # Tracked in docs/IMPLEMENTATION_PLAN.md — deferred, not forgotten.
+      # SMTP_URL is REQUIRED again as of 2026-08-30: Google Workspace SMTP relay,
+      # authenticating as noreply@rocketease.com with an App Password. It was
+      # temporarily optional so the platform could ship before mail existed.
+      # Its absence is a signup that accepts the form and never sends the mail, and
+      # a PASSWORD RESET that strands a locked-out user with no way back in.
       #
       # The rest of the optional list is optional by design: each missing entry
       # costs exactly one feature, and the product says so in the UI.
@@ -242,14 +241,13 @@ jobs:
             TOKEN_MASTER_KEY
             AZURE_STORAGE_ACCOUNT
             AZURE_STORAGE_KEY
+            SMTP_URL
           )
 
           # DATABASE_ADMIN_URL is read separately below: it belongs to the Jobs
           # and must never reach the running app, which connects as the
           # restricted `rocketease_app` role.
           optional=(
-            # TEMPORARY. Move back to `required` once Mailgun is configured.
-            SMTP_URL
             GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET
             APPLE_CLIENT_ID APPLE_CLIENT_SECRET APPLE_APP_BUNDLE_IDENTIFIER
             META_APP_ID META_APP_SECRET META_WEBHOOK_VERIFY_TOKEN
@@ -294,11 +292,6 @@ jobs:
               echo "optional secret present: $name"
             fi
           done
-
-          # Loud on purpose: a missing mail provider is invisible from outside.
-          if ! grep -q '^SMTP_URL=' /tmp/platform.env; then
-            echo "::warning::SMTP_URL is not set: signup still works, but every transactional email is logged instead of sent, including PASSWORD RESET. Set it with: az keyvault secret set --vault-name $VAULT --name SMTP-URL --value <url>"
-          fi
 
           # printf %s with command substitution, NOT a plain redirect: `az -o tsv`
           # appends a newline and `--from-file` stores bytes verbatim, which would

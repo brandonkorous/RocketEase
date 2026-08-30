@@ -10,6 +10,30 @@ not proven. The mock provider (`PROVIDERS_ENABLE_MOCK=1`) remains the only end-t
 Credentials live in `apps/platform/.env` (gitignored) and, for production, in Key Vault. No secret
 appears in this file.
 
+## Production status — verified 2026-08-30
+
+Key Vault holds all 16 provider secrets and `platform-env` carries 21 keys. Deploy `fc9eded` rolled
+them out; `/api/webhooks/{provider}` now answers:
+
+| Result | Providers | Meaning |
+|---|---|---|
+| `200` + echoed challenge | meta | verify token matches; **ready for Meta to subscribe** |
+| `403` | meta (wrong token), tiktok, linkedin, youtube, google_business | provider is configured; rejecting on token/signature, which is correct |
+| `404 unknown provider` | pinterest, x | genuinely not configured — no credentials yet |
+
+A `404` here always means "no credentials in this deployment" (`lib/providers.ts` only registers a
+provider when its client id is present), never a routing fault. That distinction cost an afternoon.
+
+## Next action
+
+**Subscribe Meta's webhook fields** in the app dashboard (Products → Webhooks), now that the callback
+verifies. Callback `https://app.rocketease.com/api/webhooks/meta`, verify token = `META_WEBHOOK_VERIFY_TOKEN`.
+Fields the adapter maps live in `packages/providers/src/meta/` — subscribe those, not the full list.
+That is the last configuration step before Meta App Review, which gates Facebook and Instagram entirely.
+
+Then, in rough order: TikTok Sandbox → record the demo video (B2) and write the scope explanation (B3);
+Shopify for conversion tracking; Bluesky adapter. Waiting on reviewers: LinkedIn CMA, Pinterest.
+
 ## Entities
 
 | Where | Name | Note |
@@ -73,7 +97,7 @@ appears in this file.
 
 | # | Blocker | Owner | Blocks |
 |---|---|---|---|
-| B1 | Provider env vars are not in the running production container — `/api/webhooks/{meta,tiktok,…}` returns 404 `unknown provider` because `lib/providers.ts` only registers a provider when its credentials are present | us (deploy) | Meta webhook setup, Meta App Review, any live OAuth |
+| ~~B1~~ | ~~Provider env vars not in the running container~~ — **resolved 2026-08-30.** Two causes: the six Google secrets were absent from Key Vault, and `envFrom.secretRef` is read once at pod start so a rebuilt Secret was never picked up. Fixed by adding the secrets and by hashing `platform-env` into a `rocketease.works/env-hash` pod-template annotation (`fc9eded`) | — | — |
 | B2 | TikTok demo video showing the real integration | us, after B1 + Sandbox | TikTok app review |
 | B3 | TikTok "explain each product and scope" write-up (1000 chars) | us | TikTok app review |
 | B4 | LinkedIn Community Management review | LinkedIn | all organization posting |

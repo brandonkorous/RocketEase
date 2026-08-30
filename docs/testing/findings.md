@@ -7,34 +7,34 @@ Started 2026-08-30. One row per finding. IDs are sequential and never reused.
 | Severity | Open | Closed |
 |---|---|---|
 | **P0** | 0 | **1** |
-| P1 | 7 | 0 |
-| P2 | 4 | 0 |
-| P3 | 1 | 0 |
-| UX | 2 | 1 |
+| P1 | 2 | 5 |
+| P2 | 2 | 2 |
+| P3 | 0 | 1 |
+| UX | 1 | 2 |
 
 ### Surface scores (1–10, below 9 = fix now)
 
 | Surface | Score | Stage | Note |
 |---|---|---|---|
 | Production stability | **2** → **9** | 1 | F-013 ✅ **fixed + verified live** (`19a987b`) |
-| Health checking | **3** | 1 | F-014 - green while pages 500 |
-| Analytics data pipeline (Meta) | **3** | 1 | F-006 - insights ingest fails on every run |
-| Connection health accuracy | **3** | 1 | F-009 - "All systems go" while degraded |
-| Composer media flow | **4** | 2 | F-003 - user-raised; ~9 clicks, no inline upload |
-| Analytics failure disclosure | **4** | 2 | F-007 - raw API string in a `title` tooltip |
+| Health checking | **3** | 1 | F-014 — still open |
+| Analytics data pipeline (Meta) | **3** → **9** | 1 | F-006 ✅ fixed (`b1fdc0c`) |
+| Connection health accuracy | **3** → **9** | 1 | F-009 ✅ fixed (`b1fdc0c`) |
+| Composer media flow | **4** → **9** | 2 | F-003 ✅ fixed (`22aa8cd`) — user-raised |
+| Analytics failure disclosure | **4** → **9** | 2 | F-007 ✅ fixed (`b1fdc0c`) |
 | Draft identity | **5** → **9** | 2 | F-005 ✅ **fixed** (`4da12cc`) |
-| Audit log | **2** | 2 | F-020 — the page is a placeholder; no reader exists |
-| Content Library navigation | **6** | 2 | F-004 - "Drafts" jumps to Calendar |
-| Analytics honesty consistency | **6** | 2 | F-008 - Channel mix shows 0 for Unavailable |
+| Audit log | **2** → **9** | 2 | F-020 ✅ fixed (`dec1770`) |
+| Content Library navigation | **6** → **9** | 2 | F-004 ✅ fixed (`7cd7433`) |
+| Analytics honesty consistency | **6** → **9** | 2 | F-008 ✅ fixed (`b1fdc0c`) |
 | Approvals / Inbox empty states | **6** | 3 | F-012 |
-| List/detail layout | **7** | 2 | F-011 - tab strips clipped |
+| List/detail layout | **7** → **9** | 2 | F-011 ✅ fixed (`7cd7433`) |
 | Public marketing site | **9** | - | All links 200, legal name correct, honest pricing |
 | Billing settings | **9** | - | Honest unconfigured state, clear credit model |
 | Campaigns | **9** | - | Clear empty state and attribution footnote |
 | Tenant isolation | **9** | - | Non-member workspace redirects, no existence leak |
 | **Publish loop (Facebook, text)** | **10** | - | 3 rapid clicks, 1 attempt, 1 post (F-019) |
 | Publish receipts / post detail | **9** | - | States the no-duplicate guarantee plainly |
-| Deploy-time resilience | **4** | 2 | F-018 - rolling deploy crashes the page, drops the action |
+| Deploy-time resilience | **4** → **9** | 2 | F-018 ✅ fixed (`7cd7433`) |
 | **Brand hub** | **10** | - | Empty cards name what each gap costs; verified with a real kit (F-017) |
 
 **Suites run:** 01 partial (public site, tenancy), 02 partial (accounts, library, composer),
@@ -89,11 +89,19 @@ gate that is meant to block unscanned media passes everything. The note calls th
 This is not a functional break — it is the security control being absent while the system reports it
 as satisfied, which is the failure mode the product's own "honest" positioning is against.
 
-**Fix options** deploy a ClamAV sidecar and set `CLAMAV_URL`; or make the unset case record
-`skipped` rather than `clean` and have the publish gate treat production `skipped` as a hard block.
-The second is the safer default — an unset scanner should fail closed.
+**Status** ⚠️ **PARTLY FIXED** — commit `7cd7433`. The lie is gone; the control is still absent.
 
-**Status** open · confirm in suite 02 G-10 what the UI tells the user about scan state
+Done in code: an uninspected asset records an explicit `not scanned: no scanner is configured` note
+instead of a bare `clean`, the composer raises a **warning** naming the file, and
+`REQUIRE_ASSET_SCAN=1` makes a missing scanner **fail closed**. The note no longer calls production
+"dev".
+
+Deliberately not done: a new `skipped` enum value. That needs a migration, and the other agent has
+`0019`/`0020` uncommitted — generating `0021` against their unpushed snapshot chain would fail CI's
+migration-drift check.
+
+**Still required:** deploy a ClamAV sidecar, set `CLAMAV_URL`, then set `REQUIRE_ASSET_SCAN=1`. See
+`config-gaps.md`. Until then nothing is actually scanned.
 
 ---
 
@@ -128,11 +136,19 @@ Three separate defects compound here, each fixable on its own:
 Autosave *does* hold — the body text survived the detour intact (verified). So this is friction and
 disorientation, not data loss.
 
-**Score** Composer media flow: **4/10** · Stage 2
-**Recommendation** Do (a). It is the single highest-value UX fix found so far, it needs no new
-backend, and it removes the detour rather than signposting it.
+**Score** Composer media flow: **4/10** before, **9/10** after · Stage 2
 
-**Status** open
+**Status** ✅ **FIXED** — commit `22aa8cd`.
+
+(a) The picker takes a drag-drop, a paste, or a file button, reusing the library's upload hook rather
+than a second presigned-PUT implementation. (b) The Content Library link opens in a new tab, so it can
+never lose a draft. (c) is moot — you no longer leave.
+
+The wait needed handling, not just the upload: `loadAssets` returns only `ready` assets and
+`completeUpload` leaves them `processing` while the worker builds renditions, so a new file cannot
+simply be selected. Each id is held pending, the route refreshes on a timer, and the asset is selected
+the moment it turns ready, with an Uploading/Processing tile in its place until then. After 90s it
+stops polling and says where the file went rather than spinning.
 
 ---
 
@@ -151,8 +167,10 @@ Nothing signals the jump beforehand, and there is no way back to Content except 
 Either make it an in-page tab that lists drafts inside Content, or style it as the cross-section link
 it actually is. Compounds F-003, because this is the path back to your draft.
 
-**Score** Content Library navigation: **6/10** · Stage 2
-**Status** open
+**Score** Content Library navigation: **6/10** before, **9/10** after · Stage 2
+**Status** ✅ **FIXED** — commit `7cd7433`. Drafts now carries `↗`, a title saying it is on the
+Calendar, and `role="link"` instead of `role="tab"`, so it stops presenting as a sibling of the
+in-page tabs.
 
 ---
 
@@ -221,8 +239,17 @@ Note the asymmetry: `postFacts()` wraps its call in `.catch(() => ({ data: [] })
    `#100`, so one retired name can never zero out the other six.
 3. Record which metric was rejected, per channel, rather than one opaque connection-level string.
 
-**Score** Analytics data pipeline (Meta): **3/10** · **Stage 1**
-**Status** open
+**Score** Analytics data pipeline (Meta): **3/10** before, **9/10** after · **Stage 1**
+
+**Status** ✅ **FIXED** — commit `b1fdc0c`.
+
+On a `#100` the request now falls back to asking for each metric on its own, keeps everything that
+still works, and returns the rejected names as `unsupportedMetrics`. Chosen over hard-coding a guess
+at Meta's current valid set, which goes stale the next time they retire something. Only `#100`
+triggers the fallback — an expired token still fails loudly instead of being retried seven times. The
+partial page is recorded as a **success** with a note naming the retired metrics.
+
+3 unit tests cover the fallback, the healthy single-call path, and the auth-error passthrough.
 
 ---
 
@@ -250,8 +277,10 @@ the true one is invisible.
 broke in plain language, and links to Connected accounts. Suppress or reword the "not yet" banner when
 the last ingest actually errored.
 
-**Score** Analytics failure disclosure: **4/10** · **Stage 2**
-**Status** open
+**Score** Analytics failure disclosure: **4/10** before, **9/10** after · **Stage 2**
+**Status** ✅ **FIXED** — commit `b1fdc0c`. A real `<details>` disclosure: keyboard reachable, one
+entry per source, plain language from `explainSyncError()`, and a link to Connected accounts. 6 unit
+tests assert no raw provider code ever reaches a person.
 
 ---
 
@@ -270,8 +299,10 @@ it does not fix the numeral, which is the thing the eye lands on.
 The Conversion funnel panel gets this right (grey bars, `—`, and a reason), so the pattern already
 exists in the codebase; Channel mix just isn't using it.
 
-**Score** Analytics honesty consistency: **6/10** · **Stage 2**
-**Status** open
+**Score** Analytics honesty consistency: **6/10** before, **9/10** after · **Stage 2**
+**Status** ✅ **FIXED** — commit `b1fdc0c`. `Donut` takes `null` for unknown and renders `—` with
+"Unavailable"; Channel mix reads the engagement scorecard's own `unavailable` reason, so the two
+panels can no longer disagree.
 
 ---
 
@@ -297,8 +328,10 @@ persistently failing surface downgrades the channel to a warning naming the surf
 (permissions) and "All systems go" (things actually working) are different claims and should not share
 one indicator.
 
-**Score** Connection health accuracy: **3/10** · **Stage 1**
-**Status** open
+**Score** Connection health accuracy: **3/10** before, **9/10** after · **Stage 1**
+**Status** ✅ **FIXED** — commit `b1fdc0c`. Per-surface sync state now downgrades a channel to a
+warning naming the surface ("Insights is not syncing"). It only ever downgrades **from** success, so a
+token error is never masked, and a retired metric is not treated as a fault. 5 unit tests.
 
 ---
 
@@ -335,8 +368,9 @@ Not the content cap: the app deliberately caps content near 1440px per `design.m
 **Fix** Give the strip a wider minimum or let the tabs wrap; and resolve the 1px overflow so a
 scrollbar never appears on a row that fits.
 
-**Score** List/detail layout: **7/10** · Stage 2
-**Status** open
+**Score** List/detail layout: **7/10** before, **9/10** after · Stage 2
+**Status** ✅ **FIXED** — commit `7cd7433`. Both strips wrap instead of scrolling, so Approvals stops
+painting a scrollbar over a 1px overflow and Inbox stops hiding **Reviews** behind one.
 
 ---
 
@@ -512,7 +546,10 @@ inbox reply drafts, and every brand-kit-grounded prompt - are **untestable and u
 
 Both are small, and they sit on the one screen in the product that is otherwise a 10.
 
-**Status** open - Stage 3
+**Status** ✅ **FIXED** — commit `7cd7433`. "7 don'ts" is pluralised, and the audience renders as a
+label ("Audience · People who…") rather than mid-sentence. A `midSentence()` helper was written and
+discarded first: it lower-cased "SaaS" and "B2B", and restructuring the sentence beats guessing at
+proper nouns.
 
 ---
 
@@ -582,8 +619,13 @@ to be ambiguous, even though the underlying state was correct.
 again" state instead of the default crash screen. A `maxUnavailable: 0` rollout plus the same-version
 pinning shortens the window further.
 
-**Score** Deploy-time resilience: **4/10** - Stage 2
-**Status** open
+**Score** Deploy-time resilience: **4/10** before, **9/10** after · Stage 2
+
+**Status** ✅ **FIXED** — commit `7cd7433`. The app had **no error boundary anywhere**, which is why
+the failure was a bare white page. There is a designed one now that recognises the stale-build case
+and says plainly that nothing was saved, sent, or published, with a reload action and the digest for
+support. `deploymentId` is opt-in via `DEPLOYMENT_ID` and only makes the skew *identifiable* — it does
+not resurrect old action ids, and the code comment says so rather than overselling it.
 
 ---
 
@@ -653,7 +695,13 @@ Why this is P1 rather than a missing nice-to-have:
 target, timestamp, filters, and CSV export (suite 06 §AA-01..04). The rows are append-only already, so
 this is read-side only. Until then, the nav item overstates what the product does.
 
-**Score** Audit log: **2/10** · **Stage 2**
-**Status** open
+**Score** Audit log: **2/10** before, **9/10** after · **Stage 2**
+
+**Status** ✅ **FIXED** — commit `dec1770`. Workspace-scoped, newest first, filters for action, person
+and date range, and a CSV export stamped with who generated it and when. Paging is keyset on
+`(created_at, id)` rather than an offset, because an append-only table grows under the reader and
+OFFSET would show a row twice or skip one as events land mid-scroll. The export lives at
+`/app/:ws/audit/export` so it cannot shadow `settings/[section]`, is gated on `reports.export`, and is
+itself audited. 10 unit tests on the CSV escaping.
 
 ---

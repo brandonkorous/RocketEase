@@ -17,7 +17,7 @@ Started 2026-08-30. One row per finding. IDs are sequential and never reused.
 | Surface | Score | Stage | Note |
 |---|---|---|---|
 | Production stability | **2** → **9** | 1 | F-013 ✅ **fixed + verified live** (`19a987b`) |
-| Health checking | **3** → **9** | 1 | F-014 ✅ live/ready split, pooled readiness, connection headroom (`0dd5223`) |
+| Health checking | **3** → **9** | 1 | F-014 ✅ live/ready split, pooled readiness, connection headroom (`c351fba`) |
 | Analytics data pipeline (Meta) | **3** → **9** | 1 | F-006 ✅ fixed + verified live (`b1fdc0c`) |
 | Facebook metric coverage | **4** → ? | 2 | F-021 ✅ successors mapped (`8687e7a`); score held until a live sync confirms the names |
 | Connection health accuracy | **3** → **9** | 1 | F-009 ✅ fixed (`b1fdc0c`) |
@@ -504,7 +504,7 @@ That makes the endpoint unfit for its two jobs - telling an operator the truth, 
 Kubernetes probe. A readiness probe on this endpoint would never have removed the failing pod from
 service, which is precisely why the outage was visible to a user.
 
-#### Fixed (`0dd5223`)
+#### Fixed (`c351fba`)
 
 One endpoint could not do both jobs, so there are now three, and only two of them are probes:
 

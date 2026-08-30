@@ -86,7 +86,16 @@ function Tabs({ data, nav }: { data: LibraryData; nav: Nav }) {
         const active = data.query.tab === t.key || (t.key === "all" && !data.query.tab);
         const cls = `flex items-center gap-2 whitespace-nowrap border-b-2 py-3.5 text-sm ${active ? "border-base-content font-semibold" : "border-transparent text-secondary hover:text-base-content"}`;
         const inner = <><span>{t.label}</span><span className="rounded-full bg-base-200 px-2 py-0.5 text-xs text-secondary">{t.n.toLocaleString()}</span></>;
-        return t.href ? <Link key={t.key} href={t.href} className={cls} role="tab">{inner}</Link> : <button key={t.key} type="button" role="tab" aria-selected={active} className={cls} onClick={() => nav({ tab: t.key === "all" ? null : t.key })}>{inner}</button>;
+        // Drafts lives on the Calendar, not in this collection. It is a link out
+        // of the section, so it says so rather than looking like a sibling tab.
+        return t.href ? (
+          <Link key={t.key} href={t.href} className={cls} role="link" title="Drafts are listed on the Calendar">
+            {inner}
+            <span aria-hidden className="text-xs text-secondary">↗</span>
+          </Link>
+        ) : (
+          <button key={t.key} type="button" role="tab" aria-selected={active} className={cls} onClick={() => nav({ tab: t.key === "all" ? null : t.key })}>{inner}</button>
+        );
       })}
     </div>
   );

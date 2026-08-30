@@ -23,9 +23,21 @@ const NODE_ONLY = [
  */
 const NEVER_BUNDLE = ["@azure/storage-blob"];
 
+/*
+ * Version skew. During a rolling deploy an open tab still holds the previous
+ * build's Server Action ids; the new pods do not have them, so the action 404s
+ * with UnrecognizedActionError. Setting this stamps the build so a mismatch is
+ * identifiable rather than anonymous — it does NOT make old ids resolvable, so
+ * the designed recovery lives in app/app/[workspaceId]/error.tsx, which is what
+ * actually turns the crash into "reload and try again". Opt-in: set
+ * DEPLOYMENT_ID (e.g. the release sha) to enable it.
+ */
+const deploymentId = process.env.DEPLOYMENT_ID;
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
+  ...(deploymentId ? { deploymentId } : {}),
   transpilePackages: ["@rocketease/ui", "@rocketease/providers", "@rocketease/media"],
   serverExternalPackages: [...NODE_ONLY, ...NEVER_BUNDLE],
   webpack(config, { nextRuntime }) {

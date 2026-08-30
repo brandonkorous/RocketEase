@@ -34,7 +34,7 @@ export function ApprovalsScreen({ data }: { data: ApprovalsData }) {
       {data.automations.length > 0 && <div className="mt-4"><AutomationQueue workspaceId={data.workspaceId} rows={data.automations} /></div>}
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <section className="rounded-box border border-base-300" aria-label="Approval queue">
-          <div className="flex gap-5 overflow-x-auto border-b border-base-300 px-4" role="tablist">
+          <div className="flex flex-wrap gap-x-5 gap-y-1 border-b border-base-300 px-4" role="tablist">
             {tabs.map(([key, label, n]) => (<button key={key} type="button" role="tab" aria-selected={data.tab === key} onClick={() => nav({ tab: key })} className={`flex items-center gap-2 whitespace-nowrap border-b-2 py-3 text-sm ${data.tab === key ? "border-base-content font-semibold" : "border-transparent text-secondary"}`}>{label}<span className="rounded-full bg-base-200 px-1.5 text-xs">{n}</span></button>))}
           </div>
           {checked.size > 0 && (

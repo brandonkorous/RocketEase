@@ -8,6 +8,7 @@ import { asset, assetRendition } from "@/db/schema/assets";
 import { channel } from "@/db/schema/connections";
 import { contentItem, postVariant, type ContentItem, type PostVariant, type VariantValidation } from "@/db/schema/content";
 import { workspace } from "@/db/schema/app";
+import { wasNotScanned } from "./assets/scan-note";
 import { disclosureGap, readRequireAiDisclosure, toDisclosureInput } from "./disclosure";
 import { getAdapter, toDescriptor } from "./providers";
 import { grantsForUse, rightsAssets } from "./rights/queries";
@@ -53,6 +54,8 @@ export async function mediaForAssets(assetIds: string[], opts: { forPublish?: bo
     }
     if (a.uploadStatus !== "ready") problems.push({ severity: "error", code: "asset_not_ready", message: `${a.fileName} is still processing.`, field: "media" });
     if (a.scanStatus !== "clean") problems.push({ severity: "error", code: "asset_unscanned", message: `${a.fileName} hasn't passed the safety scan.`, field: "media" });
+    // A `clean` nothing actually inspected must not read like a clean scan.
+    else if (wasNotScanned(a.scanNote)) problems.push({ severity: "warning", code: "asset_not_scanned", message: `${a.fileName} was not virus-scanned — no scanner is configured for this deployment.`, field: "media" });
     // Providers pull the "web" rendition when it exists (already oriented/compressed), else the original.
     const web = rends.find((r) => r.assetId === a.id && r.kind === "preview" && a.kind === "image");
     const key = opts.forPublish && web ? web.storageKey : a.storageKey;

@@ -41,10 +41,10 @@ export function VoiceCard({ workspaceId, kit }: Base) {
       ) : (
         <div className="flex flex-col gap-3">
           {words.length > 0 && <Chips items={words} />}
-          {voice.audience && <p className="text-sm text-secondary">Written for {voice.audience}</p>}
+          {voice.audience && <p className="text-sm text-secondary"><span className="text-secondary/70">Audience</span> · {voice.audience}</p>}
           <Meta parts={[
             voice.doList.length ? plural(voice.doList.length, "do") : null,
-            voice.dontList.length ? `${voice.dontList.length} don't` : null,
+            voice.dontList.length ? plural(voice.dontList.length, "don't", "don'ts") : null,
             voice.examples.length ? plural(voice.examples.length, "example") : "no examples",
             voiceRules.bannedWords.length ? plural(voiceRules.bannedWords.length, "banned word") : null,
           ]} />

@@ -59,7 +59,7 @@ export function InboxQueue({ data, nav }: { data: InboxScreenData; nav: Nav }) {
         </div>
       </div>
       <div className="mt-2 flex items-center justify-between border-b border-base-300 px-4">
-        <div className="flex gap-4 overflow-x-auto" role="tablist">
+        <div className="flex flex-wrap gap-x-4 gap-y-1" role="tablist">
           {TABS.map((t) => (
             <button key={t.key} type="button" role="tab" aria-selected={f.tab === t.key} onClick={() => nav({ tab: t.key === "all" ? null : t.key })} className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 py-2 text-sm ${f.tab === t.key ? "border-base-content font-semibold" : "border-transparent text-secondary"}`}>
               {t.label}{t.key === "unread" && data.counts.unread > 0 && <span className="rounded-full bg-base-content px-1.5 text-xs font-semibold text-base-100">{data.counts.unread}</span>}

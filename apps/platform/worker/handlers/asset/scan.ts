@@ -1,7 +1,18 @@
-/** ClamAV REST (clamav-rest / clamd HTTP) when CLAMAV_URL is set; otherwise a dev no-op that records it was skipped. */
+/*
+ * Malware scanning. When CLAMAV_URL is unset there is no scanner, and this said
+ * so only in a note that read "(dev)" while recording the asset as `clean` — so
+ * production reported a control it was not running. The note is now accurate and
+ * machine-readable, and REQUIRE_ASSET_SCAN makes the absence fail closed.
+ */
+import { NOT_SCANNED_NOTE } from "@/lib/assets/scan-note";
+
 export async function scanBuffer(buf: Buffer): Promise<{ status: "clean" | "infected" | "error"; note?: string }> {
   const url = process.env.CLAMAV_URL;
-  if (!url) return { status: "clean", note: "scanner not configured (dev)" };
+  if (!url) {
+    // Fail closed where that is the deliberate posture; otherwise pass, but say so.
+    if (process.env.REQUIRE_ASSET_SCAN === "1") return { status: "error", note: "a scan is required here, and no scanner is configured" };
+    return { status: "clean", note: NOT_SCANNED_NOTE };
+  }
   try {
     const fd = new FormData();
     fd.append("file", new Blob([new Uint8Array(buf)]), "upload");

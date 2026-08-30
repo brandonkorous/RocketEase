@@ -5,7 +5,7 @@
 
 export const ENTITY = {
   /** Legal name of the operating company. */
-  legalName: "WizeWork LLC",
+  legalName: "WizeWorks LLC",
   /** Trading / product name used throughout the site. */
   productName: "RocketEase",
   /** How the documents refer to the company after first mention. */

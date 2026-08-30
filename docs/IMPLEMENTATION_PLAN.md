@@ -206,10 +206,14 @@ to leave dev mode; TikTok needs domain-verified ToS + Privacy URLs to submit at 
 | 11.4 | Marketing pages — features, integrations (honest per-provider status), pricing (prices from `NEXT_PUBLIC_PRICE_*`, never in the repo), 4 solutions + index, about, contact, demo, developers, help, status, changelog, roadmap; honest empty states for blog/guides/templates/careers/partners | ✅ |
 | 11.5 | **Provider deauthorize + data-deletion endpoints** — `parseSignedRequest` on the adapter contract (Meta HMAC-SHA256 impl, tested), `provider_deletion_request` table (migration 0016), `provider.deletion` queue + worker handler, `POST /api/connect/[provider]/{deauthorize,data-deletion}` returning Meta's `{url, confirmation_code}`, public `/data-deletion/[code]` status page | ✅ |
 
-Still to do before provider submission: DNS for `app.rocketease.com`; TikTok URL domain verification;
-set `NEXT_PUBLIC_PRICE_MONTHLY`/`NEXT_PUBLIC_PRICE_YEARLY` as Docker build args; register the DMCA
-designated agent with the U.S. Copyright Office (renewable every 3 years — the policy page alone does
-not confer safe harbour); paste the Meta callback URLs into the app dashboard.
+Done since: DNS for `app.rocketease.com`; TikTok URL domain verification; Meta callback URLs pasted
+into the app dashboard. Still to do: set `NEXT_PUBLIC_PRICE_MONTHLY`/`NEXT_PUBLIC_PRICE_YEARLY` as
+Docker build args; register the DMCA designated agent with the U.S. Copyright Office (renewable every
+3 years — the policy page alone does not confer safe harbour).
+
+**Note:** the registered legal name is **WizeWorks LLC** (with the `s`). `lib/site.ts` and the terms
+lede said "WizeWork LLC" until 2026-08-29; both are corrected but `apps/web` needs a redeploy for the
+published pages to reflect it. The Meta business portfolio is still named "WizeWork LLC".
 
 ---
 
@@ -261,7 +265,7 @@ Four agent-run streams with disjoint file ownership; the lead integrates, genera
 
 M0–M6 are built and verified against the mock provider. What remains before a real launch:
 
-1. **Credentials & app review** — Meta (Facebook/Instagram + Marketing API), LinkedIn Community Management (partner-gated), TikTok Business. Every real adapter is written but untested live; `packages/providers/README.md` lists scopes and prerequisites.
+1. **Credentials & app review** — 🔨 in progress, see **`docs/provider-apps.md`** for per-platform state, blockers and resume steps. As of 2026-08-29: Meta, LinkedIn, TikTok and Google apps are registered and their credentials are in `.env`; LinkedIn Community Management (organization posting) and Pinterest are submitted and awaiting review; TikTok is in Draft pending a demo video; X is deferred (paid tier). Every real adapter is still untested live — `packages/providers/README.md` lists scopes and prerequisites. **The production container does not yet have the provider env vars**, so every `/api/webhooks/*` returns 404 and no live OAuth can run.
 2. **Deploy** — ✅ infrastructure applied 2026-08-29 (`deploy/README.md`): own Postgres 18 flexible server, Key Vault, storage account and CI identity on the sparx AKS cluster, via `sparx.works/terraform/{envs/azure,bootstrap-azure}/rocketease.tf`. Storage is a native **Azure Blob** driver (`lib/storage/azure.ts`) — Azure has no S3-compatible API, so the old "Azure Blob (S3 API)" note was wrong. Routing is the shared Caddy, not an Ingress. Remaining: set `SMTP-URL` (see below), first push to `main`, make the three GHCR packages public, verify pods, then flip `rocketease_dns_enabled` for the DNS cutover.
 3. ~~Hardening leftovers~~ — ✅ done 2026-08-28: step-up re-auth (password/TOTP, 5-min window) before paid spend, structural comment-reply reconciliation (no text markers), field/asset-anchored approval comments, composer UTM prefill, e2e hardened for dev compile latency (note: `auth` and `inbox` specs still flake under `next dev` when run as a full suite — every step passes in isolation; CI runs the production build).
 4. **M7** — ✅ best-time analysis + explainable recommendations (`lib/recommendations`), ✅ automation rules with approval gates (Settings → Automations), ✅ YouTube/Pinterest/X adapters (untested live; see providers README for tier/quota gates). ✅ conversion tracking sources (GA4 / Shopify / signed webhook — GA4 and Shopify untested live; `docs/tracking.md`). ✅ white-label agency reporting (branded documents, agency branding, `/r/:token` share links, double-opt-in client recipients, agency roll-up). ✅ SSO/SCIM (SCIM curl-proven; IdP untested live; SAML ForceAuthn unavailable upstream). Remaining before launch: provider/IdP/GA4/Shopify credentials, AKS deploy (Terraform path needed), Chromium for PDF reports.

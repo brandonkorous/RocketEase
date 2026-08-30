@@ -187,6 +187,25 @@ Production uses **Azure Blob** (`STORAGE_DRIVER=azure`, `lib/storage/azure.ts`).
 Azure has no S3-compatible API, so this is a real driver rather than the S3 one
 pointed at another endpoint; the S3 driver remains for local MinIO.
 
+### The Azure SDK must never be bundled
+
+`generateBlobSASQueryParameters` authorises by
+`credential instanceof StorageSharedKeyCredential`. Webpack happily emits TWO
+copies of `@azure/storage-blob` into the server bundle, and a credential built
+by one copy then fails the other's check: every upload dies with
+*"Invalid sharedKeyCredential, userDelegationKey or accountName"* while
+perfectly valid credentials sit in the environment, which reads like a secrets
+problem and is not one. It is listed in `serverExternalPackages`
+(`apps/platform/next.config.ts`) to keep one class identity, and the client
+cache in `lib/storage/azure.ts` is module-scoped rather than on `globalThis` so
+the two copies can never share an object even if one returns.
+
+Local dev uses the S3/MinIO driver, which has no such check, so **nothing
+outside production can catch this**. If you change bundling, verify inside a
+built image: `grep -rl "Invalid sharedKeyCredential" .next/server/` must find
+nothing, and `require("@azure/storage-blob")` must resolve through the traced
+relative symlink.
+
 The container is private and every access is a short-lived SAS URL the browser
 uses directly, so bytes never transit the cluster. **The account's CORS rules are
 therefore load-bearing**: the browser PUTs and GETs against Azure itself, so

@@ -18,7 +18,7 @@ export function getBoss(): Promise<PgBoss> {
         connectionString: url,
         schema: "pgboss",
         application_name: `rke-${process.env.RKE_PROCESS ?? "platform"}`,
-        max: 5,
+        max: Number(process.env.PGBOSS_POOL_MAX ?? 3),
       });
       boss.on("error", (err: Error) => log.error("pg-boss error", { err }));
       await boss.start();

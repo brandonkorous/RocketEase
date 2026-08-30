@@ -119,6 +119,36 @@ Scoping ownership to `pgboss` keeps the protection that matters.
 The `db-role` Job creates it; Azure has no `docker/init/*.sql` hook, so nothing
 else will.
 
+## Connection pools must fit `max_connections`
+
+**Adding a DB-connected Deployment can take the whole app down, and the failure
+looks like a random page crash.** On 2026-08-30 Home, Analytics and Reports served
+intermittent 500s while `/api/health` stayed green; the cause was Postgres refusing
+connections with *"remaining connection slots are reserved for roles with privileges
+of the pg_use_reserved_connections role"*.
+
+Every process opens **two** pools, not one:
+
+| Pool | Env var | Default | Set in |
+|---|---|---|---|
+| Drizzle / postgres.js | `DB_POOL_MAX` | 5 | `apps/platform/db/index.ts` |
+| pg-boss | `PGBOSS_POOL_MAX` | 3 | `apps/platform/lib/jobs/boss.ts` |
+
+So the ceiling is `(DB_POOL_MAX + PGBOSS_POOL_MAX) x (platform replicas + worker +
+media-worker)` = `8 x 4` = **32** at today's replica counts. `web` connects to
+nothing and does not count.
+
+Azure Postgres Flexible Server on the Burstable tier allows **50**, minus its own
+reserved superuser and management slots. The defaults were 10 and 5 (15/process,
+**60** total) until this was fixed — over the limit, which is why the fourth
+DB-connected process (`media-worker`, added by M12.1) was enough to start starving
+the others.
+
+**Before adding a Deployment that touches Postgres, or raising `replicas`, redo that
+multiplication.** The symptom is not a clean error: whichever processes connect first
+keep their pools and the late ones fail every query, so the outage looks like it
+belongs to whatever page happened to land on the starved replica.
+
 ## Release order
 
 The deploy job runs, in this order, and fails the release at any step:

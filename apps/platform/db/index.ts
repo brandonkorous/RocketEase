@@ -34,7 +34,10 @@ if (!url) throw new Error("DATABASE_URL is not set");
 
 // One pool per process; Next.js dev hot-reload re-evaluates modules, so cache on globalThis.
 const globalForDb = globalThis as unknown as { __misSql?: ReturnType<typeof postgres> };
-const sql = globalForDb.__misSql ?? postgres(url, { max: 10, prepare: false });
+// Every process opens this pool AND pg-boss's. The sum across platform (x2),
+// worker and media-worker must fit Postgres max_connections — see deploy/README.md.
+const poolMax = Number(process.env.DB_POOL_MAX ?? 5);
+const sql = globalForDb.__misSql ?? postgres(url, { max: poolMax, prepare: false });
 if (process.env.NODE_ENV !== "production") globalForDb.__misSql = sql;
 
 export const db = drizzle(sql, { schema });

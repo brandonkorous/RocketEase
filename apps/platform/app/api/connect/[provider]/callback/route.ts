@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { ProviderError } from "@rocketease/providers";
 import { db } from "@/db";
+import { absoluteUrl } from "@/lib/app-url";
 import { providerConnection } from "@/db/schema/connections";
 import { audit } from "@/lib/audit";
 import { callbackUrl, codeVerifierFor, consumeOAuthState } from "@/lib/connections";
@@ -25,8 +26,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
 
   const state = q.get("state") ?? "";
   const st = await consumeOAuthState(state, session.user.id);
-  if (!st) return NextResponse.redirect(new URL("/?error=oauth_state", req.url));
-  const back = (err?: string) => NextResponse.redirect(new URL(`${st.redirectTo ?? workspacePath(st.workspaceId, "accounts")}${err ? `?error=${encodeURIComponent(err)}` : ""}`, req.url));
+  if (!st) return NextResponse.redirect(absoluteUrl("/?error=oauth_state"));
+  const back = (err?: string) => NextResponse.redirect(absoluteUrl(`${st.redirectTo ?? workspacePath(st.workspaceId, "accounts")}${err ? `?error=${encodeURIComponent(err)}` : ""}`));
 
   if (q.get("error")) {
     await audit({ action: "connection.cancelled", actorUserId: session.user.id, organizationId: st.organizationId, workspaceId: st.workspaceId, targetType: "provider", targetId: provider, summary: { note: q.get("error_description") ?? q.get("error") ?? undefined }, result: "denied" });
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
 
     await audit({ action: "connection.authorized", actorUserId: session.user.id, organizationId: st.organizationId, workspaceId: st.workspaceId, targetType: "provider_connection", targetId: connectionId, summary: { after: { provider, scopes: cred.scopes } } });
     const nextQs = st.redirectTo && st.redirectTo !== workspacePath(st.workspaceId, "accounts") ? `?next=${encodeURIComponent(st.redirectTo)}` : "";
-    return NextResponse.redirect(new URL(`${workspacePath(st.workspaceId, `accounts/select/${connectionId}`)}${nextQs}`, req.url));
+    return NextResponse.redirect(absoluteUrl(`${workspacePath(st.workspaceId, `accounts/select/${connectionId}`)}${nextQs}`));
   } catch (err) {
     log.error("oauth callback failed", { provider, err });
     const msg = err instanceof ProviderError ? err.category : "exchange_failed";

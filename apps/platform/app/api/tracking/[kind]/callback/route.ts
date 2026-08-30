@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { ProviderError } from "@rocketease/providers";
 import { db } from "@/db";
+import { absoluteUrl } from "@/lib/app-url";
 import { trackingSource, type TrackingSource } from "@/db/schema/tracking";
 import { audit } from "@/lib/audit";
 import { enqueue } from "@/lib/jobs/boss";
@@ -47,8 +48,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ kind
   if (!isOAuthKind(kind)) return NextResponse.json({ error: "Unknown tracking source" }, { status: 404 });
 
   const source = await consumeTrackingState(q.get("state") ?? "", kind);
-  if (!source) return NextResponse.redirect(new URL("/?error=tracking_state", req.url));
-  const back = (err?: string) => NextResponse.redirect(new URL(`${settings(source.workspaceId)}${err ? `?error=${encodeURIComponent(err)}` : "?ok=tracking_connected"}`, req.url));
+  if (!source) return NextResponse.redirect(absoluteUrl("/?error=tracking_state"));
+  const back = (err?: string) => NextResponse.redirect(absoluteUrl(`${settings(source.workspaceId)}${err ? `?error=${encodeURIComponent(err)}` : "?ok=tracking_connected"}`));
   await requireCapability(source.workspaceId, "workspace.settings");
 
   if (q.get("error") || !q.get("code")) {

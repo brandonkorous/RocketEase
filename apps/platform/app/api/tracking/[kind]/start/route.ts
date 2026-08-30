@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/db";
+import { absoluteUrl } from "@/lib/app-url";
 import { trackingSource, TRACKING_KINDS, type TrackingKind } from "@/db/schema/tracking";
 import { audit } from "@/lib/audit";
 import { AuthorizationError } from "@/lib/authz";
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ kind
   const q = req.nextUrl.searchParams;
   const workspaceId = q.get("workspaceId") ?? "";
   if (!(TRACKING_KINDS as readonly string[]).includes(kind) || !isOAuthKind(kind)) return NextResponse.json({ error: "Unknown tracking source" }, { status: 404 });
-  const back = (err?: string) => NextResponse.redirect(new URL(`${settings(workspaceId)}${err ? `?error=${encodeURIComponent(err)}` : ""}`, req.url));
+  const back = (err?: string) => NextResponse.redirect(absoluteUrl(`${settings(workspaceId)}${err ? `?error=${encodeURIComponent(err)}` : ""}`));
 
   try {
     const ctx = await requireCapability(workspaceId, "workspace.settings");

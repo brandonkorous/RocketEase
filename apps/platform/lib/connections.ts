@@ -2,9 +2,8 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import type { ProviderKey } from "@rocketease/providers";
 import { db } from "@/db";
+import { appUrl } from "@/lib/app-url";
 import { oauthState } from "@/db/schema/connections";
-
-const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5001";
 
 export const callbackUrl = (provider: ProviderKey) => `${appUrl()}/api/connect/${provider}/callback`;
 

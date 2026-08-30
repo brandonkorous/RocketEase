@@ -7,6 +7,7 @@
  * at any time from Report history.
  */
 import { db } from "@/db";
+import { appUrl } from "@/lib/app-url";
 import { reportShare } from "@/db/schema/analytics";
 import { emit } from "@/lib/jobs/outbox";
 import { presignGet } from "@/lib/storage";
@@ -15,7 +16,7 @@ import { loadBranding, logoDataUri } from "./branding";
 import { DEFAULT_SHARE_DAYS, mintShareToken, shareExpiry } from "./share";
 import type { ResolvedRecipients } from "./recipients";
 
-export const appUrl = () => (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5001").replace(/\/+$/, "");
+export { appUrl } from "@/lib/app-url";
 export const shareUrl = (token: string) => `${appUrl()}/r/${token}`;
 
 export type DeliveryInput = {

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AuthorizationError } from "@/lib/authz";
+import { absoluteUrl } from "@/lib/app-url";
 import { audit } from "@/lib/audit";
 import { callbackUrl, codeChallengeFor, createOAuthState } from "@/lib/connections";
 import { getAdapter, isProviderKey } from "@/lib/providers";
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     // PKCE params are always supplied; adapters that do not need them ignore them.
     return NextResponse.redirect(getAdapter(provider).authorizationUrl({ state, redirectUri: callbackUrl(provider), codeChallenge: codeChallengeFor(state), codeChallengeMethod: "S256" }));
   } catch (e) {
-    if (e instanceof AuthorizationError) return NextResponse.redirect(new URL(`${workspacePath(workspaceId, "accounts")}?error=forbidden`, req.url));
+    if (e instanceof AuthorizationError) return NextResponse.redirect(absoluteUrl(`${workspacePath(workspaceId, "accounts")}?error=forbidden`));
     throw e;
   }
 }

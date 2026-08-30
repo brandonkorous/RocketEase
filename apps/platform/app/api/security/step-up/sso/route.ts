@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { appUrl } from "@/lib/app-url";
 import { audit } from "@/lib/audit";
 import { getSession } from "@/lib/session";
 import { recordStepUp } from "@/lib/step-up";
@@ -7,8 +8,6 @@ import { decodeTicket, nonceMatches, STEP_UP_COOKIE } from "@/lib/sso/step-up-ti
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5001";
 
 /**
  * Landing point after an SSO step-up round trip. The identity provider has

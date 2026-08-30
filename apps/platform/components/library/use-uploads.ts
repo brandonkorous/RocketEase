@@ -18,8 +18,12 @@ function putWithProgress(url: string, file: File, headers: Record<string, string
   });
 }
 
-/** Direct-to-storage uploads with per-file progress; refreshes the route as files land. */
-export function useUploads(workspaceId: string) {
+/**
+ * Direct-to-storage uploads with per-file progress; refreshes the route as files land.
+ * `onUploaded` fires once the asset row exists — it is still `processing` at that
+ * point, so callers that need a usable asset must wait for it to turn `ready`.
+ */
+export function useUploads(workspaceId: string, onUploaded?: (assetId: string) => void) {
   const router = useRouter();
   const [uploads, setUploads] = useState<UploadItem[]>([]);
 
@@ -33,6 +37,7 @@ export function useUploads(workspaceId: string) {
       const done = await completeUpload(workspaceId, begin.assetId);
       if (done.error) throw new Error(done.error);
       set({ status: "done" });
+      onUploaded?.(begin.assetId);
       router.refresh();
     } catch (e) {
       set({ status: "error", error: e instanceof Error ? e.message : "Upload failed" });

@@ -10,15 +10,22 @@
 import { BlobSASPermissions, BlobServiceClient, SASProtocol, StorageSharedKeyCredential, generateBlobSASQueryParameters } from "@azure/storage-blob";
 import { contentDisposition, env, type ObjectHead, type StorageDriver, type UploadTicket } from "./types";
 
-const g = globalThis as unknown as { __rkeAz?: { cred: StorageSharedKeyCredential; svc: BlobServiceClient } };
+/*
+ * Module-scoped, NOT on globalThis. A cached credential shared across two
+ * bundled copies of the SDK is signed by one class and checked by the other,
+ * which fails `instanceof` and rejects every SAS. next.config.ts externalises
+ * the package so there is only one copy; keeping the cache local means a future
+ * bundler change cannot resurrect the mismatch.
+ */
+let client: { cred: StorageSharedKeyCredential; svc: BlobServiceClient } | undefined;
 
 function azure() {
-  if (!g.__rkeAz) {
+  if (!client) {
     const account = env("AZURE_STORAGE_ACCOUNT");
     const cred = new StorageSharedKeyCredential(account, env("AZURE_STORAGE_KEY"));
-    g.__rkeAz = { cred, svc: new BlobServiceClient(`https://${account}.blob.core.windows.net`, cred) };
+    client = { cred, svc: new BlobServiceClient(`https://${account}.blob.core.windows.net`, cred) };
   }
-  return g.__rkeAz;
+  return client;
 }
 
 const containerName = () => env("AZURE_STORAGE_CONTAINER", "media");

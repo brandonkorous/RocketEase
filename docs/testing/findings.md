@@ -7,7 +7,7 @@ Started 2026-08-30. One row per finding. IDs are sequential and never reused.
 | Severity | Open | Closed |
 |---|---|---|
 | **P0** | 0 | **1** |
-| P1 | 2 | 5 |
+| P1 | 3 | 5 |
 | P2 | 2 | 2 |
 | P3 | 0 | 1 |
 | UX | 1 | 2 |
@@ -18,12 +18,13 @@ Started 2026-08-30. One row per finding. IDs are sequential and never reused.
 |---|---|---|---|
 | Production stability | **2** → **9** | 1 | F-013 ✅ **fixed + verified live** (`19a987b`) |
 | Health checking | **3** | 1 | F-014 — still open |
-| Analytics data pipeline (Meta) | **3** → **9** | 1 | F-006 ✅ fixed (`b1fdc0c`) |
+| Analytics data pipeline (Meta) | **3** → **9** | 1 | F-006 ✅ fixed + verified live (`b1fdc0c`) |
+| Facebook metric coverage | **4** | 2 | F-021 — Meta retired 7 metric names; reach/impressions/followers have no source |
 | Connection health accuracy | **3** → **9** | 1 | F-009 ✅ fixed (`b1fdc0c`) |
-| Composer media flow | **4** → **9** | 2 | F-003 ✅ fixed (`22aa8cd`) — user-raised |
-| Analytics failure disclosure | **4** → **9** | 2 | F-007 ✅ fixed (`b1fdc0c`) |
+| Composer media flow | **4** → **9** | 2 | F-003 ✅ fixed + verified live (`22aa8cd`) — user-raised |
+| Analytics failure disclosure | **4** → **9** | 2 | F-007 ✅ fixed + verified live (`b1fdc0c`) |
 | Draft identity | **5** → **9** | 2 | F-005 ✅ **fixed** (`4da12cc`) |
-| Audit log | **2** → **9** | 2 | F-020 ✅ fixed (`dec1770`) |
+| Audit log | **2** → **9** | 2 | F-020 ✅ fixed + verified live, 42 events (`dec1770`) |
 | Content Library navigation | **6** → **9** | 2 | F-004 ✅ fixed (`7cd7433`) |
 | Analytics honesty consistency | **6** → **9** | 2 | F-008 ✅ fixed (`b1fdc0c`) |
 | Approvals / Inbox empty states | **6** | 3 | F-012 |
@@ -703,5 +704,54 @@ and date range, and a CSV export stamped with who generated it and when. Paging 
 OFFSET would show a row twice or skip one as events land mid-scroll. The export lives at
 `/app/:ws/audit/export` so it cannot shadow `settings/[section]`, is gated on `reports.export`, and is
 itself audited. 10 unit tests on the CSV escaping.
+
+---
+
+### F-021 · P1 · Meta has retired seven Page metrics — Reach, Impressions, Link clicks and Followers have no source on Facebook
+
+**Where** `packages/providers/src/meta/insights.ts` `PAGE_MAP` / `POST_FB_MAP`
+**Found by** the F-006 fix, verified live 2026-08-30 — the new disclosure named them
+
+With the fallback shipped, ingestion succeeded for the first time ("Data refreshed Aug 30, 4:07 AM")
+and the disclosure printed exactly which names Meta rejected:
+
+> Jotacular: facebook no longer reports **page_impressions, page_impressions_unique, page_fans,
+> page_fan_adds, page_consumptions_by_consumption_type, post_impressions, post_impressions_unique**.
+> Every other metric is up to date.
+
+Seven of the twelve mapped Facebook metrics are gone. My pre-fix guess — that `page_video_views` and
+`page_consumptions_by_consumption_type` were the culprits — was **wrong on the first**: it is the whole
+impressions / reach / fans family that Meta retired.
+
+What that costs, per the canonical mapping:
+
+| Canonical metric | Was sourced from | Status on Facebook now |
+|---|---|---|
+| `impressions` | `page_impressions`, `post_impressions` | **no source** |
+| `reach` | `page_impressions_unique`, `post_impressions_unique` | **no source** |
+| `followers` | `page_fans` | **no source** |
+| `follower_gain` | `page_fan_adds` | **no source** |
+| `link_clicks` | `page_consumptions_by_consumption_type` | page-level gone; `post_clicks` survives |
+| `engagement` | `page_post_engagements` | working |
+| `reactions`, `video_views` | `post_reactions_by_type_total`, `post_video_views` | working |
+
+So the product is now *honest* about the gap — the scorecard shows `—` with a reason and the
+disclosure names the metrics — but Reach, Impressions and Followers are simply unavailable for
+Facebook until the adapter maps Meta's replacements.
+
+This is precisely what M8.3 anticipated: "Meta reach → 'viewers' retirement: dual-track definitions,
+break annotations". The **metric registry** knows about the retirement; the **adapter's metric map**
+was never updated to the successor names.
+
+**Fix** Map the replacements (the `views`/`viewers` family and the current follower-count field)
+against Graph v21+, and record a definition break at the changeover date so old and new are never one
+line on a chart — the M8.3 machinery for that already exists.
+
+**Why it is P1 and not P0:** nothing is wrong or misleading on screen; the numbers are correctly
+absent with a stated reason. But four headline metrics being permanently blank on the one live
+provider is not a shippable analytics story.
+
+**Score** Facebook metric coverage: **4/10** · Stage 2
+**Status** open
 
 ---

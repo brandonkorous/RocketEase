@@ -13,6 +13,7 @@ import { contentItem, postVariant, type ContentItem, type PostVariant } from "@/
 import { audit } from "@/lib/audit";
 import { track } from "@/lib/telemetry";
 import { inferFormat, summarizeItem, validateVariant } from "@/lib/content";
+import { deriveTitle } from "@/lib/content-title";
 
 export type Actor = { userId: string; organizationId: string; workspaceId: string };
 
@@ -75,7 +76,7 @@ export async function createContentItem(actor: Actor, input: NewItemInput, surfa
       .values({
         organizationId: actor.organizationId,
         workspaceId: actor.workspaceId,
-        title: input.title?.trim() || "Untitled post",
+        title: input.title?.trim() || deriveTitle(input.text ?? ""),
         sharedText: input.text ?? "",
         sharedAssetIds: assetIds,
         link: input.link ?? null,

@@ -12,6 +12,7 @@ import { audit } from "@/lib/audit";
 import { track } from "@/lib/telemetry";
 import { inferFormat, summarizeItem, validateVariant } from "@/lib/content";
 import { createContentItem, ownedAssetIds } from "@/lib/authoring";
+import { deriveTitle, isAutoTitle } from "@/lib/content-title";
 import { requireCapability } from "@/lib/session";
 import { workspacePath } from "@/lib/nav";
 import { fail, guard, type ActionState } from "./shared";
@@ -55,7 +56,9 @@ export async function saveDraft(input: DraftInput) {
     const assetRows = sharedAssetIds.length ? await db.select({ id: asset.id, kind: asset.kind }).from(asset).where(inArray(asset.id, sharedAssetIds)) : [];
     await db.transaction(async (tx) => {
       const approvalState = item.approvalState === "approved" ? "superseded" : item.approvalState;
-      await tx.update(contentItem).set({ title: d.title || item.title, sharedText: d.sharedText, sharedAssetIds, link: d.link ? d.link : null, approvalState, ...(disclosure ? { syntheticMedia: disclosure } : {}), updatedAt: new Date() }).where(eq(contentItem.id, item.id));
+      // Keep an auto-derived name tracking the text; never touch one a person set.
+      const title = d.title || (isAutoTitle(item.title, item.sharedText) ? deriveTitle(d.sharedText) : item.title);
+      await tx.update(contentItem).set({ title, sharedText: d.sharedText, sharedAssetIds, link: d.link ? d.link : null, approvalState, ...(disclosure ? { syntheticMedia: disclosure } : {}), updatedAt: new Date() }).where(eq(contentItem.id, item.id));
       const stale = d.channelIds.length ? and(eq(postVariant.contentItemId, item.id), notInArray(postVariant.channelId, d.channelIds), inArray(postVariant.status, EDITABLE)) : and(eq(postVariant.contentItemId, item.id), inArray(postVariant.status, EDITABLE));
       await tx.delete(postVariant).where(stale);
       for (const channelId of d.channelIds) await upsertVariant(tx, item, d, channelId, assetRows);

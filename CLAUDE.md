@@ -64,6 +64,20 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
 - **Providers**: `packages/providers` is the adapter contract; `mock` (dev, `PROVIDERS_ENABLE_MOCK=1`) exercises the full connect → select → sync → publish → reconcile loop locally; `meta`/`linkedin`/`tiktok` are real API code, untested live until credentials exist. Tokens are AES-GCM envelopes bound to the row id (`lib/crypto.ts`, `lib/providers.ts`); never log or return them.
 - **Jobs**: enqueue only via the transactional outbox (`emit(tx, name, payload)` in `lib/jobs/outbox.ts`); the worker relays. Queue names/payloads live in `lib/jobs/queues.ts`; handlers in `worker/handlers/`. Worker code must not import `server-only` or `next/headers` (use `lib/audit.ts`'s dynamic pattern).
 - **Publishing**: `post_variant` state is authoritative; `content_item.status` is a summary (`summarizeItem`). The publish worker revalidates everything first, treats ambiguous provider errors by **reconciling before any retry**, and only retries retryable categories with backoff. Never bypass `idempotencyKey`.
+- **Staff & betas**: `lib/staff/` is RocketEase's own operator surface at `/staff` (`requireStaff`, 404 for
+  everyone else, `STAFF_EMAILS` bootstrap requires a verified email). Staff is a property of a PERSON,
+  orthogonal to tenancy — it never composes with `requireWorkspace`, and there is no code path where
+  being staff changes what a tenant-scoped query returns. `lib/features/` is beta enrolment
+  (`feature_grant`, default closed, `hasFeature(orgId, "media.generation")`) — a fourth kind of "no",
+  distinct from `lib/flags.ts` (global ops), entitlements (billing) and `can()` (role).
+- **Media generation**: `packages/media` is the adapter contract (`MediaAdapter`, model registry,
+  per-`JobKind` routing with a recorded `model_reason`, honest `{ unknown }` cost estimates);
+  `mock` exercises the whole loop with real decodable fixtures and zero spend. Generation is a SPEND
+  mutation: `media.generate` is `stately`/`retryLimit: 0` and **reconciles against the vendor before
+  any re-spend**. `lib/media/` probes rather than believes — ffprobe decides duration and dimensions,
+  and an unavailable tool records unknown, never 0. `WORKER_ROLE=media` runs ffmpeg work
+  (`asset.process`, `media.*`) in its own Deployment. See `docs/media-generation.md`,
+  `docs/media-models.md`, `docs/plans/m12.1-media-foundation.md`.
 - **Storage**: `lib/storage/` — one API, two drivers chosen by `STORAGE_DRIVER`: `s3.ts` (MinIO locally at :5090, console :5091) and `azure.ts` (Azure Blob in production; Azure has **no** S3-compatible API, so it is a real driver, not a re-pointed endpoint). Browser uploads go straight to storage via presigned PUT; `asset.process` makes renditions and runs the scan hook. Unscanned/expired-rights assets can't publish.
 - **Conversion tracking** (`lib/tracking`, `docs/tracking.md`): GA4 / Shopify / signed webhook sources write `conversion_fact` via `tracking.sync`. Site-reported and ad-reported conversions never double-count — a paid `utm_medium` belongs to the ad platform, everything else to the tracking source; ROAS is paid-medium revenue ÷ spend. `lib/tracking/availability.ts` owns every "why is this unavailable" string; never show a missing conversion metric as 0.
 - **Inbox**: `packages/providers` inbox contract (`fetchInbox`/`reply`/`findReply`/`inboxItemsFromWebhook`, `inbox-types.ts`). Ingestion is `lib/engagement/ingest.ts` (idempotent on channel+remoteId) fed by `inbox.sync` polling (worker tick every 2 min) and `POST /api/webhooks/[provider]` → `webhook_receipt` → `webhook.process`. Outbound replies are `message` rows in `queued` state delivered by `inbox.reply`; an ambiguous provider result is reconciled with `findReply` before any resend (ENG-003). The mock store lives in the worker process, so local "simulate incoming" goes through the webhook receipt path, never a direct in-process call.

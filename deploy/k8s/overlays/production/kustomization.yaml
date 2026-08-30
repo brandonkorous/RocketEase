@@ -76,3 +76,8 @@ patches:
       - op: add
         path: /spec/template/metadata/annotations
         value: { rocketease.works/env-hash: "__ENV_HASH__" }
+  - target: { kind: Deployment, name: media-worker }
+    patch: |-
+      - op: add
+        path: /spec/template/metadata/annotations
+        value: { rocketease.works/env-hash: "__ENV_HASH__" }

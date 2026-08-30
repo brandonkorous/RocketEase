@@ -1,0 +1,45 @@
+# The media worker: same image as `worker`, different role.
+#
+# It exists as its own Deployment because ffmpeg is CPU-bound and minutes-long,
+# and a render sharing a process with inbox.sync (which ticks every two minutes)
+# would starve it. WORKER_ROLE=media makes it subscribe ONLY to the media queues
+# — the mapping lives in apps/platform/lib/jobs/queues.ts so a new queue cannot
+# end up owned by neither process.
+#
+# Only the general worker runs the outbox relay, the polling tickers and the
+# cron sweeps; running those twice would double every scheduled enqueue.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-worker
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: media-worker } }
+  template:
+    metadata: { labels: { app: media-worker } }
+    spec:
+      terminationGracePeriodSeconds: 60 # a render in flight deserves longer than the general worker
+      containers:
+        - name: media-worker
+          image: rocketease/worker:latest
+          env:
+            - name: WORKER_ROLE
+              value: media
+          envFrom:
+            - secretRef: { name: platform-env }
+            - configMapRef: { name: platform-config }
+          resources:
+            # Higher than the general worker (cpu 1 / 1Gi): transcoding is the
+            # whole job here. MEDIA_MAX_CONCURRENCY keeps one pod from taking
+            # more work than these limits can serve.
+            requests: { cpu: 500m, memory: 1Gi }
+            limits: { cpu: 2, memory: 4Gi }
+          volumeMounts:
+            # Renders need real disk. The container filesystem is not it, and
+            # MEDIA_SCRATCH_DIR points every temp file here.
+            - name: scratch
+              mountPath: /scratch
+          securityContext: { runAsNonRoot: true, runAsUser: 1001, runAsGroup: 1001, allowPrivilegeEscalation: false }
+      volumes:
+        - name: scratch
+          emptyDir: { sizeLimit: 20Gi }

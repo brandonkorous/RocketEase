@@ -502,7 +502,7 @@ jobs:
         run: |
           set -euo pipefail
           failed=0
-          for svc in web platform worker; do
+          for svc in web platform worker media-worker; do
             if ! kubectl rollout status -n "$NAMESPACE" "deploy/$svc" --timeout=600s; then
               echo "::error::Rollout of $svc did not complete."
               kubectl describe deploy "$svc" -n "$NAMESPACE" || true

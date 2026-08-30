@@ -33,7 +33,17 @@ export function validateAgainstCapabilities(caps: Capabilities, req: Omit<Publis
   }
   for (const v of videos) {
     if (limits.videoMaxSeconds && v.durationSeconds && v.durationSeconds > limits.videoMaxSeconds)
-      issues.push({ severity: "error", code: "video_too_long", message: `Video must be under ${limits.videoMaxSeconds}s.`, field: "media" });
+      issues.push({ severity: "error", code: "video_too_long", message: `Video must be under ${limits.videoMaxSeconds}s (this one is ${Math.round(v.durationSeconds)}s).`, field: "media" });
+    // An unknown duration is NOT a pass. We cannot prove the video is too long,
+    // so this is a warning rather than an error — but staying silent would let a
+    // clip we never measured sail past a limit and fail at the provider instead.
+    if (limits.videoMaxSeconds && v.durationSeconds === undefined)
+      issues.push({
+        severity: "warning",
+        code: "video_duration_unknown",
+        message: `This video's length couldn't be read, so the ${limits.videoMaxSeconds}s limit for this channel can't be checked.`,
+        field: "media",
+      });
     if (limits.videoMaxBytes && v.bytes && v.bytes > limits.videoMaxBytes)
       issues.push({ severity: "error", code: "video_too_large", message: "Video exceeds the size limit for this channel.", field: "media" });
   }

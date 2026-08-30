@@ -48,13 +48,28 @@ export type JobPayloads = {
   "rights.expiring": Record<string, never>;
   /** Nightly + period-end: report AI credits above the included allowance to the Stripe meter. */
   "billing.report_usage": Record<string, never>;
+  /** Submit one generation to a model vendor. A SPEND mutation — never retried blindly. */
+  "media.generate": { mediaJobId: string };
+  /** Advance running generations, and pull bytes the moment one completes. */
+  "media.poll": { mediaJobId?: string };
 };
 
 export type JobName = keyof JobPayloads;
 
+/**
+ * Which worker process owns a queue. `media` work is CPU-bound ffmpeg and long
+ * vendor polls; it must not share a process with inbox.sync ticking every two
+ * minutes. The role lives here rather than in a WORKER_QUEUES env list so a new
+ * queue cannot be forgotten by one of the two processes and silently dropped.
+ */
+export const WORKER_ROLES = ["general", "media"] as const;
+export type WorkerRole = (typeof WORKER_ROLES)[number];
+
+export type QueuePolicy = Omit<Queue, "name"> & { role?: WorkerRole };
+
 const STANDARD: Omit<Queue, "name"> = { retryLimit: 5, retryDelay: 5, retryBackoff: true, expireInSeconds: 600 };
 
-export const QUEUES: Record<JobName, Omit<Queue, "name">> = {
+export const QUEUES: Record<JobName, QueuePolicy> = {
   "outbox.relay": { policy: "singleton", retryLimit: 3, retryDelay: 2, expireInSeconds: 120 },
   "mail.send": { ...STANDARD, retryLimit: 8, retryDelayMax: 900 },
   // Publishing must never blindly retry: the worker decides after reconciliation.
@@ -63,7 +78,8 @@ export const QUEUES: Record<JobName, Omit<Queue, "name">> = {
   "webhook.process": { ...STANDARD, retryLimit: 6 },
   "insights.ingest": { policy: "singleton", retryLimit: 3, retryDelay: 60, retryBackoff: true, expireInSeconds: 1800 },
   "report.run": { ...STANDARD, retryLimit: 2, expireInSeconds: 1800 },
-  "asset.process": { ...STANDARD, retryLimit: 3, expireInSeconds: 900 },
+  // ffmpeg runs here now (probe + poster frame), so this belongs to the media worker.
+  "asset.process": { ...STANDARD, retryLimit: 3, expireInSeconds: 900, role: "media" },
   "inbox.sync": { policy: "singleton", retryLimit: 2, retryDelay: 30, retryBackoff: true, expireInSeconds: 600 },
   // Replies reconcile before any retry; the handler decides whether a retry is safe.
   "inbox.reply": { policy: "stately", retryLimit: 4, retryDelay: 20, retryBackoff: true, expireInSeconds: 300 },
@@ -84,6 +100,16 @@ export const QUEUES: Record<JobName, Omit<Queue, "name">> = {
   "rights.expiring": { policy: "singleton", retryLimit: 1, retryDelay: 300, expireInSeconds: 1800 },
   // Reporting is idempotent (billing_usage_report holds the running total), so a retry cannot double-charge.
   "billing.report_usage": { policy: "singleton", retryLimit: 2, retryDelay: 300, retryBackoff: true, expireInSeconds: 1800 },
+  // A spend mutation: the handler decides after reconciliation, exactly like
+  // publish.execute. A blind retry re-spends real money.
+  "media.generate": { policy: "stately", retryLimit: 0, expireInSeconds: 900, role: "media" },
+  // Races the vendor's URL expiry (Sora: ~1 hour), so it polls tightly.
+  "media.poll": { policy: "singleton", retryLimit: 3, retryDelay: 15, retryBackoff: true, expireInSeconds: 900, role: "media" },
 };
 
 export const JOB_NAMES = Object.keys(QUEUES) as JobName[];
+
+/** A queue with no explicit role belongs to the general worker. */
+export const roleOf = (name: JobName): WorkerRole => QUEUES[name].role ?? "general";
+
+export const queuesForRole = (role: WorkerRole): JobName[] => JOB_NAMES.filter((n) => roleOf(n) === role);

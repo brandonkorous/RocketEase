@@ -18,14 +18,20 @@ COPY apps/platform/package.json apps/platform/
 # so its manifest must be here for the filtered install to resolve the link.
 COPY packages/ui/package.json packages/ui/
 COPY packages/providers/package.json packages/providers/
+COPY packages/media/package.json packages/media/
 RUN pnpm install --frozen-lockfile --filter @rocketease/platform...
 
 FROM deps AS runner
+# ffmpeg/ffprobe: the media worker probes uploads, extracts poster frames, and
+# will render. Without them the pipeline records durations as UNKNOWN rather
+# than guessing — correct, but it degrades the product silently, so install it.
+RUN apk add --no-cache ffmpeg
 COPY packages/ui packages/ui
 # Source-only, like @rocketease/ui: package.json exports point straight at src/*.ts
 # and it is listed in transpilePackages, so there is nothing to build — but without
 # the sources the Next build fails on "Can't resolve @rocketease/providers/client".
 COPY packages/providers packages/providers
+COPY packages/media packages/media
 COPY apps/platform apps/platform
 ENV NODE_ENV=production RKE_PROCESS=worker
 # NUMERIC uid/gid, and USER is the NUMBER. Kubernetes cannot verify a non-numeric

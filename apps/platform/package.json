@@ -32,6 +32,7 @@
     "@opentelemetry/sdk-node": "^0.221.0",
     "@opentelemetry/sdk-trace-node": "^2.10.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
+    "@rocketease/media": "workspace:*",
     "@rocketease/providers": "workspace:*",
     "@rocketease/ui": "workspace:*",
     "@wizeworks/silicaui": "^0.55.0",

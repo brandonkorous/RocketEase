@@ -23,8 +23,11 @@ import * as generator from "./schema/generator";
 import * as aiUsage from "./schema/ai-usage";
 import * as billing from "./schema/billing";
 import * as agency from "./schema/agency";
+import * as features from "./schema/features";
+import * as staff from "./schema/staff";
+import * as media from "./schema/media";
 
-export const schema = { ...auth, ...app, ...api, ...scim, ...connections, ...assets, ...content, ...approvals, ...engagement, ...analytics, ...telemetry, ...quality, ...campaigns, ...recommendations, ...automations, ...tracking, ...hashtags, ...recycling, ...rights, ...billing, ...aiUsage, ...generator, ...agency };
+export const schema = { ...auth, ...app, ...api, ...scim, ...connections, ...assets, ...content, ...approvals, ...engagement, ...analytics, ...telemetry, ...quality, ...campaigns, ...recommendations, ...automations, ...tracking, ...hashtags, ...recycling, ...rights, ...billing, ...aiUsage, ...generator, ...agency, ...features, ...staff, ...media };
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set");

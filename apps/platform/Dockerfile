@@ -12,6 +12,7 @@ COPY apps/platform/package.json apps/platform/
 # so its manifest must be here for the filtered install to resolve the link.
 COPY packages/ui/package.json packages/ui/
 COPY packages/providers/package.json packages/providers/
+COPY packages/media/package.json packages/media/
 RUN pnpm install --frozen-lockfile --filter @rocketease/platform...
 
 FROM deps AS build
@@ -20,6 +21,7 @@ COPY packages/ui packages/ui
 # and it is listed in transpilePackages, so there is nothing to build — but without
 # the sources the Next build fails on "Can't resolve @rocketease/providers/client".
 COPY packages/providers packages/providers
+COPY packages/media packages/media
 COPY apps/platform apps/platform
 ENV NEXT_TELEMETRY_DISABLED=1
 

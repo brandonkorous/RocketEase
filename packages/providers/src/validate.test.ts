@@ -36,6 +36,27 @@ describe("validateAgainstCapabilities", () => {
     expect(codes(vid)).toEqual(expect.arrayContaining(["video_too_long", "video_too_large"]));
   });
 
+  it("names the actual length when a video is too long, so the fix is obvious", () => {
+    const vid = validateAgainstCapabilities(caps, { format: "video", text: "", media: [{ url: "https://x/v.mp4", mimeType: "video/mp4", durationSeconds: 91 }] });
+    expect(vid.find((i) => i.code === "video_too_long")?.message).toContain("91s");
+  });
+
+  it("warns rather than passing silently when a video's duration is unknown", () => {
+    // Until M12.1 nothing probed uploads, so durationSeconds was ALWAYS undefined
+    // and this limit was never enforced. Unknown must not read as "fine".
+    const vid = validateAgainstCapabilities(caps, { format: "video", text: "", media: [{ url: "https://x/v.mp4", mimeType: "video/mp4" }] });
+    const issue = vid.find((i) => i.code === "video_duration_unknown");
+    expect(issue?.severity).toBe("warning");
+    expect(issue?.message).toContain("60s");
+    expect(codes(vid)).not.toContain("video_too_long");
+  });
+
+  it("says nothing about duration on a channel with no duration limit", () => {
+    const noLimit: Capabilities = { ...caps, limits: { ...caps.limits, videoMaxSeconds: undefined } };
+    const vid = validateAgainstCapabilities(noLimit, { format: "video", text: "", media: [{ url: "https://x/v.mp4", mimeType: "video/mp4" }] });
+    expect(codes(vid)).not.toContain("video_duration_unknown");
+  });
+
   it("warns on missing alt text and non-clickable links; errors on unsupported first comment", () => {
     const issues = validateAgainstCapabilities(caps, { format: "image", text: "", media: [img()], link: "https://x", firstComment: "hi" });
     expect(issues.find((i) => i.code === "alt_text_missing")?.severity).toBe("warning");

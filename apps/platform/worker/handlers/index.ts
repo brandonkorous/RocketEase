@@ -22,6 +22,8 @@ import { recycleTick } from "./recycle-tick";
 import { rightsExpiring } from "./rights-expiring";
 import { billingReportUsage } from "./billing-report-usage";
 import { providerDeletion } from "./provider-deletion";
+import { mediaGenerate } from "./media-generate";
+import { mediaPoll } from "./media-poll";
 
 export type HandlerContext = { log: Logger; signal: AbortSignal };
 export type Handler<N extends JobName> = (data: JobPayloads[N], ctx: HandlerContext) => Promise<void>;
@@ -38,6 +40,8 @@ export const handlers: { [N in Exclude<JobName, "outbox.relay">]: Handler<N> } =
   "insights.ingest": insightsIngest,
   "report.run": reportRunJob,
   "asset.process": assetProcess,
+  "media.generate": mediaGenerate,
+  "media.poll": mediaPoll,
   "inbox.sync": inboxSync,
   "inbox.reply": inboxReply,
   "quality.check": qualityCheck,

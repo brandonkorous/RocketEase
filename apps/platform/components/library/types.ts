@@ -1,5 +1,5 @@
 export type AssetCard = {
-  id: string; kind: "image" | "video" | "document"; fileName: string; title: string | null; altText: string | null; caption: string | null; mimeType: string;
+  id: string; kind: "image" | "video" | "document" | "audio"; fileName: string; title: string | null; altText: string | null; caption: string | null; mimeType: string;
   bytes: number | null; width: number | null; height: number | null; durationSeconds: number | null; uploadStatus: string; scanStatus: string; scanNote: string | null;
   processingError: string | null; rightsNote: string | null; rightsExpiresAt: string | null; rightsScope: "organic" | "paid" | "both"; folderId: string | null; tags: string[]; thumbUrl: string | null; previewUrl: string | null;
   originalUrl: string | null; renditions: { kind: string; width: number | null; height: number | null; bytes: number | null }[]; usedIn: Record<string, number>; createdAt: string; uploadedBy: string | null;

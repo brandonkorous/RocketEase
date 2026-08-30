@@ -23,7 +23,7 @@ const guard = async <T>(fn: () => Promise<T>): Promise<T | ActionState> => {
   }
 };
 
-const MAX_BYTES: Record<AssetKind, number> = { image: 30 * 1024 * 1024, video: 2 * 1024 * 1024 * 1024, document: 50 * 1024 * 1024 };
+const MAX_BYTES: Record<AssetKind, number> = { image: 30 * 1024 * 1024, video: 2 * 1024 * 1024 * 1024, document: 50 * 1024 * 1024, audio: 200 * 1024 * 1024 };
 const ALLOWED: Record<string, AssetKind> = {
   "image/jpeg": "image",
   "image/png": "image",
@@ -32,6 +32,12 @@ const ALLOWED: Record<string, AssetKind> = {
   "video/mp4": "video",
   "video/quicktime": "video",
   "video/webm": "video",
+  "audio/mpeg": "audio",
+  "audio/mp4": "audio",
+  "audio/wav": "audio",
+  "audio/x-wav": "audio",
+  "audio/webm": "audio",
+  "audio/ogg": "audio",
   "application/pdf": "document",
 };
 

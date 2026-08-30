@@ -217,6 +217,71 @@ published pages to reflect it. The Meta business portfolio is still named "WizeW
 
 ---
 
+## Milestone 12 — Ad creative generation (planned 2026-08-29)
+
+Quality **image and video ad creative** — shots, voice-over, music, captions, per-network renders,
+placement preflight, disclosure. Read before starting anything here:
+
+- **`docs/media-generation.md`** — the pipeline, data model, workers, build order
+- **`docs/media-models.md`** — model choices, output types, routing, and how the registry is managed
+- **`docs/plans/m12.1-media-foundation.md`** — the execution plan for stage 12.1 (work packages, gates, env)
+- `docs/research/ai-media-2026.md` — the evidence behind all three
+
+**Build it, dogfood it, price it from measurement** (user decision, 2026-08-30). It ships behind a
+**beta grant** — us first, then early adopters — and runs on RocketEase's own marketing before it is
+offered. Pricing is deliberately deferred; cost is *instrumented* from the first render
+(`media_job.vendor_cost_usd`, `quantity`, `unit`) plus a hard ceiling as a blast-radius limit, not as
+pricing. The number that decides pricing is **cost per *approved* ad**, including discarded takes,
+and only real use produces it. See `docs/media-generation.md` §9a for the gate and for what beta-only
+lets us defer.
+
+Text AI is done (M8.8, M9.3, M10.5). Media is one image adapter and a stub comment. The gap is not
+"add a video model": `asset.process` handles images only, so a video upload gets a checksum and
+nothing else, and `Capabilities.limits.videoMaxSeconds` is validated against a duration we never
+learn. **That is a live defect in video publishing today**, before a frame is generated.
+
+| # | Item | Status |
+|---|---|---|
+| 12.1 | **Pipeline foundation** — ✅ done 2026-08-30. Staff surface (`staff_user`, `requireStaff`, `/staff`); beta gate (`feature_grant`, `lib/features`, default closed); `packages/media` (registry, routing, cost, mock adapter with real decodable media); `media_job` + `media.*` queues + worker roles + a dedicated media Deployment with ffmpeg; ffprobe toolchain; `asset.process` split and extended (video/audio probe, poster, thumb); output normalization; cost instrumentation + hard ceiling; asset provenance and lineage. **Closes the live video-publishing defect.** 771 tests | ✅ |
+| 12.2 | Static ad creative — `AdPlan`; `ReferenceSet` bound to the brand kit; product/scene stills; **deterministic type + logo compositing**; `ad-canvas-specs.ts` and the placement preflight; per-placement variants | ☐ |
+| 12.3 | Voice & captions — Scribe/Deepgram → `caption_track` with word timings; burned-in caption renditions + SRT/VTT sidecar (almost no network takes a sidecar over its API; YouTube does); TTS voice-over with stock voices; `voice` table and the consent gate | ☐ |
+| 12.4 | Video assembly — shot generation routed per job kind; assembly of generated + uploaded footage; audio mix with ducking and −14 LUFS; per-placement aspect renders; plan editing and re-render | ☐ |
+| 12.5 | Advanced motion & provenance — reference-conditioned product motion; multi-shot sequences; footage editing (Aleph); consent-gated performance transfer; music generation + `platform_clearance`; C2PA re-signing | ☐ |
+
+Dogfood corpus: seven live brands — `sparx.works`, `meetpiggles.com`, `jotacular.com`,
+`silicaui.com`, `wize.works`, `agconn.com`, `kanninja.com`. Private posting to a real network is
+required for Meta's review anyway, so the provider track and this one feed each other.
+
+**Static before video is deliberate.** Static ads are where compositing, brand binding, placement
+preflight and variant discipline get built and proven — at cents per attempt instead of dollars.
+Video inherits all of it.
+
+Five findings from the research that drive the design, none of them obvious:
+
+- **Route, don't pick.** Every serious 2026 platform is a router: Higgsfield switches 8+ video models
+  per shot, Runway shipped Runway Dev as one API, fal.ai runs ~1,000 endpoints. There is no
+  `AI_VIDEO_MODEL` env var — a model is chosen per job, from a registry, for a recorded reason.
+- **The brand kit is the moat.** Every capable model now takes reference images (Veo 3.1
+  "ingredients" 3, Seedance 9 img + 3 vid + 3 audio, Nano Banana Pro 14, Higgsfield "Soul ID"). The
+  scarce input is structured per-client brand truth, and M10 already built it.
+- **Composite type, never diffuse it.** Models are approximate at text; a price under a client's
+  brand is not a place to be approximate. Compositing also makes safe zones checkable and copy edits
+  free. Meta unified Stories/Reels in March 2026 on 14% top / 35% bottom / 6% sides.
+- **Business accounts cannot use the platform music libraries, and licences do not travel.** Meta
+  Sound Collection is cleared for Facebook and Instagram only; TikTok's Commercial Music Library for
+  TikTok only. "One video, five networks" with library music is a violation on four of them. Nobody
+  models this; it is the same shape as the M8.4 rights clocks.
+- **Re-encoding strips C2PA.** Every ffmpeg pass destroys the credentials Veo/Sora attach — the exact
+  machine-readable marking EU AI Act Art. 50 (in force 2 Aug 2026) and the platform auto-labellers
+  rely on. We re-sign, or record `stripped` and say so.
+
+Open decisions: `docs/media-models.md` §11 (primary router — fal + a direct Vertex adapter
+recommended; Higgsfield as competitor-or-vendor; indemnity floor; seeds; consent-gated models in v1)
+and `docs/media-generation.md` §12 (render build-vs-buy; Canva interop; C2PA signing identity; where
+`AdPlan` lives; ceiling defaults).
+
+---
+
 ## Continuous tracks (every milestone)
 
 Accessibility review (WCAG 2.2 AA), threat model updates, privacy/retention, performance budgets (P75 nav < 2.5s), i18n-ready strings, connector maintenance, docs/ADRs.

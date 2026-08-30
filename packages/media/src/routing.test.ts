@@ -1,0 +1,111 @@
+import { describe, expect, it } from "vitest";
+import { isRouted, routeJob, type RoutingPolicy } from "./routing";
+import type { GenerationSpec } from "./types";
+
+const all = () => true;
+const none = () => false;
+const spec = (over: Partial<GenerationSpec> = {}): GenerationSpec => ({ jobKind: "hero_shot", prompt: "a hero shot", ...over });
+
+describe("routeJob", () => {
+  it("picks a model that can serve the job and explains why", () => {
+    const r = routeJob(spec(), { isConfigured: all });
+    expect(isRouted(r)).toBe(true);
+    if (!isRouted(r)) return;
+    expect(r.model.key).toBe("mock-video");
+    expect(r.reason).toContain("Mock video");
+  });
+
+  it("refuses when no adapter is configured, naming the adapter", () => {
+    const r = routeJob(spec(), { isConfigured: none });
+    expect(isRouted(r)).toBe(false);
+    if (isRouted(r)) return;
+    expect(r.error).toContain("mock adapter isn't configured");
+  });
+
+  it("rejects a duration the model does not accept, and says what it does accept", () => {
+    const r = routeJob(spec({ durationSeconds: 7 }), { isConfigured: all });
+    expect(isRouted(r)).toBe(false);
+    if (isRouted(r)) return;
+    expect(r.error).toContain("4 or 8");
+  });
+
+  it("accepts a duration the model declares", () => {
+    expect(isRouted(routeJob(spec({ durationSeconds: 8 }), { isConfigured: all }))).toBe(true);
+  });
+
+  it("honours a per-request pin", () => {
+    const r = routeJob(spec({ jobKind: "product_still", modelKey: "mock-image" }), { isConfigured: all });
+    expect(isRouted(r) && r.reason).toContain("pinned");
+  });
+
+  it("refuses a pin that cannot do the job rather than quietly routing elsewhere", () => {
+    const r = routeJob(spec({ jobKind: "product_still", modelKey: "mock-video" }), { isConfigured: all });
+    expect(isRouted(r)).toBe(false);
+    if (isRouted(r)) return;
+    expect(r.error).toContain("doesn't do");
+  });
+
+  it("errors on an unknown pinned model", () => {
+    const r = routeJob(spec({ modelKey: "does-not-exist" }), { isConfigured: all });
+    expect(isRouted(r)).toBe(false);
+  });
+
+  it("respects an excluded model", () => {
+    const policy: RoutingPolicy = { excludeModels: ["mock-video"] };
+    const r = routeJob(spec(), { isConfigured: all, policy });
+    expect(isRouted(r)).toBe(false);
+    if (isRouted(r)) return;
+    expect(r.error).toContain("excluded by this workspace");
+  });
+
+  it("respects an excluded adapter", () => {
+    const r = routeJob(spec(), { isConfigured: all, policy: { excludeAdapters: ["mock"] } });
+    expect(isRouted(r)).toBe(false);
+  });
+
+  it("treats an unstated indemnity as not satisfying requireIndemnity, and says so precisely", () => {
+    const r = routeJob(spec(), { isConfigured: all, policy: { requireIndemnity: true } });
+    expect(isRouted(r)).toBe(false);
+    if (isRouted(r)) return;
+    expect(r.error).toContain("doesn't state an indemnity");
+  });
+
+  it("routes despite more references than the model takes — downsampling is the caller's job, not routing's", () => {
+    const refs = Array.from({ length: 5 }, (_, i) => ({ assetId: `a${i}`, role: "product" as const }));
+    const r = routeJob(spec({ references: refs }), { isConfigured: all });
+    expect(isRouted(r)).toBe(true);
+  });
+
+  it("rejects a model that takes no reference images at all", () => {
+    const r = routeJob(spec({ jobKind: "voiceover", prompt: "read this", references: [{ assetId: "a", role: "product" }] }), { isConfigured: all });
+    expect(isRouted(r)).toBe(false);
+    if (isRouted(r)) return;
+    expect(r.error).toContain("takes no reference images");
+  });
+
+  it("rejects footage editing on a model that cannot do it", () => {
+    const r = routeJob(spec({ references: [{ assetId: "a", role: "source" }] }), { isConfigured: all });
+    expect(isRouted(r)).toBe(false);
+    if (isRouted(r)) return;
+    expect(r.error).toContain("cannot edit existing footage");
+  });
+
+  it("rejects a count above what the model returns per request", () => {
+    const r = routeJob(spec({ count: 3 }), { isConfigured: all });
+    expect(isRouted(r)).toBe(false);
+    if (isRouted(r)) return;
+    expect(r.error).toContain("at most 1");
+  });
+
+  it("says plainly when nothing does the job yet", () => {
+    const r = routeJob(spec({ jobKind: "footage_edit" }), { isConfigured: all });
+    expect(isRouted(r)).toBe(false);
+    if (isRouted(r)) return;
+    expect(r.error).toContain("No model does");
+  });
+
+  it("prefers the workspace's chosen model for that job kind", () => {
+    const r = routeJob(spec({ jobKind: "product_still" }), { isConfigured: all, policy: { prefer: { product_still: "mock-image" } } });
+    expect(isRouted(r) && r.reason).toContain("preferred by this workspace");
+  });
+});

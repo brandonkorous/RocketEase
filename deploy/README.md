@@ -149,6 +149,36 @@ multiplication.** The symptom is not a clean error: whichever processes connect 
 keep their pools and the late ones fail every query, so the outage looks like it
 belongs to whatever page happened to land on the starved replica.
 
+## Three health endpoints, and only two of them are probes
+
+`/api/health` stayed green through the whole 2026-08-30 outage, so it is no longer
+wired to anything. The split is deliberate:
+
+| Path | Answers | Touches the DB | Probe |
+|---|---|---|---|
+| `/api/health/live` | is this process running | **no** | liveness + startup |
+| `/api/health/ready` | can THIS replica serve | yes, via the app pool | readiness |
+| `/api/health` | what an operator needs to see | yes, plus server headroom | **none** |
+
+Two rules behind that table, both learned the hard way:
+
+- **Liveness must never touch the database.** It is true of every replica at once,
+  so a probe that restarts a pod because Postgres is busy restarts all of them and
+  turns a degradation into an outage.
+- **Readiness queries through the application pool**, not a side channel. That is the
+  difference that matters: on 2026-08-30 the replicas that had already opened their
+  connections kept working while a later one could open none, and only a real pooled
+  query tells those two apart. A cheap privileged `select 1` will not.
+
+`/api/health` adds `connections` — the server's `max_connections` against
+`pg_stat_activity` — which is the condition the pools section above describes. It is
+reported as `degraded`, never as `ok: false`: it is true cluster-wide, so failing
+readiness on it would empty the Service rather than shed a bad pod.
+
+Every response carries `instance` (the pod name). Polling through the Service reaches
+one replica of N, so **poll a few times**: differing `instance` values with differing
+answers is how you see that 1 of 2 is bad.
+
 ## Release order
 
 The deploy job runs, in this order, and fails the release at any step:

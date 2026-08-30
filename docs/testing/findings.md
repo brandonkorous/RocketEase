@@ -17,7 +17,7 @@ Started 2026-08-30. One row per finding. IDs are sequential and never reused.
 | Surface | Score | Stage | Note |
 |---|---|---|---|
 | Production stability | **2** → **9** | 1 | F-013 ✅ **fixed + verified live** (`19a987b`) |
-| Health checking | **3** | 1 | F-014 — still open |
+| Health checking | **3** → **9** | 1 | F-014 ✅ live/ready split, pooled readiness, connection headroom (`0dd5223`) |
 | Analytics data pipeline (Meta) | **3** → **9** | 1 | F-006 ✅ fixed + verified live (`b1fdc0c`) |
 | Facebook metric coverage | **4** → ? | 2 | F-021 ✅ successors mapped (`8687e7a`); score held until a live sync confirms the names |
 | Connection health accuracy | **3** → **9** | 1 | F-009 ✅ fixed (`b1fdc0c`) |
@@ -504,12 +504,39 @@ That makes the endpoint unfit for its two jobs - telling an operator the truth, 
 Kubernetes probe. A readiness probe on this endpoint would never have removed the failing pod from
 service, which is precisely why the outage was visible to a user.
 
-**Fix** Have the check acquire from the *application* pool rather than a privileged side channel, fail
-when acquisition is saturated, and report per-replica identity so an operator can see that 1 of 2 is
-bad. Then wire it to a readiness probe.
+#### Fixed (`0dd5223`)
 
-**Score** Health checking: **3/10** - **Stage 1**
-**Status** open
+One endpoint could not do both jobs, so there are now three, and only two of them are probes:
+
+| Path | Answers | Touches the DB | Probe |
+|---|---|---|---|
+| `/api/health/live` | is this process running | **no** | liveness + startup |
+| `/api/health/ready` | can THIS replica serve | yes, through the app pool | readiness |
+| `/api/health` | what an operator needs | yes, plus server headroom | **none** |
+
+**Readiness queries through the application pool.** That is the whole fix for the miss: the replicas
+that had already opened their connections kept working while a later one could open none, and only a
+real pooled query tells those two apart. The starved pod would have left the Service; its healthy
+sibling would have kept serving.
+
+**Liveness deliberately touches nothing.** The old manifest had liveness on the same DB-dependent
+endpoint — a latent second bug, and a worse one: a Postgres blip would have restarted *every* replica
+at once and turned a degradation into an outage. It now answers from the process alone, with a
+`startupProbe` so a slow boot is not mistaken for a hang.
+
+**`/api/health` gained the thing nobody could see.** It reports `connections` — `max_connections`
+against `pg_stat_activity` — which is the F-013 condition stated directly rather than inferred from
+crashed pages. It is reported as `degraded`, never `ok: false`: the condition is true cluster-wide,
+so failing readiness on it would empty the Service instead of shedding one bad pod.
+
+Every response carries `instance`, the pod name. A poll through the Service reaches one replica of N,
+so differing `instance` values with differing answers is now how an operator sees 1-of-2.
+
+Headroom says `unknown` rather than `0` when the query is refused or the server reports nothing —
+the same rule the analytics surfaces follow.
+
+**Score** Health checking: **3/10** → **9/10** · Stage 1
+**Status** fixed, awaiting the post-deploy roll
 
 ---
 

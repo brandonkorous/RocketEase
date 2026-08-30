@@ -17,8 +17,14 @@ spec:
             - secretRef: { name: platform-env }
             # BETTER_AUTH_URL, NEXT_PUBLIC_APP_URL, MAIL_FROM, LOG_LEVEL
             - configMapRef: { name: platform-config }
-          readinessProbe: { httpGet: { path: /api/health, port: 3000 }, initialDelaySeconds: 5 }
-          livenessProbe: { httpGet: { path: /api/health, port: 3000 }, periodSeconds: 20 }
+          # Liveness must never touch the database. A probe that restarts a pod
+          # because Postgres is busy hits every replica at once and turns a
+          # degradation into an outage. Readiness does query, so a replica that
+          # cannot get a connection leaves the Service while its siblings serve.
+          # /api/health itself is the operator view — never wire a probe to it.
+          startupProbe: { httpGet: { path: /api/health/live, port: 3000 }, periodSeconds: 5, failureThreshold: 24 }
+          readinessProbe: { httpGet: { path: /api/health/ready, port: 3000 }, initialDelaySeconds: 5, periodSeconds: 10 }
+          livenessProbe: { httpGet: { path: /api/health/live, port: 3000 }, periodSeconds: 20 }
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { cpu: 1, memory: 1Gi }

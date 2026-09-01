@@ -162,7 +162,9 @@ describe("assembleVideo refusals", () => {
     expect(await assembleVideo({ spec: spec([]), clips: {} })).toEqual({ ok: false, reason: "There are no clips to assemble." });
   });
 
-  it("refuses when not one clip could be read", async () => {
+  // Reachable only where ffmpeg exists: without it assembleVideo refuses one
+  // check earlier, for the honest reason that it cannot inspect anything.
+  it.skipIf(!tools.ffmpeg)("refuses when not one clip could be read", async () => {
     const result = await assembleVideo({ spec: spec([{ assetId: "gone", durationMs: 500 }]), clips: {} });
     expect(result).toEqual({ ok: false, reason: "None of this plan's clips could be read." });
   });

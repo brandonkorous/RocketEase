@@ -8,11 +8,9 @@
  */
 import type { ModelDescriptor } from "../io";
 import { MediaError, type GenerationSpec, type RawOutput } from "../types";
+import { sizeFor } from "./models";
 
 export const TIMEOUT_MS = 120_000;
-
-/** Declared aspects → the only sizes the endpoint documents. */
-export const SIZES: Record<string, string> = { "1:1": "1024x1024", "3:2": "1536x1024", "2:3": "1024x1536" };
 
 export type ImagesReply = { data?: { b64_json?: string }[]; error?: { message?: string; code?: string; type?: string } };
 
@@ -41,7 +39,9 @@ export function errorFor(status: number, body: ImagesReply | null): MediaError {
 }
 
 export async function requestImages(t: Transport, model: ModelDescriptor, spec: GenerationSpec, count: number): Promise<RawOutput[]> {
-  const size = SIZES[spec.aspect ?? "1:1"];
+  // Per MODEL, not per adapter: gpt-image-1 takes three fixed sizes, gpt-image-2
+  // takes arbitrary ones and we ask for the placement's own resolution.
+  const size = sizeFor(model, spec.aspect);
   // Routing should have caught this; refusing here costs nothing and a silently
   // squared portrait is worse than a refusal.
   if (!size) throw new MediaError(`This model doesn't render ${spec.aspect}.`, { category: "validation", retryable: false });

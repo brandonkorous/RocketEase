@@ -136,7 +136,7 @@ describe("openai images adapter", () => {
 });
 
 describe("azure openai images adapter", () => {
-  const azureModel = () => modelByKey("azure-gpt-image-1")!;
+  const azureModel = () => modelByKey("azure-gpt-image-2")!;
 
   beforeEach(() => {
     process.env.AZURE_OPENAI_ENDPOINT = "https://rke.openai.azure.com";
@@ -157,7 +157,7 @@ describe("azure openai images adapter", () => {
   it("posts to the DEPLOYMENT path, named after the pinned model", async () => {
     stubFetch(okReply());
     await azureOpenAiAdapter().start(azureModel(), spec, "k1");
-    expect(calls[0].url).toBe("https://rke.openai.azure.com/openai/deployments/gpt-image-1/images/generations?api-version=2026-01-01");
+    expect(calls[0].url).toBe("https://rke.openai.azure.com/openai/deployments/gpt-image-2/images/generations?api-version=2026-01-01");
   });
 
   it("uses the DEPLOYMENT name when the resource calls the model something else", async () => {
@@ -171,8 +171,8 @@ describe("azure openai images adapter", () => {
     process.env.AZURE_OPENAI_IMAGE_DEPLOYMENT = "rocketease-images";
     stubFetch(okReply());
     const handle = await azureOpenAiAdapter().start(azureModel(), spec, "k1");
-    expect(azureModel().vendorModelId).toBe("gpt-image-1");
-    expect(handle.modelKey).toBe("azure-gpt-image-1");
+    expect(azureModel().vendorModelId).toBe("gpt-image-2");
+    expect(handle.modelKey).toBe("azure-gpt-image-2");
   });
 
   it("strips a trailing slash — the classic Azure 404", async () => {
@@ -192,7 +192,9 @@ describe("azure openai images adapter", () => {
   it("leaves the model OUT of the body — it is already in the path", async () => {
     stubFetch(okReply());
     await azureOpenAiAdapter().start(azureModel(), spec, "k1");
-    expect(calls[0].body).toEqual({ prompt: "a quiet street", n: 2, size: "1024x1024" });
+    // 1088, not 1024: gpt-image-2 takes arbitrary sizes and we ask just above
+    // the 1080 placement canvas, so the render downscales rather than enlarges.
+    expect(calls[0].body).toEqual({ prompt: "a quiet street", n: 2, size: "1088x1088" });
   });
 
   it("explains a 404 as a deployment-name problem, because that is what it is", async () => {
@@ -217,6 +219,6 @@ describe("azure openai images adapter", () => {
   it("records the job under its own model key, so history reads back honestly", async () => {
     stubFetch(okReply());
     const handle = await azureOpenAiAdapter().start(azureModel(), spec, "k1");
-    expect(handle).toMatchObject({ adapter: "azure-openai", modelKey: "azure-gpt-image-1" });
+    expect(handle).toMatchObject({ adapter: "azure-openai", modelKey: "azure-gpt-image-2" });
   });
 });

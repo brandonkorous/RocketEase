@@ -150,7 +150,7 @@ describe("routing with a real adapter registered", () => {
   it("prefers AZURE over the direct vendor when both are configured", () => {
     const bothOpenAi = (a: string) => a === "openai" || a === "azure-openai";
     const r = routeJob(spec({ jobKind: "scene_still" }), { isConfigured: bothOpenAi });
-    expect(isRouted(r) && r.model.key).toBe("azure-gpt-image-1");
+    expect(isRouted(r) && r.model.key).toBe("azure-gpt-image-2");
     expect(isRouted(r) && r.model.adapter).toBe("azure-openai");
   });
 
@@ -161,6 +161,6 @@ describe("routing with a real adapter registered", () => {
 
   it("keeps the deployment name pinned — Azure's path segment is the model id", () => {
     const r = routeJob(spec({ jobKind: "scene_still" }), { isConfigured: (a) => a === "azure-openai" });
-    expect(isRouted(r) && r.model.vendorModelId).toBe("gpt-image-1");
+    expect(isRouted(r) && r.model.vendorModelId).toBe("gpt-image-2");
   });
 });

@@ -18,7 +18,7 @@ export type { GeneratorProps, GeneratorChannel, SavedBriefView } from "./types";
  * here is a draft — the only way out of this screen is "Use in Create", which
  * makes an ordinary draft a person still edits, approves, and sends.
  */
-export function GeneratorScreen({ workspaceId, channels, savedBriefs, imagesEnabled, brand }: GeneratorProps) {
+export function GeneratorScreen({ workspaceId, channels, savedBriefs, imagesEnabled, imageEstimate, brand }: GeneratorProps) {
   const api = useGenerator(workspaceId, channels);
   const byChannel = channels.map((c) => ({ channel: c, concepts: api.concepts.filter((x) => x.channelId === c.id) })).filter((g) => g.concepts.length > 0);
 
@@ -45,7 +45,7 @@ export function GeneratorScreen({ workspaceId, channels, savedBriefs, imagesEnab
               <section key={channel.id} className="flex flex-col gap-3" aria-label={`Concepts for ${channel.name}`}>
                 <h2 className="text-base font-semibold">{channel.networkLabel} · {channel.name}</h2>
                 <div className="grid gap-4 2xl:grid-cols-2">
-                  {concepts.map((c) => (<ConceptCard key={c.id} api={api} concept={c} channel={channel} imagesEnabled={imagesEnabled} />))}
+                  {concepts.map((c) => (<ConceptCard key={c.id} api={api} concept={c} channel={channel} imagesEnabled={imagesEnabled} imageEstimate={imageEstimate} />))}
                 </div>
               </section>
             ))

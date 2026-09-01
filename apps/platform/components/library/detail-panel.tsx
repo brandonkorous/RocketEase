@@ -9,6 +9,7 @@ import { useActionFeedback } from "@/lib/use-action-feedback";
 import { workspacePath } from "@/lib/nav";
 import { daysUntil, remainingLabel } from "@/lib/rights/format";
 import { NetMark } from "../net-mark";
+import { formatCostUsd } from "@/lib/media/cost-format";
 import { fmtBytes, fmtDate, type AssetCard, type CollectionRow } from "./types";
 
 type Props = { a: AssetCard; workspaceId: string; canEdit: boolean; timezone: string; collections: CollectionRow[]; onClose: () => void };
@@ -29,11 +30,33 @@ export function DetailPanel({ a, workspaceId, canEdit, timezone, collections, on
         <dt className="text-secondary/70">Type</dt><dd className="text-right">{a.mimeType}</dd>
         <dt className="text-secondary/70">Scan</dt><dd className="text-right capitalize">{a.scanStatus}{a.scanNote ? ` · ${a.scanNote}` : ""}</dd>
       </dl>
+      {a.generation && <Generation g={a.generation} />}
       <h3 className="mt-4 text-sm font-semibold">Used in</h3>
       {used.length ? <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm">{used.map(([network, n]) => (<li key={network} className="flex items-center gap-1.5"><NetMark network={network} />{n} post{n === 1 ? "" : "s"}</li>))}</ul> : <p className="mt-1 text-sm text-secondary/70">Not used in any post yet.</p>}
       <Link href={workspacePath(workspaceId, `create?asset=${a.id}`)} className="mt-2 inline-block text-sm font-medium hover:underline">+ Add to post</Link>
       {canEdit ? <EditForm a={a} workspaceId={workspaceId} collections={collections} onClose={onClose} /> : <p className="mt-4 text-sm text-secondary/70">You can view this asset but not edit it.</p>}
     </div>
+  );
+}
+
+/**
+ * What this image cost to make. Written to media_job since M12.1 and readable
+ * NOWHERE until now — which mattered, because the monthly spend ceiling accrues
+ * against exactly this number, so a vendor that quietly stopped reporting usage
+ * would have disarmed the ceiling with nothing on any screen to show it.
+ * "Not reported" is therefore said out loud rather than shown as free.
+ */
+function Generation({ g }: { g: NonNullable<AssetCard["generation"]> }) {
+  return (
+    <section className="mt-4" aria-labelledby="gen-info">
+      <h3 id="gen-info" className="text-sm font-semibold">AI-generated</h3>
+      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+        <dt className="text-secondary/70">Model</dt><dd className="text-right">{g.model}</dd>
+        <dt className="text-secondary/70">Cost</dt>
+        <dd className="text-right">{formatCostUsd(g.costUsd) ?? <span className="text-secondary/70">Not reported</span>}</dd>
+      </dl>
+      {g.reason && <p className="mt-1 text-xs text-secondary/70">{g.reason}</p>}
+    </section>
   );
 }
 

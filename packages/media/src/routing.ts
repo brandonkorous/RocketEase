@@ -92,12 +92,17 @@ export function routeJob(
       rejected.push({ key: m.key, why });
       continue;
     }
+    // Written to be read by a person looking at one media_job row months later,
+    // not by whoever wrote the router. Each skipped candidate is named with its
+    // reason in parentheses, because the bare concatenation produced lines like
+    // "mock-image the mock adapter isn't configured".
+    const job = spec.jobKind.replace(/_/g, " ");
     const because =
       m.key === preferred
         ? "preferred by this workspace"
         : rejected.length
-          ? `first available for ${spec.jobKind.replace(/_/g, " ")} — ${rejected.map((r) => `${r.key} ${r.why}`).join("; ")}`
-          : `best fit for ${spec.jobKind.replace(/_/g, " ")}`;
+          ? `chosen for ${job}; passed over ${rejected.map((r) => `${r.key} (${r.why})`).join(", ")}`
+          : `best fit for ${job}`;
     return { model: m, reason: `${m.label}: ${because}.`, rejected };
   }
 

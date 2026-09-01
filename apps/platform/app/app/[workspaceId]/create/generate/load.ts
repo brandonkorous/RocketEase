@@ -5,6 +5,7 @@ import { aiConfigured } from "@/lib/ai/client";
 import { adCapable } from "@/lib/ai/generator/ads";
 import { listBriefs } from "@/lib/ai/generator/briefs";
 import { canGenerate } from "@/lib/media/jobs";
+import { imageUnitEstimate } from "@/lib/media/estimate";
 import { loadBrandKit } from "@/lib/brand/store";
 import { publishableChannels } from "@/lib/content";
 import { hasCapability, type WorkspaceContext } from "@/lib/session";
@@ -12,15 +13,16 @@ import { hasCapability, type WorkspaceContext } from "@/lib/session";
 export type GeneratorLoad =
   | { kind: "no_capability" }
   | { kind: "no_channels" }
-  | { kind: "unconfigured" }
-  | { kind: "ready"; channels: GeneratorChannel[]; savedBriefs: SavedBriefView[]; imagesEnabled: boolean; brand: { configured: boolean; styled: boolean } };
+  | { kind: "unconfigured"; imagesEnabled: boolean }
+  | { kind: "ready"; channels: GeneratorChannel[]; savedBriefs: SavedBriefView[]; imagesEnabled: boolean; imageEstimate: string | null; brand: { configured: boolean; styled: boolean } };
 
 export async function loadGenerator(ctx: WorkspaceContext): Promise<GeneratorLoad> {
   const workspaceId = ctx.workspace.id;
   if (!hasCapability(ctx.workspace, "content.create")) return { kind: "no_capability" };
   const rows = await publishableChannels(workspaceId);
   if (rows.length === 0) return { kind: "no_channels" };
-  if (!aiConfigured()) return { kind: "unconfigured" };
+  // Images are a DIFFERENT model behind a different key; report them separately.
+  if (!aiConfigured()) return { kind: "unconfigured", imagesEnabled: canGenerate("scene_still") };
 
   const channels: GeneratorChannel[] = rows.map((c) => ({
     id: c.id,
@@ -39,5 +41,5 @@ export async function loadGenerator(ctx: WorkspaceContext): Promise<GeneratorLoa
     configured: Boolean(kit.voice.tone || kit.identity.oneLiner || kit.messaging.valueProps.length),
     styled: Boolean(kit.visual.imagery.style || kit.visual.palette.length),
   };
-  return { kind: "ready", channels, savedBriefs, imagesEnabled: canGenerate("scene_still"), brand };
+  return { kind: "ready", channels, savedBriefs, imagesEnabled: canGenerate("scene_still"), imageEstimate: imageUnitEstimate(), brand };
 }

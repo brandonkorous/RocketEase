@@ -45,7 +45,10 @@ export function errorFor(status: number, body: ImagesReply | null): MediaError {
   const message = body?.error?.message ?? `The image endpoint returned ${status}.`;
   if (status === 401 || status === 403) return new MediaError("The image API key was rejected.", { category: "permission", vendorCode: code });
   if (status === 404) return new MediaError("No such image deployment. Check the deployment name matches the model.", { category: "validation", vendorCode: code });
-  if (status === 429) return new MediaError("The image endpoint is rate limiting us.", { category: "rate_limit", vendorCode: code });
+  // Actionable, because this is the error a small deployment meets most: an
+  // Azure image deployment's default quota is a couple of requests per MINUTE,
+  // so two generations in quick succession is enough to hit it.
+  if (status === 429) return new MediaError("The image model is busy — try again in a minute.", { category: "rate_limit", vendorCode: code });
   // Azure returns content_filter; OpenAI returns a moderation-shaped message.
   if (status === 400 && /policy|moderation|safety|content_filter/i.test(`${code} ${message}`)) {
     return new MediaError("The prompt was refused on content-policy grounds.", { category: "policy", retryable: false, vendorCode: code });

@@ -7,9 +7,12 @@ import { user } from "@/db/schema/auth";
 import { asset, assetRendition, folder, tag } from "@/db/schema/assets";
 import { contentItem, postVariant } from "@/db/schema/content";
 import { channel } from "@/db/schema/connections";
+import { mediaJob } from "@/db/schema/media";
 import { presignGet } from "@/lib/storage";
 import { hasCapability, requireWorkspace } from "@/lib/session";
 import { loadBrandKit } from "@/lib/brand/store";
+import { canGenerate } from "@/lib/media/jobs";
+import { imageUnitEstimate } from "@/lib/media/estimate";
 
 export const metadata: Metadata = { title: "Content" };
 
@@ -77,6 +80,26 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
 
   const ids = rows.map((r) => r.a.id);
   const rends = ids.length ? await db.select().from(assetRendition).where(inArray(assetRendition.assetId, ids)) : [];
+
+  // What each generated asset cost. Recorded since M12.1 and shown nowhere
+  // until now, which left the number the monthly ceiling accrues against
+  // unreadable outside a psql session against production.
+  const jobIds = rows.map((r) => r.a.mediaJobId).filter((v): v is string => Boolean(v));
+  const jobs = jobIds.length
+    ? await db
+        .select({ id: mediaJob.id, modelKey: mediaJob.modelKey, cost: mediaJob.vendorCostUsd, reason: mediaJob.modelReason })
+        .from(mediaJob)
+        .where(inArray(mediaJob.id, jobIds))
+    : [];
+  const jobById = new Map(jobs.map((j) => [j.id, j]));
+  /** null unless this asset came from a media job we can still resolve. */
+  const generationOf = (a: typeof asset.$inferSelect): AssetCard["generation"] => {
+    const job = a.mediaJobId ? jobById.get(a.mediaJobId) : null;
+    if (!job) return a.generatedByAi ? { model: "AI-generated", costUsd: null, reason: null } : null;
+    // numeric() comes back as a string; null stays null rather than becoming 0.
+    return { model: job.modelKey, costUsd: job.cost === null ? null : Number(job.cost), reason: job.reason };
+  };
+
   const toCard = async (a: typeof asset.$inferSelect, uploader: string | null): Promise<AssetCard> => {
     const thumb = rends.find((r) => r.assetId === a.id && r.kind === "thumb");
     const preview = rends.find((r) => r.assetId === a.id && r.kind === "preview");
@@ -91,6 +114,7 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
       renditions: rends.filter((r) => r.assetId === a.id).map((r) => ({ kind: r.kind, width: r.width, height: r.height, bytes: r.bytes })),
       usedIn: usage.get(a.id) ?? {},
       createdAt: a.createdAt.toISOString(), uploadedBy: uploader,
+      generation: generationOf(a),
     };
   };
   const cards = await Promise.all(rows.map((r) => toCard(r.a, r.uploader)));
@@ -123,6 +147,9 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
     collections,
     smart: { expiring: Number(expiringCount[0]?.n ?? 0), review: Number(needsReviewCount[0]?.n ?? 0), unused: Math.max(0, total - usage.size), used: usage.size },
     assets: cards,
+    // Needs no concept and no text model: the action checks canGenerate, not
+    // aiConfigured, so this surface is independent of AI drafting entirely.
+    imageGeneration: { enabled: canGenerate("scene_still"), estimate: imageUnitEstimate() },
     selected,
     matched: Number(matched),
     page,

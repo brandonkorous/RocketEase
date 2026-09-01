@@ -62,6 +62,19 @@ divisible-by-16 sizing are confirmed by live traffic, not documentation.
    which is what it did before 2026-08-31, when the reply's `usage` block was
    parsed away and discarded.
 
+   You no longer need psql for this. The asset's detail panel in the Content
+   library shows **Model** and **Cost**, and every completed job logs a
+   `media job charged` line. Reading it required a hand-written Kubernetes Job
+   until 2026-09-01, which is why nobody would ever have noticed it going null.
+8. **Generate an image with NO concept.** Content library → the rail's
+   "Generate an image". This path touches no text model at all, which is the
+   point: drafting and images are different vendors behind different keys, and
+   one being down must not take the other with it. With drafting unconfigured,
+   /create/generate should now SAY images still work and link here.
+9. **Check the aspect control.** Each Generate surface offers 1:1, 9:16 and
+   16:9. Portrait must request `1088x1936`. Before 2026-09-01 every generated
+   image was square regardless of where it was going.
+
 ---
 
 ## The constraint that shapes the whole test: 2 requests per minute
@@ -75,10 +88,13 @@ already holds all of it:
 So the deployment cannot be scaled up by editing Terraform — the capacity is not
 available to allocate. Raising it needs a quota request to Microsoft.
 
-What this means for testing: **a 3-image job partly 429s, and two generations in
-the same minute will fail.** Our mapping treats 429 as `rate_limit` and
-retryable, so it degrades correctly rather than losing money, but the product
-experience at count=4 is currently bad. Test count=1, and space the runs.
+What this means for testing — and one correction to an earlier note here: a
+multi-image job is **one** request, because `n` is a parameter on a single POST,
+so `count: 4` does NOT consume four of the two. The limit bites on separate
+generations: **two clicks of Generate inside a minute is enough to 429.** Our
+mapping treats 429 as `rate_limit` and retryable, so nothing is lost, and the
+message now says "try again in a minute" rather than naming the vendor's state.
+Still worth spacing the runs.
 
 Neighbouring quota, if this becomes the blocker: `gpt-image-1.5` has 9
 GlobalStandard and 3 DataZoneStandard. DataZone is interesting for a second

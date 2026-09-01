@@ -9,6 +9,7 @@
 import { eq } from "drizzle-orm";
 import type { MediaAdapter, MediaJobState as VendorState, ModelDescriptor } from "@rocketease/media";
 import { db } from "@/db";
+import { log } from "@/lib/log";
 import { mediaJob, type MediaJob } from "@/db/schema/media";
 import { normalizeOutputs } from "./normalize";
 import { loadVoice, rightsScopeForVoice } from "./voice/store";
@@ -67,6 +68,24 @@ export async function completeMediaJob(
       updatedAt: new Date(),
     })
     .where(eq(mediaJob.id, row.id));
+
+  /*
+   * Spend has to be READABLE, not merely recorded. vendor_cost_usd is what the
+   * monthly ceiling accrues against, and until this line the only way to see it
+   * was to run a psql Job against production — so an api-version that quietly
+   * stopped returning `usage` would disarm the ceiling with nothing to notice.
+   * A null cost is logged as unknown rather than omitted, because that is the
+   * case worth spotting.
+   */
+  log.info("media job charged", {
+    mediaJobId: row.id,
+    adapter: row.adapter,
+    model: row.modelKey,
+    quantity: state.usage?.quantity ?? null,
+    unit: state.usage?.unit ?? null,
+    costUsd: state.usage?.costUsd ?? "unknown",
+    assets: assetIds.length,
+  });
 
   return { assetIds, mismatches };
 }

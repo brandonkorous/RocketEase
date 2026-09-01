@@ -4,18 +4,19 @@ import { Badge, Button, Input, Textarea } from "@wizeworks/silicaui-react";
 import { estimatePublishCost, isFreeToPublish, type ChannelKind, type ProviderKey } from "@rocketease/providers/client";
 import { conceptText, type Concept } from "@/lib/ai/generator/types";
 import { NetMark } from "../net-mark";
+import { ImageControls } from "./image-controls";
 import { IssueList, LengthMeter } from "./meter";
 import type { GeneratorChannel } from "./types";
 import type { ConceptImage, GeneratorApi } from "./use-generator";
 
-type Props = { api: GeneratorApi; concept: Concept; channel?: GeneratorChannel; imagesEnabled: boolean };
+type Props = { api: GeneratorApi; concept: Concept; channel?: GeneratorChannel; imagesEnabled: boolean; imageEstimate: string | null };
 
 /**
  * One concept, editable in place. The card is a draft a person is expected to
  * rewrite — every field is an input, and nothing leaves the card until they
  * press "Use in Create".
  */
-export function ConceptCard({ api, concept: c, channel, imagesEnabled }: Props) {
+export function ConceptCard({ api, concept: c, channel, imagesEnabled, imageEstimate }: Props) {
   const images = api.images[c.id] ?? [];
   const busy = api.busy === c.id;
   const text = conceptText(c);
@@ -66,9 +67,7 @@ export function ConceptCard({ api, concept: c, channel, imagesEnabled }: Props) 
         <Button size="sm" variant="outline" color="neutral" disabled={busy} onClick={() => api.regenerate(c)}>Regenerate</Button>
         <Button size="sm" variant="ghost" color="neutral" onClick={() => api.copy(c)}>Copy</Button>
         {imagesEnabled && (
-          <Button size="sm" variant="ghost" color="neutral" disabled={api.busy === `${c.id}:image`} onClick={() => api.makeImage(c)}>
-            {api.busy === `${c.id}:image` ? "Generating image…" : "Generate image"}
-          </Button>
+          <ImageControls api={api} conceptId={c.id} estimate={imageEstimate} onGenerate={(aspect) => api.makeImage(c, aspect)} />
         )}
       </footer>
     </article>

@@ -86,7 +86,12 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
   `mock` exercises the whole loop with real decodable fixtures and zero spend. **There is exactly
   one image path**: every generation routes through the registry, so nothing calls a vendor
   directly and nothing escapes the ceiling. A model is a pinned catalog entry, never an env var.
-  An adapter declares `synchronous` when `start` does the whole job — `runMediaJobNow` runs those
+  **Spend must be readable, not merely recorded**: `vendor_cost_usd` is logged on
+  every completion and shown on the asset's detail panel, because it is what the monthly
+  ceiling accrues against and a silent null would disarm that ceiling. Image generation is
+  reachable WITHOUT the text model (`generateImage` checks `canGenerate`, never
+  `aiConfigured`) — two vendors, two keys, so one being down must not take the other with
+  it. An adapter declares `synchronous` when `start` does the whole job — `runMediaJobNow` runs those
   inline and QUEUES everything else, because an adapter holding job state in memory cannot be
   started in the web process and polled in the worker.
 - **Content credentials** (M12.5a, `docs/plans/m12.5a-provenance.md`): `lib/media/c2pa.ts` PROBES

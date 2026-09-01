@@ -128,7 +128,7 @@ describe("routing with a real adapter registered", () => {
     const r = routeJob(spec({ jobKind: "scene_still" }), { isConfigured: onlyOpenAi });
     // The LIVE model, not the one retiring on 2026-10-23 that sits behind it.
     expect(isRouted(r) && r.model.key).toBe("gpt-image-2");
-    expect(isRouted(r) && r.reason).toContain("mock-image the mock adapter isn't configured");
+    expect(isRouted(r) && r.reason).toContain("passed over mock-image (the mock adapter isn't configured)");
   });
 
   it("prefers the mock locally, so a dev box with both keys spends nothing", () => {

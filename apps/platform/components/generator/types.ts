@@ -22,6 +22,8 @@ export type GeneratorProps = {
   savedBriefs: SavedBriefView[];
   /** Image generation is configured on the server; the button is hidden when it isn't. */
   imagesEnabled: boolean;
+  /** What one generated image costs, already formatted, or null when unpriced. */
+  imageEstimate: string | null;
   /** What the brand kit contributes to this run — stated, never implied. */
   brand: { configured: boolean; styled: boolean };
 };

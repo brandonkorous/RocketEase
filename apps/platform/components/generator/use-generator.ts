@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@wizeworks/silicaui-react";
 import { generateConcepts, generateImage, regenerateConcept, saveBrief, sendToCreate } from "@/lib/actions/generator";
 import type { AdSet, Brief, Concept } from "@/lib/ai/generator/types";
+import type { ImageAspect } from "@/lib/ai/generator/image-spec";
 import { conceptText } from "@/lib/ai/generator/types";
 import { cleanBrief, emptyBrief, type GeneratorChannel } from "./types";
 
@@ -72,10 +73,10 @@ export function useGenerator(workspaceId: string, channels: GeneratorChannel[]) 
     router.push(res.url);
   };
 
-  const makeImage = async (c: Concept) => {
+  const makeImage = async (c: Concept, aspect: ImageAspect = "square") => {
     setBusy(`${c.id}:image`);
     const prompt = [c.hook, c.body].filter(Boolean).join(" ").slice(0, 1_200);
-    const res = await generateImage({ workspaceId, prompt, aspect: "square", count: 1, altText: c.altText });
+    const res = await generateImage({ workspaceId, prompt, aspect, count: 1, altText: c.altText });
     setBusy(null);
     if (res.error) return fail(res.error);
     // A model that takes minutes finishes in the worker; that is not a failure.

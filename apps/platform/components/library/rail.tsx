@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button, Input } from "@wizeworks/silicaui-react";
 import { createFolder } from "@/lib/actions/folders";
 import { useActionFeedback } from "@/lib/use-action-feedback";
+import { GeneratePanel } from "./generate-panel";
 import { LibIcon } from "./icons";
 import type { LibraryData } from "./types";
 
@@ -37,6 +38,9 @@ export function CollectionsRail({ data, nav }: { data: LibraryData; nav: Nav }) 
         <li><RailItem icon={LibIcon.clock} active={query.smart === "expiring"} label="Expiring Soon" n={data.smart.expiring} onClick={() => nav({ smart: "expiring", folder: null })} /></li>
         <li><RailItem icon={LibIcon.img} active={query.smart === "unused"} label="Unused Assets" n={data.smart.unused} onClick={() => nav({ smart: "unused", folder: null })} /></li>
       </ul>
+      {data.imageGeneration.enabled && canEdit && (
+        <GeneratePanel workspaceId={data.workspaceId} estimate={data.imageGeneration.estimate} />
+      )}
     </aside>
   );
 }

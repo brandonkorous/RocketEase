@@ -79,13 +79,15 @@ configMapGenerator:
       # per-image price, so this is measured, not copied. Against this deployment
       # on 2026-08-31 a medium-quality image cost $0.004–$0.040 depending on how
       # busy the picture is (packages/media/src/openai/models.ts records the
-      # readings). $0.08 is ~2x the busiest measured: an estimate rounds UP, so
-      # the ceiling errs toward refusing rather than toward spending.
+      # readings), and a real generation on 2026-09-01 recorded $0.0154. $0.05
+      # rounds UP past the busiest measured, so the ceiling errs toward refusing
+      # rather than spending — without overstating a typical image five-fold the
+      # way the first guess of $0.08 did.
       #
       # Actual spend is NOT this number — media_job.vendor_cost_usd comes from
       # the token usage the vendor reports back, which is what the monthly
       # ceiling accrues against.
-      - AI_MEDIA_RATES_JSON={"azure-gpt-image-2":0.08}
+      - AI_MEDIA_RATES_JSON={"azure-gpt-image-2":0.05}
       # A job caps at 4 images (lib/actions/media.ts), so $0.50 clears any real
       # request and still stops one that has gone strange.
       - MEDIA_CEILING_USD_PER_JOB=0.50

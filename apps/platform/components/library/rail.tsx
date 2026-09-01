@@ -44,7 +44,7 @@ export function CollectionsRail({ data, nav }: { data: LibraryData; nav: Nav }) 
         <GeneratePanel workspaceId={data.workspaceId} estimate={data.imageGeneration.estimate} />
       )}
       {data.videoGeneration.enabled && canEdit && (
-        <GenerateVideoPanel workspaceId={data.workspaceId} estimate={data.videoGeneration.estimate} />
+        <GenerateVideoPanel workspaceId={data.workspaceId} estimate={data.videoGeneration.estimate} products={data.videoGeneration.products} />
       )}
       <GenerationStatus rows={data.generations} />
     </aside>

@@ -27,7 +27,23 @@ export const SORA_MODELS: ModelDescriptor[] = [
     // these by lib/media/video/assemble.ts, not asked of the model.
     jobs: ["product_motion", "hero_shot", "broll"],
     io: {
-      inputs: { text: true },
+      /*
+       * ONE reference image, and "source" is MEASURED, not assumed.
+       *
+       * A multipart POST carrying `input_reference` was accepted on 2026-09-01,
+       * and the output's FIRST FRAME was the reference byte-for-byte — a flat
+       * violet plate — which then animated into a violet object. So this is a
+       * literal opening frame the model moves on from, not a subject it looks
+       * at and reinterprets. That distinction decides how it is used: hand it a
+       * product packshot and the real product is genuinely on screen, so the
+       * packshot has to work as frame one.
+       *
+       * The descriptor previously said `text` only, so the resolver dropped
+       * every reference before it could reach the vendor.
+       *
+       * The image must match the requested `size`; Sora does not letterbox.
+       */
+      inputs: { text: true, referenceImages: { max: 1, role: "source" } },
       outputs: {
         container: "mp4",
         resolutions: Object.values(SORA_SIZES),

@@ -51,6 +51,27 @@ export function sizeFor(spec: GenerationSpec): string {
   return size;
 }
 
+/**
+ * The one reference image Sora takes, or none.
+ *
+ * PRODUCT WINS. A model that accepts a single reference and is handed a mood
+ * board instead of the packshot produces a confident picture of the wrong
+ * product, which is worse than no reference at all — so the priority is fixed
+ * rather than "whatever the caller listed first" (lib/media/references.ts
+ * applies the same order before it ever gets here).
+ *
+ * A reference resolved to a URL rather than bytes is skipped, not fetched:
+ * this adapter does no IO of its own, and silently downloading a caller's URL
+ * would move a trust boundary.
+ */
+export function referenceFor(spec: GenerationSpec): { bytes: Uint8Array; mimeType: string } | undefined {
+  const usable = (spec.references ?? []).filter((r) => r.bytes && r.bytes.byteLength > 0);
+  if (usable.length === 0) return undefined;
+  const order = ["product", "logo", "talent", "style", "source", "driving"];
+  const best = [...usable].sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role))[0];
+  return { bytes: best.bytes!, mimeType: best.mimeType ?? "image/png" };
+}
+
 /** 6 seconds is a 400, not a rounded 8 — so refuse here rather than at the vendor. */
 export function secondsFor(model: ModelDescriptor, spec: GenerationSpec): number {
   const allowed = model.io.outputs.duration?.allowed ?? [];
@@ -96,10 +117,11 @@ export function soraAdapter(): MediaAdapter {
       if (!c) throw new MediaError("Video generation is not configured.", { category: "unconfigured" });
       const size = sizeFor(spec);
       const seconds = secondsFor(model, spec);
+      const reference = referenceFor(spec);
 
       // Recorded BEFORE the call: if this throws, reconcile must know we tried.
       attempted.add(idempotencyKey);
-      const job = await createJob(c, { prompt: spec.prompt, size, seconds });
+      const job = await createJob(c, { prompt: spec.prompt, size, seconds, reference });
       if (!job.id) throw new MediaError("The video service accepted the job but returned no id.", { category: "unknown", ambiguous: true });
 
       return { adapter: "azure-sora", modelKey: model.key, remoteJobId: job.id, idempotencyKey };

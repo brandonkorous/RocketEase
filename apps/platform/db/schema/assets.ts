@@ -65,6 +65,10 @@ export const tag = pgTable(
   (t) => [uniqueIndex("tag_ws_name_idx").on(t.workspaceId, t.name)],
 );
 
+/** Mirrors lib/media/references.ts REFERENCE_KINDS; kept here so the column is typed. */
+export const REFERENCE_KINDS = ["product", "logo", "style", "talent"] as const;
+export type ReferenceKind = (typeof REFERENCE_KINDS)[number];
+
 export const asset = pgTable(
   "asset",
   {
@@ -91,6 +95,15 @@ export const asset = pgTable(
     rightsExpiresAt: timestamp("rights_expires_at", { withTimezone: true }),
     /** Whether the licence covers organic posting, paid usage, or both. */
     rightsScope: text("rights_scope").$type<RightsScope>().notNull().default("both"),
+    /**
+     * What this asset can be handed to a model AS, or null for most things.
+     *
+     * `product` is the one that matters: Sora's reference image becomes the
+     * literal FIRST FRAME of the clip, so flagging the real packshot is what
+     * puts the real product on screen instead of a plausible lookalike.
+     * lib/media/references.ts already knows the priority order between kinds.
+     */
+    referenceKind: text("reference_kind").$type<ReferenceKind>(),
     /** Made by a model rather than captured. Drives the synthetic-media disclosure suggestion. */
     generatedByAi: boolean("generated_by_ai").notNull().default(false),
     generationModel: text("generation_model"),

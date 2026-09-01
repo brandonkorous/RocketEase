@@ -17,6 +17,7 @@ import type { JobPayloads } from "@/lib/jobs/queues";
 import { emit } from "@/lib/jobs/outbox";
 import { endMediaJob } from "@/lib/media/finish";
 import type { HandlerContext } from "./index";
+import { hydrateReferences } from "@/lib/media/hydrate-references";
 
 export async function mediaGenerate(data: JobPayloads["media.generate"], ctx: HandlerContext) {
   const row = await db.query.mediaJob.findFirst({ where: (j, { eq: e }) => e(j.id, data.mediaJobId) });
@@ -44,7 +45,8 @@ export async function mediaGenerate(data: JobPayloads["media.generate"], ctx: Ha
       remoteJobId = existing.handle.remoteJobId;
       l.warn("media job already existed at the vendor; not re-spending", { remoteJobId });
     } else {
-      const handle = await adapter.start(model, row.spec as never, row.idempotencyKey);
+      const hydrated = await hydrateReferences(row.spec as never, model, row.workspaceId);
+      const handle = await adapter.start(model, hydrated, row.idempotencyKey);
       remoteJobId = handle.remoteJobId;
     }
 

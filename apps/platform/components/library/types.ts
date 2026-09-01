@@ -13,6 +13,8 @@ export type AssetCard = {
    * they live on media_job, the "media job charged" log line and the ceiling.
    */
   generation: { model: string; credits: number | null; reason: string | null } | null;
+  /** What a model may be handed this image as. Null for most assets. */
+  referenceKind: "product" | "logo" | "style" | "talent" | null;
 };
 export type CollectionRow = { id: string; name: string; count: number };
 export type RecentRow = { id: string; fileName: string; bytes: number | null; createdAt: string; thumbUrl: string | null };
@@ -29,7 +31,7 @@ export type LibraryData = {
   /** Generating an image here needs no concept and no text model — see generate-panel.tsx. */
   imageGeneration: { enabled: boolean; estimate: string | null };
   /** Separate from images: a different model, a different vendor bill, and it may be off on its own. */
-  videoGeneration: { enabled: boolean; estimate: string | null };
+  videoGeneration: { enabled: boolean; estimate: string | null; products: { id: string; label: string }[] };
   /** In-flight and recently-failed jobs. Empty is the normal case. */
   generations: GenerationRow[];
 };

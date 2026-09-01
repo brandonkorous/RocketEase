@@ -25,12 +25,19 @@ const schema = z.object({
   prompt: z.string().trim().min(3).max(1_500),
   aspect: z.enum(["9:16", "16:9"]).default("9:16"),
   seconds: z.union([z.literal(4), z.literal(8), z.literal(12)]).default(4),
+  /**
+   * Optional product packshot. Sora's reference becomes the literal FIRST
+   * FRAME, so this is what puts the real product on screen rather than a
+   * plausible lookalike. Only the id travels — bytes are fetched at the vendor
+   * call (lib/media/hydrate-references.ts).
+   */
+  productAssetId: z.string().min(1).optional(),
 });
 
 export async function generateVideo(input: z.input<typeof schema>): Promise<VideoState> {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { error: "Describe the clip you want first." };
-  const { workspaceId: ws, prompt, aspect, seconds } = parsed.data;
+  const { workspaceId: ws, prompt, aspect, seconds, productAssetId } = parsed.data;
 
   return guard(async () => {
     const ctx = await requireCapability(ws, "content.create");
@@ -51,8 +58,9 @@ export async function generateVideo(input: z.input<typeof schema>): Promise<Vide
       organizationId: ctx.workspace.organizationId,
       workspaceId: ws,
       surface: "action:video.generate",
-      props: { seconds, aspect, model: res.modelKey },
+      props: { seconds, aspect, model: res.modelKey, withProduct: Boolean(productAssetId) },
     });
-    return { ok: `Generating a ${seconds}-second clip. It takes a few minutes and lands in the library when it's ready.` };
+    const opener = productAssetId ? " It opens on your product shot." : "";
+    return { ok: `Generating a ${seconds}-second clip.${opener} It takes a few minutes and lands in the library when it's ready.` };
   });
 }

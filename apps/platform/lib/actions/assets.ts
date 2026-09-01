@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { RIGHTS_SCOPES, asset, tag, type AssetKind } from "@/db/schema/assets";
+import { REFERENCE_KINDS, RIGHTS_SCOPES, asset, tag, type AssetKind } from "@/db/schema/assets";
 import { audit } from "@/lib/audit";
 import { AuthorizationError } from "@/lib/authz";
 import { emit } from "@/lib/jobs/outbox";
@@ -93,12 +93,14 @@ const metaSchema = z.object({
   rightsNote: z.string().trim().max(500).optional(),
   rightsExpiresAt: z.string().optional(),
   rightsScope: z.enum(RIGHTS_SCOPES).optional(),
+  /** "" clears it — a select has no null, so the empty option means "not a reference". */
+  referenceKind: z.union([z.enum(REFERENCE_KINDS), z.literal("")]).optional(),
 });
 
 export async function updateAsset(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = metaSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail("Check the form");
-  const { workspaceId, assetId, tags, rightsExpiresAt, ...fields } = parsed.data;
+  const { workspaceId, assetId, tags, rightsExpiresAt, referenceKind, ...fields } = parsed.data;
   return guard(async () => {
     const ctx = await requireCapability(workspaceId, "content.edit");
     const row = await db.query.asset.findFirst({ where: (a, { and, eq }) => and(eq(a.id, assetId), eq(a.workspaceId, workspaceId)) });
@@ -113,7 +115,14 @@ export async function updateAsset(_prev: ActionState, formData: FormData): Promi
     }
     await db
       .update(asset)
-      .set({ ...fields, tagIds, rightsExpiresAt: rightsExpiresAt ? new Date(rightsExpiresAt) : null, updatedAt: new Date() })
+      .set({
+        ...fields,
+        tagIds,
+        rightsExpiresAt: rightsExpiresAt ? new Date(rightsExpiresAt) : null,
+        // undefined leaves it alone; "" is a deliberate clear.
+        ...(referenceKind === undefined ? {} : { referenceKind: referenceKind === "" ? null : referenceKind }),
+        updatedAt: new Date(),
+      })
       .where(eq(asset.id, row.id));
     await audit({ action: "asset.update", actorUserId: ctx.session.user.id, organizationId: row.organizationId, workspaceId, targetType: "asset", targetId: row.id, summary: { after: { ...fields, tags: names } } });
     revalidatePath(workspacePath(workspaceId, "content"));

@@ -59,14 +59,37 @@ async function call(url: string, init: RequestInit): Promise<SoraJob> {
   return body;
 }
 
-export async function createJob(c: SoraConfig, body: { prompt: string; size: string; seconds: number }): Promise<SoraJob> {
-  return call(`${base(c)}?api-version=${c.apiVersion}`, {
-    method: "POST",
-    headers: auth(c),
-    // `model` is the DEPLOYMENT name here, and `seconds` is a string: 4 is a
-    // 400 ("Invalid value"), "4" is accepted.
-    body: JSON.stringify({ model: c.deployment, prompt: body.prompt, size: body.size, seconds: String(body.seconds) }),
-  });
+export type CreateBody = { prompt: string; size: string; seconds: number; reference?: { bytes: Uint8Array; mimeType: string } };
+
+/**
+ * JSON when there is no reference image, multipart when there is.
+ *
+ * Not a stylistic choice: `input_reference` is a file part, and sending the
+ * same request as JSON with a base64 string is rejected. The Content-Type
+ * header is omitted for multipart deliberately — fetch writes it itself, with
+ * the boundary, and setting it by hand produces a body the server cannot parse.
+ */
+export async function createJob(c: SoraConfig, body: CreateBody): Promise<SoraJob> {
+  const url = `${base(c)}?api-version=${c.apiVersion}`;
+  const seconds = String(body.seconds);
+
+  if (!body.reference) {
+    return call(url, {
+      method: "POST",
+      headers: auth(c),
+      // `model` is the DEPLOYMENT name here, and `seconds` is a string: 4 is a
+      // 400 ("Invalid value"), "4" is accepted.
+      body: JSON.stringify({ model: c.deployment, prompt: body.prompt, size: body.size, seconds }),
+    });
+  }
+
+  const form = new FormData();
+  form.set("model", c.deployment);
+  form.set("prompt", body.prompt);
+  form.set("size", body.size);
+  form.set("seconds", seconds);
+  form.set("input_reference", new Blob([body.reference.bytes as BlobPart], { type: body.reference.mimeType }), "reference");
+  return call(url, { method: "POST", headers: { "api-key": c.apiKey }, body: form });
 }
 
 export async function readJob(c: SoraConfig, jobId: string): Promise<SoraJob> {

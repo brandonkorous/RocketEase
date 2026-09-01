@@ -17,6 +17,7 @@ import { emit } from "@/lib/jobs/outbox";
 import { log } from "@/lib/log";
 import { completeMediaJob, endMediaJob } from "./finish";
 import { auditGeneration, enqueueJob, jobValues, prepareJob, type CreateJobInput } from "./jobs";
+import { hydrateReferences } from "./hydrate-references";
 
 export type RunNowResult =
   | { mediaJobId: string; assetIds: string[]; mismatches: string[] }
@@ -34,7 +35,8 @@ async function submit(row: MediaJob, adapter: MediaAdapter) {
   }
   const model = adapter.models().find((m) => m.key === row.modelKey);
   if (!model) throw new MediaError("That model is no longer offered.", { category: "unconfigured" });
-  return adapter.start(model, row.spec as never, row.idempotencyKey);
+  const hydrated = await hydrateReferences(row.spec as never, model, row.workspaceId);
+  return adapter.start(model, hydrated, row.idempotencyKey);
 }
 
 export async function runMediaJobNow(input: CreateJobInput): Promise<RunNowResult> {

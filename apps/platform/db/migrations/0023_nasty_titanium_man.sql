@@ -1,0 +1,1 @@
+ALTER TABLE "asset" ADD COLUMN "reference_kind" text;

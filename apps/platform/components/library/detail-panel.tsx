@@ -107,6 +107,7 @@ function EditForm({ a, workspaceId, collections, onClose }: { a: AssetCard; work
       <div className="flex flex-col gap-1.5"><Label htmlFor="d-title">Title</Label><Input id="d-title" name="title" size="sm" defaultValue={a.title ?? ""} /></div>
       <div className="flex flex-col gap-1.5"><Label htmlFor="d-alt">Alt text {a.kind === "image" && <span className="text-secondary/70">(required to publish)</span>}</Label><Textarea id="d-alt" name="altText" rows={2} defaultValue={a.altText ?? ""} placeholder="Describe the image for people who can't see it" /></div>
       <div className="flex flex-col gap-1.5"><Label htmlFor="d-caption">Default caption</Label><Textarea id="d-caption" name="caption" rows={2} defaultValue={a.caption ?? ""} /></div>
+      {a.kind === "image" && <ReferenceField a={a} />}
       <RightsFields a={a} />
       <div className="grid grid-cols-2 gap-2 pt-1">
         <Button type="submit" color="primary" loading={pending}>Save</Button>
@@ -117,6 +118,30 @@ function EditForm({ a, workspaceId, collections, onClose }: { a: AssetCard; work
         <Button type="button" variant="outline" color="error" disabled={busy} onClick={() => run(() => deleteAsset(workspaceId, a.id), (r) => { if (r.ok) onClose(); })}>Delete</Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * What a model may be handed this image AS.
+ *
+ * Images only: a video cannot be a reference frame. `product` is the one that
+ * earns its place — Sora's reference becomes the literal first frame, so this
+ * is the difference between the real product on screen and a convincing
+ * lookalike.
+ */
+function ReferenceField({ a }: { a: AssetCard }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor="d-ref">Use as a reference</Label>
+      <select id="d-ref" name="referenceKind" className="select select-sm" defaultValue={a.referenceKind ?? ""}>
+        <option value="">Not a reference</option>
+        <option value="product">Product shot</option>
+        <option value="logo">Logo</option>
+        <option value="style">Style reference</option>
+        <option value="talent">Talent</option>
+      </select>
+      <p className="text-xs text-secondary/70">A product shot can open a generated clip, so the real thing is on screen rather than something that resembles it.</p>
+    </div>
   );
 }
 

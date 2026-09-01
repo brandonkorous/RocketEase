@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { modelByKey } from "../catalog";
 import { estimate } from "../cost";
 import type { GenerationSpec } from "../types";
-import { secondsFor, sizeFor, soraAdapter, __resetSoraJobs } from "./index";
+import { referenceFor, secondsFor, sizeFor, soraAdapter, __resetSoraJobs } from "./index";
 
 const model = () => modelByKey("azure-sora-2")!;
 const spec = (over: Partial<GenerationSpec> = {}): GenerationSpec => ({ jobKind: "hero_shot", prompt: "a lemon rotating", ...over });
@@ -192,6 +192,52 @@ describe("errors", () => {
   it("repeats what Azure said about a bad duration rather than paraphrasing it", async () => {
     vi.stubGlobal("fetch", fail(400, { error: { message: "Invalid value: '6'. Supported values are: '4', '8', and '12'.", code: "invalid_value" } }));
     await expect(soraAdapter().start(model(), spec(), "media_400")).rejects.toThrow(/Supported values are: '4', '8', and '12'/);
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("reference images", () => {
+  const ref = (role: string, byte: number) => ({ assetId: `a-${role}`, role, bytes: new Uint8Array([byte]), mimeType: "image/png" }) as never;
+
+  it("takes none when nothing was attached", () => {
+    expect(referenceFor(spec())).toBeUndefined();
+  });
+
+  it("PREFERS the product packshot over a style board", () => {
+    // Sora accepts exactly one. Spending it on a mood board produces a
+    // confident video of the wrong product, which is worse than no reference.
+    const chosen = referenceFor(spec({ references: [ref("style", 9), ref("product", 1)] }));
+    expect(chosen?.bytes[0]).toBe(1);
+  });
+
+  it("skips a reference that resolved to a URL instead of bytes - this adapter does no IO", () => {
+    const urlOnly = { assetId: "a", role: "product", url: "https://example.test/p.png" } as never;
+    expect(referenceFor(spec({ references: [urlOnly] }))).toBeUndefined();
+  });
+
+  it("skips an empty buffer rather than posting a zero-byte file part", () => {
+    const empty = { assetId: "a", role: "product", bytes: new Uint8Array() } as never;
+    expect(referenceFor(spec({ references: [empty] }))).toBeUndefined();
+  });
+
+  it("sends multipart with input_reference, and NOT JSON, when one is attached", async () => {
+    const f = reply(completed);
+    vi.stubGlobal("fetch", f);
+    await soraAdapter().start(model(), spec({ references: [ref("product", 7)] }), "media_ref");
+    const [, init] = f.mock.calls[0];
+    expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get("input_reference")).toBeInstanceOf(Blob);
+    // fetch writes the multipart boundary itself; setting it by hand produces
+    // a body the server cannot parse.
+    expect(init.headers["Content-Type"]).toBeUndefined();
+    vi.unstubAllGlobals();
+  });
+
+  it("still sends plain JSON when there is no reference", async () => {
+    const f = reply(completed);
+    vi.stubGlobal("fetch", f);
+    await soraAdapter().start(model(), spec(), "media_noref");
+    expect(typeof f.mock.calls[0][1].body).toBe("string");
     vi.unstubAllGlobals();
   });
 });

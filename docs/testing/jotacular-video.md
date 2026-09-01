@@ -80,6 +80,44 @@ keep-out-of-frame list, and:
 So the prompt above only has to carry the *shot*. Style is already handled, and
 asking for type in the prompt fights the system rather than using it.
 
+## DONE — it is live
+
+**https://www.facebook.com/reel/1098039156004819** — published 2026-09-01 as a
+Reel on the Jotacular Page. One attempt, confirmed by Facebook, network id
+`1098039156004819`.
+
+The caption as it actually appears, read back off the live page:
+
+> You are at the lake and an idea arrives. You have about four seconds before it goes.
+> Write it, type it, say it, or snap it. It saves in whatever form it arrived in.
+> Nothing to file. Nothing to maintain.
+> Start jotting.
+> **Made with AI**
+
+Facebook exposes no AI-content parameter, so the label went into the text, which
+is exactly what `FB_CAPS.disclosure = "caption"` promises. It worked end to end.
+
+## Measured pricing — the numbers that were placeholders
+
+| | 4-second clip | 12-second clip |
+|---|---|---|
+| Vendor cost (ours) | $0.40 | $1.20 |
+| Customer credits | 48 | 144 |
+| Wall clock | ~50s | ~2m |
+| File size | 1.3 MB | 7.8 MB |
+
+Both at 720x1280, h264 + aac, C2PA-signed, `mismatches: 0`.
+
+`$0.10/s` is now confirmed as the arithmetic actually charged, not a guess — but
+it is still **our configured rate**, because Azure publishes no retail meter for
+sora. `12 credits/second` remains an operator choice: it makes a video credit
+cost us about 1.8x what an image credit does. **That ratio is a pricing decision
+still open.**
+
+Worth knowing for the ceiling: a 12-second clip at $1.20 is the most expensive
+single thing the product can ask for, and the per-job cap is $1.50. There is not
+much room above it.
+
 ## Bugs this run has found so far
 
 Three, all P1, all only visible in a live run:
@@ -89,15 +127,21 @@ Three, all P1, all only visible in a live run:
 | B-006 | The Sora path we wrote to does not exist | 14 tests, fixtures written from the same wrong guess as the code |
 | B-007 | A failed generation is invisible | Nothing read back state that was being written correctly |
 | B-008 | Every generation stranded — polled once, never again | The handler was right; nothing called it a second time |
+| B-009 | Video spend recorded null, so the monthly ceiling counted it as $0 | Images metered correctly, hiding it |
+| B-010 | Saving an asset (or a team member) killed the page | Identity-across-renders; nothing here renders React |
 
-B-007 and B-008 are the same shape: **code that was written, correct, and never
-reached.** A handler with no caller is invisible to every test that calls the
-handler.
+Four of the five are the same shape: **a correct thing wired wrongly.** A
+handler with no caller (B-008), a value written and never read (B-007), a column
+computed for one vendor and not the other (B-009), a function whose identity was
+the contract (B-010). None of them is a wrong algorithm, and none of them is
+visible to a test that calls the unit directly.
 
 ## State
 
-- All three fixed and pushed (`de611ad`), deploying.
-- One clip is submitted and stranded by B-008. Its bytes live 24h, so the new
-  sweep should collect it on its own — which is the fix proving itself.
-- Both video prices are still placeholders: `$0.10/s` vendor, `12 credits/s`
-  customer. The first successful clip is what replaces them with measurement.
+All five fixed, pushed and deployed except B-010 (`d2ca38f`), which was still
+building when the post went out. **B-010 is live for users until that lands** —
+saving an asset or a team member kills the page.
+
+The B-008 sweep can be watched working in the media worker log: polls land every
+15 seconds while a clip renders, and it rescued the job that was already
+stranded before the fix shipped.

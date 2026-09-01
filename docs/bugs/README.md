@@ -18,6 +18,7 @@ register; a finding that turns into work to do gets a bug file here.
 | [B-008](B-008-generations-never-polled-again.md) | P1 | **fixed** | Every generation stranded: the poll ran once and nothing ever called it again |
 | [B-009](B-009-video-spend-never-reached-the-ceiling.md) | P1 | **fixed** | Video spend recorded null, so the monthly ceiling counted it as zero |
 | [B-010](B-010-saving-an-asset-killed-the-page.md) | P1 | **fixed** | Saving an asset (or a team member) killed the page with an infinite render loop |
+| [B-011](B-011-spec-never-carried-the-new-fields.md) | P1 | **fixed** | Product reference and voice script never reached the spec, so both features did nothing |
 
 **Severity** — P0 production down or data loss · P1 wrong public output, money, or
 a control that does not control · P2 wrong or misleading in-product · P3 cosmetic.

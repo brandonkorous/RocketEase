@@ -57,7 +57,17 @@ export async function generateVideo(input: z.input<typeof schema>): Promise<Vide
       organizationId: ctx.workspace.organizationId,
       workspaceId: ws,
       userId: ctx.session.user.id,
-      spec: { jobKind: "hero_shot", prompt: [prompt, style].filter(Boolean).join("\n\n"), aspect, durationSeconds: seconds, count: 1 },
+      spec: {
+        jobKind: "hero_shot",
+        prompt: [prompt, style].filter(Boolean).join("\n\n"),
+        aspect,
+        durationSeconds: seconds,
+        count: 1,
+        // Only the id travels; bytes are fetched at the vendor call.
+        ...(productAssetId ? { references: [{ assetId: productAssetId, role: "product" as const }] } : {}),
+        // Read back by chainVoiceover once the picture exists.
+        ...(voiceScript ? { voiceScript, captions, ...(voiceId ? { voiceId } : {}) } : {}),
+      },
     });
     if ("error" in res) return { error: res.error };
 

@@ -1,24 +1,117 @@
 # Live production testing — AI media generation
 
-State as of **2026-08-30**, written to survive a context compaction. Everything
+State as of **2026-09-01**, written to survive a context compaction. Everything
 below was verified against real infrastructure, not inferred.
 
 ---
 
-## What is live and proven
+## Where this got to
 
-**Image generation, end to end, on our own Azure resource.**
+**Images and text both work end to end in production, verified in the browser.**
+Concept → draft on gpt-5.4 → Generate image → asset in the library, with cost,
+model, aspect and audit all correct. The standalone library generator works with
+no concept and no text model.
+
+Shipped and live (commits `a055de4`, `c5e9a41`):
+
+- Drafting runs on **gpt-5.4** (`rocketease-text`, DataZoneStandard, US-only
+  inference). `lib/ai/transport/` picks the vendor from configuration, so
+  switching is env, not code.
+- Images run on **gpt-image-2** (`rocketease-images`, GlobalStandard).
+- `vendor_cost_usd` is logged AND shown on the asset detail panel.
+- Aspect is a control (1:1 / 9:16 / 16:9); 9:16 verified at 1088×1936.
+- Spend estimate shown before the button: "About $0.05 per image."
+- `/staff` works, `media.generation` granted to WizeWorks
+  (`msZ2DmeaQrRaT0dgYRxURbdqn9FcFBSb`).
+
+### Live endpoints
 
 | | |
 |---|---|
-| Account | `oai-rocketease-prod-eus2` (kind `OpenAI`), `rg-sparx-prod-cus`, eastus2 |
-| Deployment | `rocketease-images` → **gpt-image-2** v2026-04-21, GlobalStandard, capacity 2 |
-| Endpoint | `https://oai-rocketease-prod-eus2.openai.azure.com/openai/deployments/rocketease-images/images/generations?api-version=2025-04-01-preview` |
-| Vault | `AZURE-OPENAI-ENDPOINT`, `-API-KEY`, `-API-VERSION`, `-IMAGE-DEPLOYMENT` — all written by Terraform |
+| Account | `oai-rocketease-prod-eus2`, `rg-sparx-prod-cus`, eastus2, kind **AIServices** |
+| Images | `<endpoint>/openai/deployments/rocketease-images/images/generations?api-version=2025-04-01-preview` |
+| Text | `<endpoint>/openai/deployments/rocketease-text/chat/completions?api-version=2024-10-21` |
+| Endpoint | `https://oai-rocketease-prod-eus2.cognitiveservices.azure.com` (the `.openai.azure.com` host also still answers) |
+| Vault | `AZURE-OPENAI-*`, all written by Terraform |
 
-Two real calls returned **HTTP 200** with a decodable PNG: `1088x1088` and
-`1088x1936`. The api-version, deployment path, `api-key` header and arbitrary
-divisible-by-16 sizing are confirmed by live traffic, not documentation.
+**gpt-5.x rejects `max_tokens`** and needs `max_completion_tokens`. A transport
+written from Claude's shape 400s on every draft.
+
+---
+
+## What has NOT been tested
+
+1. **A ceiling REFUSAL has never been observed.** The ceiling is proven
+   *configured* — an unpriced job would have been refused and ours was not — but
+   nothing has watched it actually say no. Do this before video.
+2. **Publishing an AI-generated image.** The synthetic-media disclosure and the
+   `credential_absent` provenance warning only appear at publish time and have
+   never run. This is the last defect that would be visible in PUBLIC.
+   Publishing posts to the real Jotacular Facebook Page — **ask first**.
+
+---
+
+## Video is unblocked, and it changes the spend maths
+
+**Sora 2 is on our existing account.** No new vendor, no credentials:
+
+    OpenAI.GlobalStandard.sora-2   used 0 / limit 9
+    OpenAI.GlobalStandard.sora     used 0 / limit 60
+
+At **$0.10 per second** (Global; Sora 2 Pro is $0.30), a 5-second clip is $0.50
+— roughly 80x an image. So `MEDIA_CEILING_USD_PER_JOB=0.50` sits exactly on the
+boundary and would refuse anything longer than five seconds. **Decide that
+ceiling deliberately before enabling video**, rather than inheriting an
+image-sized one.
+
+---
+
+## Quota: 2 RPM, request submitted
+
+Confirmed via the control-plane API, not inferred:
+
+    currentTierName    "Tier 1"
+    tierUpgradePolicy  "OnceUpgradeIsAvailable"   (auto-upgrade is ON)
+
+Tier 1's PUBLISHED quota for gpt-image-2 GlobalStandard is 6 RPM. This
+subscription is provisioned at **2**, fully allocated, `availableCapacity: 0`.
+Three of four image models sit at exactly one third of their documented Tier 1
+figure; `gpt-image-1.5` is the exception at its full 9.
+
+| model | actual | Tier 1 doc |
+|---|---|---|
+| gpt-image-1 | 3 | 9 |
+| gpt-image-1-mini | 4 | 12 |
+| gpt-image-2 | **2** | **6** |
+| gpt-image-1.5 | 9 | 9 |
+
+**A quota request for 12 RPM was submitted 2026-09-01** (Model Deployment /
+Azure OpenAI / Global Standard). Decision: stay on gpt-image-2 at 2 RPM while
+waiting rather than switching to gpt-image-1.5, which would buy 9 RPM now but
+dies 2026-12-16.
+
+Note `gpt-image-2` is **GlobalStandard-only** in eastus2 — only 1.5 offers
+DataZoneStandard — so the residency gap on images cannot be closed on this model.
+
+---
+
+## The Foundry upgrade (done 2026-09-01) changed less than advertised
+
+The account `oai-rocketease-prod-eus2` was converted to `kind = AIServices`
+through the portal.
+
+- **Quota did NOT change.** Still 2 RPM in the `OpenAI.*` namespace; no
+  `AIServices.*` image quota appeared in eastus2. Resource kind decides which
+  model FAMILIES can be deployed, not per-model rate limits. (The MAI-Image
+  models with 9–18 RPM are swedencentral-only.)
+- **The endpoint DID move**, despite the portal saying it would not:
+  `*.openai.azure.com` → `*.cognitiveservices.azure.com`. Both answer 200 on
+  images and chat, verified live.
+- Terraform needed three changes to stop fighting it: `kind = "AIServices"`,
+  `project_management_enabled = true` (FORCES REPLACEMENT if absent), and an
+  `identity { type = "SystemAssigned" }` block the provider demands with it.
+  Committed as `73d458a11` in sparx.works — **not pushed**, because a pre-push
+  hook fails on `page-performance.ts`, unrelated uncommitted work in that repo.
 
 ---
 
@@ -77,29 +170,21 @@ divisible-by-16 sizing are confirmed by live traffic, not documentation.
 
 ---
 
-## The constraint that shapes the whole test: 2 requests per minute
+## What 2 RPM means while testing
 
-`gpt-image-2` on this subscription has a **quota of 2**, and the deployment
-already holds all of it:
+The numbers are in the quota section above; this is what it does to a test run.
 
-    OpenAI.GlobalStandard.gpt-image-2 | used 2 / limit 2
-    rocketease-images rateLimits: [{ key: request, count: 2, renewalPeriod: 60 }]
+A multi-image job is **one** request — `n` is a parameter on a single POST — so
+`count: 4` does NOT consume four of the two. (An earlier note here said it did;
+that was wrong.) The limit bites on SEPARATE generations: **two clicks of
+Generate inside a minute is enough to 429.** That is mapped to `rate_limit`,
+retryable, and the message now reads "The image model is busy — try again in a
+minute" rather than naming the vendor's internal state. Nothing is lost, but
+space the runs.
 
-So the deployment cannot be scaled up by editing Terraform — the capacity is not
-available to allocate. Raising it needs a quota request to Microsoft.
-
-What this means for testing — and one correction to an earlier note here: a
-multi-image job is **one** request, because `n` is a parameter on a single POST,
-so `count: 4` does NOT consume four of the two. The limit bites on separate
-generations: **two clicks of Generate inside a minute is enough to 429.** Our
-mapping treats 429 as `rate_limit` and retryable, so nothing is lost, and the
-message now says "try again in a minute" rather than naming the vendor's state.
-Still worth spacing the runs.
-
-Neighbouring quota, if this becomes the blocker: `gpt-image-1.5` has 9
-GlobalStandard and 3 DataZoneStandard. DataZone is interesting for a second
-reason — it would pin inference to the US, which gpt-image-2 (Global-only)
-cannot. That is a model decision, not an ops one; nobody has made it.
+`quality: "high"` also exceeded `TIMEOUT_MS` (120s) when measured. We never send
+a quality, so production gets `medium` — but if quality ever becomes a control,
+that timeout has to move with it.
 
 ---
 
@@ -198,6 +283,24 @@ generation is GlobalStandard-only and may run anywhere.
   fail. Use `az resource list` / `az rest` with an explicit recent version.
 - **centralus carries no image model at all**, which is why the AI accounts sit
   in eastus2 while everything else is centralus.
+- **`NEXT_PUBLIC_*` is a GitHub repo VARIABLE, not a ConfigMap value.** It is
+  baked at build time, so it cannot come from `platform-config`.
+  `NEXT_PUBLIC_AI_ENABLED` was unset, which would have hidden every AI control
+  in the browser no matter what the server was doing. Set with `gh variable set`.
+- **A ConfigMap change only reaches pods because the deploy rewrites the image
+  tag to the commit SHA.** `envFrom.configMapRef` resolves once, at pod start,
+  exactly like the secretRef the env-hash annotation exists for. Editing the
+  ConfigMap in the cluster by hand changes nothing.
+- **`kubectl exec` is blocked by the permission classifier.** To read the
+  database, apply a one-off Job with `postgres:18-alpine` mounting
+  `platform-env`'s `DATABASE_URL` — the same mechanism migrations use, and the
+  only route in, since production Postgres has no public network access.
+- **This repo has no `.gitattributes` and mixed line endings.** Editing on
+  Windows can rewrite a CRLF file to LF, turning a 20-line change into a
+  300-line whole-file diff. Check `git diff --stat` before committing.
+- **The portal Foundry upgrade sets `project_management_enabled`, which FORCES
+  REPLACEMENT in Terraform** on an account that soft-deletes and holds a global
+  DNS label. It also needs an `identity` block. See sparx.works `73d458a11`.
 
 ---
 

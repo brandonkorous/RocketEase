@@ -7,22 +7,19 @@ below was verified against real infrastructure, not inferred.
 
 ## Where this got to
 
-**Images and text both work end to end in production, verified in the browser.**
-Concept → draft on gpt-5.4 → Generate image → asset in the library, with cost,
-model, aspect and audit all correct. The standalone library generator works with
-no concept and no text model.
+**Images, text and the whole spend/billing chain work end to end in production,
+verified in the browser.** Video is BUILT and deployed but has never produced a
+clip — that is the next thing to do.
 
-Shipped and live (commits `a055de4`, `c5e9a41`):
+Shipped and live:
 
-- Drafting runs on **gpt-5.4** (`rocketease-text`, DataZoneStandard, US-only
-  inference). `lib/ai/transport/` picks the vendor from configuration, so
-  switching is env, not code.
-- Images run on **gpt-image-2** (`rocketease-images`, GlobalStandard).
-- `vendor_cost_usd` is logged AND shown on the asset detail panel.
-- Aspect is a control (1:1 / 9:16 / 16:9); 9:16 verified at 1088×1936.
-- Spend estimate shown before the button: "About $0.05 per image."
-- `/staff` works, `media.generation` granted to WizeWorks
-  (`msZ2DmeaQrRaT0dgYRxURbdqn9FcFBSb`).
+- Drafting on **gpt-5.4** (`rocketease-text`, DataZoneStandard, US-only).
+  `lib/ai/transport/` picks the vendor from configuration, so switching is env.
+- Images on **gpt-image-2** (`rocketease-images`, GlobalStandard, 2 RPM).
+- Video on **sora-2** (`rocketease-video`, GlobalStandard, 9 RPM) — deployed
+  2026-09-01, `e16999e26` in sparx.works. **Never yet run.**
+- Customers are billed in **credits**; our vendor dollars are on `/staff` only.
+- Five bugs found by live testing, four fixed and verified — see `docs/bugs/`.
 
 ### Live endpoints
 
@@ -31,38 +28,69 @@ Shipped and live (commits `a055de4`, `c5e9a41`):
 | Account | `oai-rocketease-prod-eus2`, `rg-sparx-prod-cus`, eastus2, kind **AIServices** |
 | Images | `<endpoint>/openai/deployments/rocketease-images/images/generations?api-version=2025-04-01-preview` |
 | Text | `<endpoint>/openai/deployments/rocketease-text/chat/completions?api-version=2024-10-21` |
-| Endpoint | `https://oai-rocketease-prod-eus2.cognitiveservices.azure.com` (the `.openai.azure.com` host also still answers) |
+| **Video** | `<endpoint>/openai/v1/video/generations/jobs?api-version=preview` — a THIRD data plane |
+| Endpoint | `https://oai-rocketease-prod-eus2.cognitiveservices.azure.com` |
 | Vault | `AZURE-OPENAI-*`, all written by Terraform |
 
-**gpt-5.x rejects `max_tokens`** and needs `max_completion_tokens`. A transport
-written from Claude's shape 400s on every draft.
+**gpt-5.x rejects `max_tokens`** and needs `max_completion_tokens`.
 
 ---
 
 ## What has NOT been tested
 
-1. **A ceiling REFUSAL has never been observed.** The ceiling is proven
-   *configured* — an unpriced job would have been refused and ours was not — but
-   nothing has watched it actually say no. Do this before video.
-2. **Publishing an AI-generated image.** The synthetic-media disclosure and the
-   `credential_absent` provenance warning only appear at publish time and have
-   never run. This is the last defect that would be visible in PUBLIC.
-   Publishing posts to the real Jotacular Facebook Page — **ask first**.
+1. **A video clip has never been generated.** Everything below it is untested by
+   extension: the QUEUE path (images run inline, video cannot), credits from
+   seconds rather than tokens, and whether a video rendition strips C2PA the way
+   an image one does. The rendition code for video is different — poster and
+   thumb, not a WebP re-encode — so that last one is a real question.
+2. **The ceiling firing on an honest request.** It has been watched refusing
+   (B-005), but only because the limit was lowered to $0.01 for one deploy. A
+   12-second clip at ~$1.20 against the $1.50 limit is the first time it can
+   bind for real; two variants at $2.40 is the first honest refusal.
+3. **Publishing an AI-generated asset.** The disclosure and credential warnings
+   are verified in the COMPOSER (B-001, B-002) but nothing has ever been sent to
+   a network. Publishing posts to the real Jotacular Facebook Page — **ask
+   first**.
 
 ---
 
-## Video is unblocked, and it changes the spend maths
+## Video: what is true, read from Microsoft Learn on 2026-09-01
 
-**Sora 2 is on our existing account.** No new vendor, no credentials:
+This corrected the repo. `packages/media/src/io.ts` said Sora takes
+"`seconds: 16 | 20` and nothing else". That is not what Azure accepts.
 
-    OpenAI.GlobalStandard.sora-2   used 0 / limit 9
-    OpenAI.GlobalStandard.sora     used 0 / limit 60
+| | |
+|---|---|
+| Durations | **4, 8 or 12** seconds, default 4. 6 is a 400, not a rounded 8. |
+| Sizes | `720x1280` portrait, `1280x720` landscape |
+| Shape | async: POST a job, poll, then GET the content. 1–5 minutes. |
+| Model | travels in the **body**, not the URL path (unlike images) |
+| api-version | the literal string **`preview`**, not a date |
+| Statuses | `queued` `preprocessing` `running` `processing` `succeeded` `failed` `cancelled` |
+| Download | dies about **1 hour** after the job finishes |
+| Audio | embedded in the MP4 — there is no separate track to mix |
+| C2PA | Sora signs every clip. That is the vendor's CLAIM; we probe the bytes. |
 
-At **$0.10 per second** (Global; Sora 2 Pro is $0.30), a 5-second clip is $0.50
-— roughly 80x an image. So `MEDIA_CEILING_USD_PER_JOB=0.50` sits exactly on the
-boundary and would refuse anything longer than five seconds. **Decide that
-ceiling deliberately before enabling video**, rather than inheriting an
-image-sized one.
+**Sora reports NO usage at all.** The job response carries `n_seconds` and
+`n_variants` and nothing else. Two consequences, in opposite directions:
+
+- Cost is **exact** rather than estimated — the billed quantity is what we asked
+  for. Better than images, where it comes back as tokens.
+- There are **no tokens**, so the token credit formula would have made every
+  clip free. `lib/media/credit-rates.ts` bills video per second instead, and an
+  unconfigured rate means null credits, never a free video by accident.
+
+### Numbers that are placeholders, not measurements
+
+Both are the first things to revisit once real clips have run.
+
+- **$0.10/second** (`AI_MEDIA_RATES_JSON`) is the published figure from
+  `docs/research/ai-media-2026.md`. Azure publishes **no retail meter for sora**
+  — the price API returns zero matching items, exactly like gpt-image-2.
+- **12 credits/second** (`AI_MEDIA_CREDIT_RATES_JSON`) makes a 4-second clip 48
+  credits against an image's ~0.26. The right ORDER, not a researched price.
+  What a second of video is worth is a pricing decision, deliberately not made
+  in code.
 
 ---
 
@@ -272,6 +300,23 @@ generation is GlobalStandard-only and may run anywhere.
 ---
 
 ## Traps that already cost time
+
+**`server-only` anywhere in the worker's import graph kills the worker**, and the
+symptom lands somewhere else entirely. Routing media metering through
+`lib/ai/usage/record.ts` pulled that marker in; the worker died at startup, and
+the failure that surfaced was an e2e **inbox** test — `channel.sync` never ran,
+so a panel it waits on never appeared. Nothing pointed at media. Unit tests
+cannot catch it because every one of them `vi.mock("server-only")`, which is
+exactly what hides it. `apps/platform/worker/imports.test.ts` now walks the
+graph and fails with the chain.
+
+**`terraform apply -target` on a name that matches nothing succeeds silently.**
+Targeting `azurerm_key_vault_secret.rocketease_ai` — the resource is
+`.rocketease` — reported "Apply complete! 1 added" and created no secrets at
+all. The deployment would have existed with no vault entries, and the video
+panel would simply never render. Check the added/changed COUNT against what you
+expected, not the word "complete".
+
 
 - **Vault secret names take hyphens only.** `ANTHROPIC_BASE_URL` is rejected;
   `ANTHROPIC-BASE-URL` is right, and ci.yml maps it back.

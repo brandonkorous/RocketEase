@@ -16,18 +16,24 @@ vi.mock("@anthropic-ai/sdk", () => ({
 const prompt: Prompt = { system: "sys", user: "usr", maxTokens: 100 };
 const load = async () => import("./client");
 
+// Azure OpenAI OUTRANKS Anthropic when configured, so an ambient text
+// deployment would quietly route these cases to the wrong vendor and let the
+// suite pass while asserting nothing about Anthropic at all.
+const AZURE_TEXT = ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_TEXT_DEPLOYMENT", "AZURE_OPENAI_TEXT_API_VERSION"];
+const clearEnv = () => {
+  delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.AI_MODEL;
+  delete process.env.ANTHROPIC_BASE_URL;
+  AZURE_TEXT.forEach((k) => delete process.env[k]);
+};
+
 beforeEach(() => {
   vi.resetModules();
   create.mockReset();
   construct.mockReset();
-  delete process.env.ANTHROPIC_API_KEY;
-  delete process.env.AI_MODEL;
-  delete process.env.ANTHROPIC_BASE_URL;
+  clearEnv();
 });
-afterEach(() => {
-  delete process.env.ANTHROPIC_API_KEY;
-  delete process.env.AI_MODEL;
-});
+afterEach(clearEnv);
 
 describe("with no ANTHROPIC_API_KEY", () => {
   test("the feature reports itself unconfigured", async () => {

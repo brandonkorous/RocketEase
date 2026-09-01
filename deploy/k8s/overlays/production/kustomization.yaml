@@ -58,6 +58,16 @@ configMapGenerator:
       # /staff writes an audited feature_grant row instead — which is why
       # STAFF_EMAILS above has to work first.
 
+      # Drafting spend, per MILLION tokens. Keyed on what aiModel() returns,
+      # which on Azure is the DEPLOYMENT name — so if that deployment is ever
+      # repointed at a different model, this rate has to move with it.
+      #
+      # gpt-5.4, DataZoneStandard, read from Azure's retail price API on
+      # 2026-09-01 and taking the rate currently in effect (input was repriced
+      # 2.75 -> 3.00 on 2026-06-01). Unset, costUsd stays null and credits are
+      # the only billed unit — the cap still works, the dollar figure is absent.
+      - AI_PRICES_JSON={"rocketease-text":{"inputPerMTok":3.0,"outputPerMTok":16.5}}
+
       # Media generation spend. NOT secrets and NOT Terraform outputs — operator
       # choices, so they live in git where a change is reviewed.
       #

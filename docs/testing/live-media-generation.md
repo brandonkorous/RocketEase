@@ -116,32 +116,57 @@ Two things worth keeping:
 
 ## Known-blocked, with the reason
 
-**Claude on Microsoft Foundry — blocked on subscription billing, not on code.**
+**Claude on Microsoft Foundry — the subscription cannot buy it. Drafting moved
+to GPT instead, and the product is not blocked.**
 
-The Foundry account `ai-rocketease-prod-eus2` (kind `AIServices`) exists. The
-`claude-opus-5` deployment does not: creating it returns
+Measured 2026-09-01, after two wrong diagnoses:
 
-    715-123420: Our system has detected this request as unusual activity
-    for your account.
+    quotaId                         Sponsored_2016-01-01
+    accepted marketplace agreements 0
 
-Microsoft documents the cause — Azure Marketplace partner models cannot be
-purchased by subscriptions without an active pay-as-you-go billing method, and
-this subscription is credit-funded (the jotDOJO Terraform section says so in as
-many words). Attach a card, then flip `rocketease_claude_deployment_enabled` to
-true. Nothing in the code or the Terraform needs to change.
+A Sponsored subscription is one of the types Microsoft excludes from Azure
+Marketplace third-party purchases. Claude is a partner model, sold through
+Marketplace, so it cannot be deployed here at all. Both alternatives were ruled
+out by experiment, not by reading:
 
-Until then **AI drafting is off in production** — `ANTHROPIC-API-KEY` is not in
-the vault, so `aiConfigured()` is false and every AI control hides itself.
+- **Not `modelProviderData`.** The Terraform now sends it (via `azapi`, because
+  `azurerm_cognitive_deployment` cannot — azurerm#31140). The error is
+  unchanged. It was still a real bug that would have blocked an eligible
+  subscription.
+- **Not quota.** Capacity 1 fails identically to capacity 13, with 0/40
+  GlobalStandard and 0/13 DataZoneStandard free and no soft-deleted account
+  holding TPM. Microsoft's troubleshooting table maps `715-123420` to quota;
+  here that is a red herring and following it cost an afternoon.
 
-Two further facts worth keeping:
+To restore Claude: convert the subscription to Pay-As-You-Go (or move the
+Foundry account to one that already is), then flip
+`rocketease_claude_deployment_enabled`. Nothing in the app changes — see below.
 
-- `claude-sonnet-5` — the platform's configured `AI_MODEL` default — has **zero
-  quota** on every SKU in this subscription. `claude-opus-5` has 40 global / 13
-  data-zone. Whatever gets deployed, `AI-MODEL` must be the DEPLOYMENT name.
-- `azurerm_cognitive_deployment` cannot express `modelProviderData` (industry,
-  organizationName, countryCode), which Anthropic deployments require. Even once
-  billing is fixed, the deployment needs `az rest`, the `azapi` provider, or a
-  newer azurerm.
+**Drafting now runs on gpt-5.4**, on the same Azure OpenAI account that serves
+images. `lib/ai/transport/` picks a vendor from configuration alone, so this was
+a deployment plus two vault values, not a rewrite. Verified against the live
+endpoint on 2026-09-01:
+
+| | |
+|---|---|
+| Deployment | `rocketease-text` → **gpt-5.4** v2026-03-05, **DataZoneStandard**, capacity 50 |
+| Endpoint | `.../openai/deployments/rocketease-text/chat/completions?api-version=2024-10-21` |
+| Vault | `AZURE-OPENAI-TEXT-DEPLOYMENT`, `AZURE-OPENAI-TEXT-API-VERSION` |
+
+Two things confirmed by live call rather than documentation:
+
+- **`max_tokens` is REJECTED.** gpt-5.x answers `Unsupported parameter:
+  'max_tokens' is not supported with this model. Use 'max_completion_tokens'
+  instead.` A transport written from Claude's shape 400s on every draft.
+- **Reasoning tokens were 0** at these prompt sizes, so the existing token
+  budgets (500–3200, sized for Claude, where they are output-only) are safe as
+  they stand. If a future prompt does trigger reasoning it eats the same budget,
+  and the transport reports a reply truncated before any text rather than
+  handing back an empty draft.
+
+Residency is BETTER here than for images: text is DataZoneStandard, so the
+prompts carrying brand voice and strategy stay in the US, while image
+generation is GlobalStandard-only and may run anywhere.
 
 ---
 
@@ -166,6 +191,5 @@ Not uniform, and the subprocessor page now says so per row:
 
 - **Images** — gpt-image-2 offers GlobalStandard ONLY. Generation may run in any
   region Microsoft hosts the model; anything stored stays in the US.
-- **Text (when unblocked)** — Claude's Hosted-on-Azure versions also offer
-  DataZoneStandard, which pins inference to the US. That is what the Terraform
-  requests.
+- **Text** — gpt-5.4 is deployed DataZoneStandard, which pins inference to the
+  US. Live since 2026-09-01, and the subprocessor page states it.

@@ -70,6 +70,14 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
   being staff changes what a tenant-scoped query returns. `lib/features/` is beta enrolment
   (`feature_grant`, default closed, `hasFeature(orgId, "media.generation")`) — a fourth kind of "no",
   distinct from `lib/flags.ts` (global ops), entitlements (billing) and `can()` (role).
+- **AI drafting**: `lib/ai/` builds prompts that call nothing (`prompts.ts` is testable on its
+  own), `lib/ai/client.ts` owns POLICY — configured, budget, metering, and never throwing —
+  and `lib/ai/transport/` owns WHICH VENDOR. Two transports, selected from configuration
+  alone: Azure OpenAI (production, gpt-5.4 on DataZoneStandard, so drafting prompts stay in
+  the US) wins when its text deployment is set; Anthropic otherwise. **Switching vendor is
+  env, not code** — that seam was added the day a subscription turned out not to be able to
+  buy Claude at all, and its absence made a config problem into a rewrite. `max_tokens` is
+  Anthropic's; gpt-5.x REJECTS it and needs `max_completion_tokens`.
 - **Media generation**: `packages/media` is the adapter contract (`MediaAdapter`, model registry,
   per-`JobKind` routing with a recorded `model_reason`, honest `{ unknown }` cost estimates).
   **What a vendor BILLS is not always the unit we estimate in** — Azure prices images per

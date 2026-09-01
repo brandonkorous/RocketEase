@@ -259,10 +259,15 @@ jobs:
             GOOGLE_BUSINESS_CLIENT_ID GOOGLE_BUSINESS_CLIENT_SECRET
             GA4_CLIENT_ID GA4_CLIENT_SECRET
             SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET
-            ANTHROPIC_API_KEY ANTHROPIC_BASE_URL AI_MODEL AI_PRICES_JSON
+            # AI_PRICES_JSON is NOT here. It is an operator choice, not a
+            # credential, and it lives in the production overlay's ConfigMap
+            # beside AI_MEDIA_RATES_JSON. Listing it in both would set the same
+            # variable from two places, and configMapRef wins - silently.
+            ANTHROPIC_API_KEY ANTHROPIC_BASE_URL AI_MODEL
             OPENAI_API_KEY
             AZURE_OPENAI_ENDPOINT AZURE_OPENAI_API_KEY AZURE_OPENAI_API_VERSION
             AZURE_OPENAI_IMAGE_DEPLOYMENT
+            AZURE_OPENAI_TEXT_DEPLOYMENT AZURE_OPENAI_TEXT_API_VERSION
             STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET
             STRIPE_PRICE_WORKSPACE_MONTHLY STRIPE_PRICE_WORKSPACE_YEARLY
             STRIPE_METER_AI_CREDITS STRIPE_PRICE_AI_CREDIT_OVERAGE

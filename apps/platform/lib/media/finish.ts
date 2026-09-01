@@ -7,7 +7,7 @@
  * what we record as having been charged.
  */
 import { eq } from "drizzle-orm";
-import { MEDIA_KIND_OF, type JobKind, type MediaAdapter, type MediaJobState as VendorState, type MediaKind, type ModelDescriptor } from "@rocketease/media";
+import { MEDIA_KIND_OF, parseRates, type JobKind, type MediaAdapter, type MediaJobState as VendorState, type MediaKind, type ModelDescriptor } from "@rocketease/media";
 import { db } from "@/db";
 import { log } from "@/lib/log";
 import { mediaJob, type MediaJob } from "@/db/schema/media";
@@ -15,12 +15,14 @@ import type { AiUsageKind } from "@/db/schema/ai-usage";
 import { creditsToColumn } from "@/lib/ai/usage/credits";
 import { recordAiUsage } from "@/lib/ai/usage/record";
 import { creditsForQuantity, parseCreditRates } from "./credit-rates";
+import { vendorCostUsd } from "./vendor-cost";
 import { normalizeOutputs } from "./normalize";
 import { loadVoice, rightsScopeForVoice } from "./voice/store";
 
 export type FinishResult = { assetIds: string[]; mismatches: string[] };
 
 const creditRates = () => parseCreditRates(process.env.AI_MEDIA_CREDIT_RATES_JSON, (m) => log.warn(m));
+const vendorRates = () => parseRates(process.env.AI_MEDIA_RATES_JSON, (m) => log.warn(m));
 
 const USAGE_KIND: Partial<Record<MediaKind, AiUsageKind>> = { image: "generate_image", video: "generate_video" };
 
@@ -99,6 +101,8 @@ export async function completeMediaJob(
     rightsScope: await scopeForJob(row),
   });
 
+  const cost = vendorCostUsd(state.usage?.costUsd, state.usage?.quantity, vendorRates()[row.modelKey]);
+
   await db
     .update(mediaJob)
     .set({
@@ -109,8 +113,9 @@ export async function completeMediaJob(
       unit: state.usage?.unit ?? null,
       inputTokens: state.usage?.tokens?.inputTokens ?? null,
       outputTokens: state.usage?.tokens?.outputTokens ?? null,
-      // Null when the vendor says nothing — never a guessed 0.
-      vendorCostUsd: state.usage?.costUsd === undefined ? null : String(state.usage.costUsd),
+      // Null when it cannot be known — never a guessed 0. Sora reports no
+      // dollars at all, so this is seconds-reported x configured rate.
+      vendorCostUsd: cost === null ? null : String(cost),
       credits: billed === null ? null : creditsToColumn(billed.credits),
       outputExpiresAt: state.expiresAt ? new Date(state.expiresAt) : null,
       finishedAt: new Date(),
@@ -132,7 +137,7 @@ export async function completeMediaJob(
     model: row.modelKey,
     quantity: state.usage?.quantity ?? null,
     unit: state.usage?.unit ?? null,
-    costUsd: state.usage?.costUsd ?? "unknown",
+    costUsd: cost ?? "unknown",
     credits: billed?.credits ?? "unbilled",
     assets: assetIds.length,
   });

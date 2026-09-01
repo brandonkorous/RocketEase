@@ -13,6 +13,7 @@ register; a finding that turns into work to do gets a bug file here.
 | [B-003](B-003-review-and-schedule-does-not-review.md) | P1 | **fixed** | "Review & schedule" schedules immediately — there is no review step |
 | [B-004](B-004-image-estimate-overstates-cost.md) | P1 | **fixed** | Generation was unmetered, priced in the wrong unit, and threw away the measurement |
 | [B-005](B-005-spend-ceiling-never-observed-refusing.md) | P2 | part | The spend ceiling cannot refuse anything the product can ask for |
+| [B-006](B-006-sora-called-a-path-that-does-not-exist.md) | P1 | **fixed** | Video generation called an Azure path that does not exist, and 14 tests agreed with it |
 
 **Severity** — P0 production down or data loss · P1 wrong public output, money, or
 a control that does not control · P2 wrong or misleading in-product · P3 cosmetic.

@@ -1,13 +1,15 @@
 /*
  * The Sora 2 HTTP calls. Three of them, and they are NOT the images data plane:
  *
- *   POST /openai/v1/video/generations/jobs              create
- *   GET  /openai/v1/video/generations/jobs/{id}         poll
- *   GET  /openai/v1/video/generations/{gid}/content/video   download
+ *   POST /openai/v1/videos              create
+ *   GET  /openai/v1/videos/{id}         poll
+ *   GET  /openai/v1/videos/{id}/content download
  *
- * The api-version is the literal string "preview", not a date. The model rides
- * in the BODY. Both differ from images, which is why this is its own module
- * rather than a flag on the other one.
+ * This is the OpenAI-compatible Videos API, reached through Azure's endpoint.
+ * It is NOT the `/video/generations/jobs` shape Azure's own docs describe for
+ * sora — that path answers 404 on this account (docs/bugs/B-006). The
+ * api-version is the literal string "preview"; the model rides in the BODY;
+ * `seconds` is a STRING; `size` is one field, not width and height.
  */
 import { MediaError } from "../types";
 
@@ -15,29 +17,33 @@ export const TIMEOUT_MS = 60_000;
 
 export type SoraConfig = { endpoint: string; apiKey: string; deployment: string; apiVersion: string };
 
-/** Exactly the fields the job response documents. No `usage` — there is none. */
+/** Exactly the fields the video object documents. No `usage` — there is none. */
 export type SoraJob = {
   id?: string;
   status?: string;
-  n_seconds?: number | string;
-  n_variants?: number | string;
-  height?: number | string;
-  width?: number | string;
-  finished_at?: number | null;
+  progress?: number;
+  seconds?: string | number;
+  size?: string;
+  created_at?: number | null;
+  completed_at?: number | null;
   expires_at?: number | null;
-  generations?: { id?: string }[];
-  failure_reason?: string | null;
-  error?: { message?: string; code?: string };
+  error?: { message?: string; code?: string | null } | null;
 };
 
-const base = (c: SoraConfig) => `${c.endpoint.replace(/\/+$/, "")}/openai/v1/video/generations`;
+const base = (c: SoraConfig) => `${c.endpoint.replace(/\/+$/, "")}/openai/v1/videos`;
 const auth = (c: SoraConfig) => ({ "api-key": c.apiKey, "Content-Type": "application/json" });
 
 export function errorFor(status: number, body: SoraJob | null): MediaError {
-  const code = body?.error?.code;
+  const code = body?.error?.code ?? undefined;
   const message = body?.error?.message ?? `The video endpoint returned ${status}.`;
   if (status === 401 || status === 403) return new MediaError("The video API key was rejected.", { category: "permission", vendorCode: code });
-  if (status === 404) return new MediaError("No such video deployment. Check the deployment name matches the model.", { category: "validation", vendorCode: code });
+  // Only DeploymentNotFound is actually about the deployment. Any other 404
+  // is a wrong path or a job that is gone, and saying "deployment" there sends
+  // the reader to check a name that was never wrong.
+  if (status === 404) {
+    const deployment = code === "DeploymentNotFound";
+    return new MediaError(deployment ? "No such video deployment. Check the deployment name matches the model." : message, { category: "validation", vendorCode: code });
+  }
   if (status === 429) return new MediaError("The video model is busy — try again in a minute.", { category: "rate_limit", vendorCode: code });
   if (status === 400) return new MediaError(message, { category: "validation", vendorCode: code });
   // 5xx after a POST is the dangerous one: the job may exist and be billing.
@@ -53,27 +59,28 @@ async function call(url: string, init: RequestInit): Promise<SoraJob> {
   return body;
 }
 
-export async function createJob(c: SoraConfig, body: { prompt: string; width: number; height: number; seconds: number }): Promise<SoraJob> {
-  return call(`${base(c)}/jobs?api-version=${c.apiVersion}`, {
+export async function createJob(c: SoraConfig, body: { prompt: string; size: string; seconds: number }): Promise<SoraJob> {
+  return call(`${base(c)}?api-version=${c.apiVersion}`, {
     method: "POST",
     headers: auth(c),
-    // `model` is the DEPLOYMENT name here, which is how this API names it.
-    body: JSON.stringify({ model: c.deployment, prompt: body.prompt, width: body.width, height: body.height, n_seconds: body.seconds }),
+    // `model` is the DEPLOYMENT name here, and `seconds` is a string: 4 is a
+    // 400 ("Invalid value"), "4" is accepted.
+    body: JSON.stringify({ model: c.deployment, prompt: body.prompt, size: body.size, seconds: String(body.seconds) }),
   });
 }
 
 export async function readJob(c: SoraConfig, jobId: string): Promise<SoraJob> {
-  return call(`${base(c)}/jobs/${encodeURIComponent(jobId)}?api-version=${c.apiVersion}`, { method: "GET", headers: auth(c) });
+  return call(`${base(c)}/${encodeURIComponent(jobId)}?api-version=${c.apiVersion}`, { method: "GET", headers: auth(c) });
 }
 
-/** The MP4 itself. Times out against the same clock, but the URL dies in ~1h. */
-export async function downloadVideo(c: SoraConfig, generationId: string): Promise<Uint8Array> {
-  const url = `${base(c)}/${encodeURIComponent(generationId)}/content/video?api-version=${c.apiVersion}`;
+/** The MP4 itself. The video id IS the download id — there is no separate one. */
+export async function downloadVideo(c: SoraConfig, videoId: string): Promise<Uint8Array> {
+  const url = `${base(c)}/${encodeURIComponent(videoId)}/content?api-version=${c.apiVersion}`;
   const res = await fetch(url, { headers: { "api-key": c.apiKey }, signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) {
-    // Past the TTL this is a 404, and it means the bytes are gone for good —
-    // the job was still billed, so this must not read as "never happened".
-    if (res.status === 404) throw new MediaError("The generated video expired before it could be downloaded.", { category: "temporary" });
+    // A 404 here is "not ready" or "past its TTL". Either way the job was
+    // billed, so this must not read as "never happened".
+    if (res.status === 404) throw new MediaError("The generated video could not be downloaded — it is either not finished or past its expiry.", { category: "temporary" });
     throw errorFor(res.status, null);
   }
   return new Uint8Array(await res.arrayBuffer());

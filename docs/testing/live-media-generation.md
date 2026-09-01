@@ -28,7 +28,7 @@ Shipped and live:
 | Account | `oai-rocketease-prod-eus2`, `rg-sparx-prod-cus`, eastus2, kind **AIServices** |
 | Images | `<endpoint>/openai/deployments/rocketease-images/images/generations?api-version=2025-04-01-preview` |
 | Text | `<endpoint>/openai/deployments/rocketease-text/chat/completions?api-version=2024-10-21` |
-| **Video** | `<endpoint>/openai/v1/video/generations/jobs?api-version=preview` — a THIRD data plane |
+| **Video** | `<endpoint>/openai/v1/videos?api-version=preview` — a THIRD data plane. NOT the `/video/generations/jobs` path Azure's sora docs describe; that one 404s (docs/bugs/B-006). |
 | Endpoint | `https://oai-rocketease-prod-eus2.cognitiveservices.azure.com` |
 | Vault | `AZURE-OPENAI-*`, all written by Terraform |
 
@@ -71,8 +71,8 @@ This corrected the repo. `packages/media/src/io.ts` said Sora takes
 | Audio | embedded in the MP4 — there is no separate track to mix |
 | C2PA | Sora signs every clip. That is the vendor's CLAIM; we probe the bytes. |
 
-**Sora reports NO usage at all.** The job response carries `n_seconds` and
-`n_variants` and nothing else. Two consequences, in opposite directions:
+**Sora reports NO usage at all.** The video object carries `seconds` and
+nothing else — no `usage`, no variants. Two consequences, in opposite directions:
 
 - Cost is **exact** rather than estimated — the billed quantity is what we asked
   for. Better than images, where it comes back as tokens.

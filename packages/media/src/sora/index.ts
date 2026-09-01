@@ -45,11 +45,10 @@ const config = (): SoraConfig | null => {
 };
 
 /** The size Azure accepts for this aspect, or a refusal naming what it does take. */
-export function sizeFor(spec: GenerationSpec): { width: number; height: number } {
+export function sizeFor(spec: GenerationSpec): string {
   const size = SORA_SIZES[spec.aspect ?? "9:16"];
   if (!size) throw new MediaError(`Sora 2 renders ${Object.keys(SORA_SIZES).join(" and ")} only.`, { category: "validation" });
-  const [width, height] = size.split("x").map(Number);
-  return { width, height };
+  return size;
 }
 
 /** 6 seconds is a 400, not a rounded 8 — so refuse here rather than at the vendor. */
@@ -65,21 +64,22 @@ export function secondsFor(model: ModelDescriptor, spec: GenerationSpec): number
 /** The one place a vendor job becomes our state, shared by poll and reconcile. */
 function stateFrom(job: SoraJob, handle: MediaJobHandle): MediaJobState {
   const status = STATUS[job.status ?? ""] ?? "running";
-  const seconds = Number(job.n_seconds ?? 0);
-  const variants = Math.max(1, Number(job.n_variants ?? 1));
+  const seconds = Number(job.seconds ?? 0);
   return {
     handle,
+    // The video id IS the download id. There is no generations[] array, so a
+    // succeeded job names exactly one output: itself.
+    outputUrls: status === "succeeded" && job.id ? [job.id] : undefined,
     status,
-    outputUrls: job.generations?.map((g) => g.id).filter((id): id is string => Boolean(id)),
     expiresAt: job.expires_at ? new Date(job.expires_at * 1000).toISOString() : undefined,
-    error: status === "failed" ? new MediaError(job.failure_reason ?? "The video job failed.", { category: "unknown" }) : undefined,
+    error: status === "failed" ? new MediaError(job.error?.message ?? "The video job failed.", { category: "unknown" }) : undefined,
     /*
-     * Per-second billing and no reported usage, so the quantity is what we
-     * ASKED for rather than what a vendor counted. That makes it exact — but
+     * Per-second billing and no reported usage, so the quantity is the
+     * duration the VENDOR echoes back rather than one we counted. Exact, but
      * only once the job succeeded; a failed job is not billed and must not
      * accrue against the ceiling.
      */
-    usage: status === "succeeded" && seconds > 0 ? { quantity: seconds * variants, unit: "video_seconds" } : undefined,
+    usage: status === "succeeded" && seconds > 0 ? { quantity: seconds, unit: "video_seconds" } : undefined,
   };
 }
 
@@ -94,12 +94,12 @@ export function soraAdapter(): MediaAdapter {
     async start(model, spec, idempotencyKey) {
       const c = config();
       if (!c) throw new MediaError("Video generation is not configured.", { category: "unconfigured" });
-      const { width, height } = sizeFor(spec);
+      const size = sizeFor(spec);
       const seconds = secondsFor(model, spec);
 
       // Recorded BEFORE the call: if this throws, reconcile must know we tried.
       attempted.add(idempotencyKey);
-      const job = await createJob(c, { prompt: spec.prompt, width, height, seconds });
+      const job = await createJob(c, { prompt: spec.prompt, size, seconds });
       if (!job.id) throw new MediaError("The video service accepted the job but returned no id.", { category: "unknown", ambiguous: true });
 
       return { adapter: "azure-sora", modelKey: model.key, remoteJobId: job.id, idempotencyKey };

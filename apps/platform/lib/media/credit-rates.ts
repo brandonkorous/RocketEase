@@ -3,7 +3,7 @@
  *
  * The token formula (lib/ai/usage/credits.ts) is the product's definition of a
  * credit, and it works for anything a language model bills. Sora reports no
- * usage at all — its job response carries `n_seconds` and nothing else — so a
+ * usage at all — its video object carries `seconds` and nothing else — so a
  * video would be silently unbilled under that formula alone.
  *
  * So a deployment configures credits per BILLED UNIT, the same shape and the

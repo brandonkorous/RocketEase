@@ -39,14 +39,15 @@ export const SORA_MODELS: ModelDescriptor[] = [
         audio: "embedded",
         count: { min: 1, max: 1 },
         delivery: "url",
-        // The download dies about an hour after the job finishes. The poller
-        // races this, which is why fetch happens on completion, not on demand.
-        urlTtlSeconds: 3600,
+        // MEASURED, not assumed: expires_at came back exactly 24h after
+        // created_at on a real job (2026-09-01). Still fetched on completion
+        // rather than on demand — a day is a deadline, not an absence of one.
+        urlTtlSeconds: 86_400,
       },
     },
     /*
      * PER SECOND, and unlike images the vendor reports NO usage at all — the
-     * job response carries n_seconds and n_variants and nothing else. So there
+     * video object carries `seconds` and nothing else. So there
      * is no `tokenRates` here: the billed quantity is exactly what we asked
      * for, which makes the cost arithmetic exact rather than an estimate.
      *

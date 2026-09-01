@@ -42,8 +42,10 @@ describe("what Azure accepts", () => {
   });
 
   it("renders the two social aspects and refuses the rest by name", () => {
-    expect(sizeFor(spec({ aspect: "9:16" }))).toEqual({ width: 720, height: 1280 });
-    expect(sizeFor(spec({ aspect: "16:9" }))).toEqual({ width: 1280, height: 720 });
+    // One `size` string, not width and height — the API rejects both of those
+    // as unknown parameters.
+    expect(sizeFor(spec({ aspect: "9:16" }))).toBe("720x1280");
+    expect(sizeFor(spec({ aspect: "16:9" }))).toBe("1280x720");
     expect(() => sizeFor(spec({ aspect: "1:1" }))).toThrow(/9:16 and 16:9/);
   });
 });
@@ -76,23 +78,72 @@ describe("reconcile", () => {
   });
 });
 
-/** A poll response, as the job API documents it. */
+/*
+ * Fixtures are the REAL response bodies, copied from live calls against
+ * oai-rocketease-prod-eus2 on 2026-09-01. The first version of this file
+ * invented them, and every test passed while the adapter called a path that
+ * did not exist (docs/bugs/B-006) — so shape is asserted, not assumed.
+ */
 const reply = (body: Record<string, unknown>) => vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => body });
 
-describe("poll", () => {
-  const handle = { adapter: "azure-sora", modelKey: "azure-sora-2", remoteJobId: "task_1", idempotencyKey: "k" };
+const completed = {
+  id: "video_6a96b4a4681c8190b36d0b7af9064c06",
+  object: "video",
+  created_at: 1788261540,
+  status: "completed",
+  completed_at: 1788261591,
+  error: null,
+  expires_at: 1788347940,
+  model: "rocketease-video",
+  progress: 100,
+  prompt: "a ceramic mug",
+  remixed_from_video_id: null,
+  seconds: "4",
+  size: "720x1280",
+};
 
-  it("bills a succeeded job for the seconds it was asked for", async () => {
-    vi.stubGlobal("fetch", reply({ id: "task_1", status: "succeeded", n_seconds: 8, n_variants: 1, generations: [{ id: "gen_1" }] }));
+describe("the request we actually send", () => {
+  it("posts to /openai/v1/videos — not the /video/generations/jobs path, which 404s", async () => {
+    const f = reply(completed);
+    vi.stubGlobal("fetch", f);
+    await soraAdapter().start(model(), spec({ durationSeconds: 8, aspect: "16:9" }), "media_url");
+    const [url, init] = f.mock.calls[0];
+    expect(url).toBe("https://x.openai.azure.com/openai/v1/videos?api-version=preview");
+    // `seconds` as a number is a 400; `width`/`height` are unknown parameters.
+    expect(JSON.parse(init.body)).toEqual({ model: "rocketease-video", prompt: "a lemon rotating", size: "1280x720", seconds: "8" });
+    vi.unstubAllGlobals();
+  });
+
+  it("polls and downloads under the same /videos path, keyed by the video id", async () => {
+    const f = reply(completed);
+    vi.stubGlobal("fetch", f);
+    await soraAdapter().poll({ adapter: "azure-sora", modelKey: "azure-sora-2", remoteJobId: "video_1", idempotencyKey: "k" });
+    expect(f.mock.calls[0][0]).toBe("https://x.openai.azure.com/openai/v1/videos/video_1?api-version=preview");
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("poll", () => {
+  const handle = { adapter: "azure-sora", modelKey: "azure-sora-2", remoteJobId: "video_1", idempotencyKey: "k" };
+
+  it("bills a completed job for the seconds the vendor echoes back", async () => {
+    vi.stubGlobal("fetch", reply({ ...completed, seconds: "8" }));
     const s = await soraAdapter().poll(handle);
     expect(s.status).toBe("succeeded");
+    // "8" is a string on the wire. Number-coercing it is the whole reason this
+    // asserts a number rather than trusting the field.
     expect(s.usage).toEqual({ quantity: 8, unit: "video_seconds" });
-    expect(s.outputUrls).toEqual(["gen_1"]);
+    vi.unstubAllGlobals();
+  });
+
+  it("names the video itself as the output — there is no generations[] array", async () => {
+    vi.stubGlobal("fetch", reply(completed));
+    expect((await soraAdapter().poll(handle)).outputUrls).toEqual([completed.id]);
     vi.unstubAllGlobals();
   });
 
   it("bills NOTHING for a failed job — a job that produced no video was not charged", async () => {
-    vi.stubGlobal("fetch", reply({ id: "task_1", status: "failed", n_seconds: 12, failure_reason: "content policy" }));
+    vi.stubGlobal("fetch", reply({ ...completed, status: "failed", error: { message: "content policy", code: null } }));
     const s = await soraAdapter().poll(handle);
     expect(s.status).toBe("failed");
     expect(s.usage).toBeUndefined();
@@ -100,23 +151,47 @@ describe("poll", () => {
     vi.unstubAllGlobals();
   });
 
-  it("bills nothing while the job is still running", async () => {
-    vi.stubGlobal("fetch", reply({ id: "task_1", status: "preprocessing", n_seconds: 4 }));
+  it("bills nothing, and names no output, while the job is still running", async () => {
+    vi.stubGlobal("fetch", reply({ ...completed, status: "in_progress", progress: 40, completed_at: null }));
     const s = await soraAdapter().poll(handle);
     expect(s.status).toBe("running");
     expect(s.usage).toBeUndefined();
+    expect(s.outputUrls).toBeUndefined();
     vi.unstubAllGlobals();
   });
 
   it("treats an unrecognised status as running, never as finished", async () => {
-    vi.stubGlobal("fetch", reply({ id: "task_1", status: "something_new", n_seconds: 4 }));
+    vi.stubGlobal("fetch", reply({ ...completed, status: "something_new" }));
     expect((await soraAdapter().poll(handle)).status).toBe("running");
     vi.unstubAllGlobals();
   });
 
-  it("counts every variant, so 2 x 8s bills 16 seconds", async () => {
-    vi.stubGlobal("fetch", reply({ id: "task_1", status: "succeeded", n_seconds: 8, n_variants: 2, generations: [{ id: "a" }, { id: "b" }] }));
-    expect((await soraAdapter().poll(handle)).usage).toEqual({ quantity: 16, unit: "video_seconds" });
+  it("reads the expiry the vendor gives, which is a day rather than an hour", async () => {
+    vi.stubGlobal("fetch", reply(completed));
+    const s = await soraAdapter().poll(handle);
+    expect(new Date(s.expiresAt!).getTime() - completed.created_at * 1000).toBe(86_400_000);
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("errors", () => {
+  const fail = (status: number, body: unknown) => vi.fn().mockResolvedValue({ ok: false, status, json: async () => body });
+
+  it("blames the deployment only when Azure says DeploymentNotFound", async () => {
+    vi.stubGlobal("fetch", fail(404, { error: { message: "The API deployment for this resource does not exist.", code: "DeploymentNotFound" } }));
+    await expect(soraAdapter().start(model(), spec(), "media_404a")).rejects.toThrow(/No such video deployment/);
+    vi.unstubAllGlobals();
+  });
+
+  it("passes a plain 404 through verbatim — a wrong path is not a wrong name", async () => {
+    vi.stubGlobal("fetch", fail(404, { error: { message: "Resource not found", code: "404" } }));
+    await expect(soraAdapter().start(model(), spec(), "media_404b")).rejects.toThrow(/Resource not found/);
+    vi.unstubAllGlobals();
+  });
+
+  it("repeats what Azure said about a bad duration rather than paraphrasing it", async () => {
+    vi.stubGlobal("fetch", fail(400, { error: { message: "Invalid value: '6'. Supported values are: '4', '8', and '12'.", code: "invalid_value" } }));
+    await expect(soraAdapter().start(model(), spec(), "media_400")).rejects.toThrow(/Supported values are: '4', '8', and '12'/);
     vi.unstubAllGlobals();
   });
 });

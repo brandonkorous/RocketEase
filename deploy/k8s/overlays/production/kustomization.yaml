@@ -93,7 +93,20 @@ configMapGenerator:
       # an estimate. $0.10/s is the published figure recorded in
       # docs/research/ai-media-2026.md; Azure publishes no retail meter for
       # sora, so this is the first number to revisit once real jobs have run.
-      - AI_MEDIA_RATES_JSON={"azure-gpt-image-2":0.05,"azure-sora-2":0.10}
+      #
+      # Voice-over is per CHARACTER, and the figure is DERIVED rather than
+      # published: Azure bills gpt-4o-mini-tts in tokens and exposes no
+      # per-character meter (the "Neural TTS" meters in the price API are the
+      # separate Speech service, not this model). Measured against the live
+      # deployment on 2026-09-01: 40 characters produced 3.168s of audio, so
+      # 12.6 chars/sec, and at the published ~$0.015 per minute of audio that
+      # is $0.0000198/char. Rounded UP, because a ceiling should err toward
+      # refusing. A 200-character script is half a cent.
+      #
+      # It must be SET even though it is tiny: a per-job ceiling with no rate
+      # for the routed model refuses every job, which is exactly what stopped
+      # the first voice-over (docs/bugs/B-013).
+      - AI_MEDIA_RATES_JSON={"azure-gpt-image-2":0.05,"azure-sora-2":0.10,"azure-gpt-4o-mini-tts":0.000025}
 
       # What the CUSTOMER is charged, for media whose vendor reports no tokens.
       # Images do report tokens and bill through the normal credit formula, so
@@ -103,7 +116,13 @@ configMapGenerator:
       # 12 credits/second is a placeholder pending real cost data: it makes a
       # 4-second clip 48 credits against an image's ~0.26, which is the right
       # ORDER but not a researched price.
-      - AI_MEDIA_CREDIT_RATES_JSON={"azure-sora-2":12}
+      #
+      # Voice-over is charged in the same proportion video is, rather than by
+      # taste: a video credit stands for about $0.0083 of our cost (12 credits
+      # per second against $0.10), so a character at $0.000025 is 0.003 credits.
+      # A 200-character voice-over is well under one credit — which is honest,
+      # because speech genuinely is cheap next to a rendered second of video.
+      - AI_MEDIA_CREDIT_RATES_JSON={"azure-sora-2":12,"azure-gpt-4o-mini-tts":0.003}
       # $1.50 is set by VIDEO, not images. Sora 2 bills per second, so the
       # three durations it accepts cost roughly $0.40 / $0.80 / $1.20 — this
       # clears the longest with headroom and still refuses a job that has gone

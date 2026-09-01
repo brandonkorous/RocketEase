@@ -51,7 +51,9 @@ describe("routeJob", () => {
   });
 
   it("respects an excluded model", () => {
-    const policy: RoutingPolicy = { excludeModels: ["mock-video"] };
+    // Both, because hero_shot now has a real model behind the mock: excluding
+    // one only proves the FALLBACK works, which is a different test.
+    const policy: RoutingPolicy = { excludeModels: ["mock-video", "azure-sora-2"] };
     const r = routeJob(spec(), { isConfigured: all, policy });
     expect(isRouted(r)).toBe(false);
     if (isRouted(r)) return;
@@ -59,7 +61,7 @@ describe("routeJob", () => {
   });
 
   it("respects an excluded adapter", () => {
-    const r = routeJob(spec(), { isConfigured: all, policy: { excludeAdapters: ["mock"] } });
+    const r = routeJob(spec(), { isConfigured: all, policy: { excludeAdapters: ["mock", "azure-sora"] } });
     expect(isRouted(r)).toBe(false);
   });
 

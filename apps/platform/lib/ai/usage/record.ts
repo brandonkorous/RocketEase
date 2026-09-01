@@ -28,6 +28,12 @@ export type AiUsageInput = AiUsageContext & {
    * here would silently record null for every image.
    */
   costUsd?: number | null;
+  /**
+   * Credits the caller already computed, for work the token formula cannot
+   * describe. Sora reports no tokens at all, so a video billed by the formula
+   * would come out free.
+   */
+  credits?: number;
 };
 export type AiUsageRecorded = { credits: number; costUsd: number | null };
 
@@ -36,7 +42,7 @@ const tokens = (n: unknown) => (typeof n === "number" && Number.isFinite(n) && n
 export async function recordAiUsage(input: AiUsageInput): Promise<AiUsageRecorded> {
   const inputTokens = tokens(input.inputTokens);
   const outputTokens = tokens(input.outputTokens);
-  const credits = creditsFor({ inputTokens, outputTokens });
+  const credits = input.credits ?? creditsFor({ inputTokens, outputTokens });
   const costUsd = input.costUsd === undefined ? costUsdFor(input.model, { inputTokens, outputTokens }) : input.costUsd;
   try {
     await db.insert(aiUsage).values({

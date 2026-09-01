@@ -12,10 +12,15 @@
  * charged, and says nothing at all until there is something to report.
  */
 import "server-only";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { mediaJob } from "@/db/schema/media";
+import type { JobKind } from "@rocketease/media";
 import { formatCredits } from "@/lib/ai/usage/credits";
+
+/** Kinds whose billed unit is an image, and whose is a second of video. */
+const IMAGE_KINDS: JobKind[] = ["product_still", "scene_still", "typographic_still"];
+const VIDEO_KINDS: JobKind[] = ["product_motion", "hero_shot", "broll", "sequence"];
 
 /** Enough to smooth a plain backdrop against a busy scene, few enough to stay recent. */
 const SAMPLE = 20;
@@ -28,20 +33,39 @@ function median(xs: number[]): number | null {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
-/** "About 1.2 credits per image, from your recent generations." Null when unknown. */
-export async function imageUnitEstimate(workspaceId: string): Promise<string | null> {
+/** Median credits per billed unit for one kind of job, or null with no history. */
+async function medianCreditsPerUnit(workspaceId: string, kinds: JobKind[]): Promise<number | null> {
   const rows = await db
     .select({ credits: mediaJob.credits, quantity: mediaJob.quantity })
     .from(mediaJob)
-    .where(and(eq(mediaJob.workspaceId, workspaceId), eq(mediaJob.state, "succeeded"), isNotNull(mediaJob.credits)))
+    .where(and(
+      eq(mediaJob.workspaceId, workspaceId),
+      eq(mediaJob.state, "succeeded"),
+      isNotNull(mediaJob.credits),
+      inArray(mediaJob.jobKind, kinds),
+    ))
     .orderBy(desc(mediaJob.createdAt))
     .limit(SAMPLE);
 
-  const perImage = rows
-    .map((r) => ({ credits: Number(r.credits), images: Math.max(1, Number(r.quantity ?? 1)) }))
-    .filter((r) => Number.isFinite(r.credits) && Number.isFinite(r.images) && r.credits > 0)
-    .map((r) => r.credits / r.images);
+  const perUnit = rows
+    .map((r) => ({ credits: Number(r.credits), units: Math.max(1, Number(r.quantity ?? 1)) }))
+    .filter((r) => Number.isFinite(r.credits) && Number.isFinite(r.units) && r.credits > 0)
+    .map((r) => r.credits / r.units);
 
-  const m = median(perImage);
+  return median(perUnit);
+}
+
+/** "About 1.2 credits per image, from your recent generations." Null when unknown. */
+export async function imageUnitEstimate(workspaceId: string): Promise<string | null> {
+  const m = await medianCreditsPerUnit(workspaceId, IMAGE_KINDS);
   return m === null ? null : `About ${formatCredits(m)} credits per image, from your recent generations.`;
+}
+
+/*
+ * Video is quoted per SECOND, not per clip, because the length is the thing the
+ * person is choosing and a clip figure would be three different numbers.
+ */
+export async function videoUnitEstimate(workspaceId: string): Promise<string | null> {
+  const m = await medianCreditsPerUnit(workspaceId, VIDEO_KINDS);
+  return m === null ? null : `About ${formatCredits(m)} credits per second, from your recent clips.`;
 }

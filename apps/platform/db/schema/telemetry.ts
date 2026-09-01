@@ -26,6 +26,7 @@ export const PRODUCT_EVENTS = [
   "ai.generate.requested",
   "ai.generate.used",
   "ai.image.generated",
+  "ai.video.generated",
 ] as const;
 export type ProductEventName = (typeof PRODUCT_EVENTS)[number];
 

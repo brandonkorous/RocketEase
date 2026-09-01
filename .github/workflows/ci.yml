@@ -268,6 +268,11 @@ jobs:
             AZURE_OPENAI_ENDPOINT AZURE_OPENAI_API_KEY AZURE_OPENAI_API_VERSION
             AZURE_OPENAI_IMAGE_DEPLOYMENT
             AZURE_OPENAI_TEXT_DEPLOYMENT AZURE_OPENAI_TEXT_API_VERSION
+            # A THIRD api-version, not a reuse: the video job API takes the
+            # literal string "preview". Without both of these the Sora adapter
+            # reports itself unconfigured and no video control renders at all —
+            # which looks like a missing feature, not a missing secret.
+            AZURE_OPENAI_VIDEO_DEPLOYMENT AZURE_OPENAI_VIDEO_API_VERSION
             STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET
             STRIPE_PRICE_WORKSPACE_MONTHLY STRIPE_PRICE_WORKSPACE_YEARLY
             STRIPE_METER_AI_CREDITS STRIPE_PRICE_AI_CREDIT_OVERAGE

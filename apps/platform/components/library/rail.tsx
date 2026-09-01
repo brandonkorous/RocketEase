@@ -5,6 +5,7 @@ import { Button, Input } from "@wizeworks/silicaui-react";
 import { createFolder } from "@/lib/actions/folders";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 import { GeneratePanel } from "./generate-panel";
+import { GenerateVideoPanel } from "./generate-video-panel";
 import { LibIcon } from "./icons";
 import type { LibraryData } from "./types";
 
@@ -40,6 +41,9 @@ export function CollectionsRail({ data, nav }: { data: LibraryData; nav: Nav }) 
       </ul>
       {data.imageGeneration.enabled && canEdit && (
         <GeneratePanel workspaceId={data.workspaceId} estimate={data.imageGeneration.estimate} />
+      )}
+      {data.videoGeneration.enabled && canEdit && (
+        <GenerateVideoPanel workspaceId={data.workspaceId} estimate={data.videoGeneration.estimate} />
       )}
     </aside>
   );

@@ -14,34 +14,45 @@ import { mediaJob, type MediaJob } from "@/db/schema/media";
 import type { AiUsageKind } from "@/db/schema/ai-usage";
 import { creditsToColumn } from "@/lib/ai/usage/credits";
 import { recordAiUsage } from "@/lib/ai/usage/record";
+import { creditsForQuantity, parseCreditRates } from "./credit-rates";
 import { normalizeOutputs } from "./normalize";
 import { loadVoice, rightsScopeForVoice } from "./voice/store";
 
 export type FinishResult = { assetIds: string[]; mismatches: string[] };
 
-/** Images today; a video kind earns its own line when video ships. */
-const USAGE_KIND: Partial<Record<MediaKind, AiUsageKind>> = { image: "generate_image" };
+const creditRates = () => parseCreditRates(process.env.AI_MEDIA_CREDIT_RATES_JSON, (m) => log.warn(m));
+
+const USAGE_KIND: Partial<Record<MediaKind, AiUsageKind>> = { image: "generate_image", video: "generate_video" };
 
 /**
- * Charge the customer in credits, from the tokens the vendor metered.
+ * Charge the customer in credits.
  *
- * Null when the vendor reported no tokens: a job we cannot measure is not a job
- * we may invent a charge for. The cost is passed rather than derived, because
- * AI_PRICES_JSON prices text deployments and knows nothing about image models.
+ * Two bases, because two vendors measure differently. An image model reports
+ * TOKENS, so the product's own credit formula applies unchanged. Sora reports
+ * no usage at all — only the seconds we asked for — so those bill through a
+ * configured credits-per-second rate instead.
+ *
+ * Null either way when there is nothing to measure: a job we cannot measure is
+ * not a job we may invent a charge for. Cost is passed rather than derived,
+ * because AI_PRICES_JSON prices text deployments and knows nothing about these.
  */
 async function chargeCredits(row: MediaJob, state: VendorState) {
-  const tokens = state.usage?.tokens;
   const kind = USAGE_KIND[MEDIA_KIND_OF[row.jobKind as JobKind]];
-  if (!tokens || !kind) return null;
+  if (!kind || !state.usage) return null;
+  const tokens = state.usage.tokens;
+  const perUnit = tokens ? null : creditsForQuantity(row.modelKey, state.usage.quantity, creditRates());
+  if (!tokens && perUnit === null) return null;
+
   return recordAiUsage({
     organizationId: row.organizationId,
     workspaceId: row.workspaceId,
     userId: row.requestedByUserId,
     kind,
     model: row.modelKey,
-    inputTokens: tokens.inputTokens,
-    outputTokens: tokens.outputTokens,
-    costUsd: state.usage?.costUsd ?? null,
+    inputTokens: tokens?.inputTokens ?? 0,
+    outputTokens: tokens?.outputTokens ?? 0,
+    credits: perUnit ?? undefined,
+    costUsd: state.usage.costUsd ?? null,
   });
 }
 
@@ -66,9 +77,9 @@ export async function completeMediaJob(
 ): Promise<FinishResult> {
   const outputs = await adapter.fetch(state);
   /*
-   * Metered in the SAME ledger and the SAME formula as drafting, so one credit
-   * means one thing across the product. Generation was previously free to the
-   * customer and pure cost to us (docs/bugs/B-004).
+   * Metered in the SAME ledger as drafting, so one credit means one thing
+   * across the product. Generation was previously free to the customer and pure
+   * cost to us (docs/bugs/B-004).
    */
   const billed = await chargeCredits(row, state);
   const { assetIds, mismatches } = await normalizeOutputs({

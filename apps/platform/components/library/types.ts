@@ -27,6 +27,8 @@ export type LibraryData = {
   recent: RecentRow[]; allTags: string[]; query: LibraryQuery; brand: BrandSummary;
   /** Generating an image here needs no concept and no text model — see generate-panel.tsx. */
   imageGeneration: { enabled: boolean; estimate: string | null };
+  /** Separate from images: a different model, a different vendor bill, and it may be off on its own. */
+  videoGeneration: { enabled: boolean; estimate: string | null };
 };
 
 export const fmtBytes = (b: number | null) => (b == null ? "" : b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);

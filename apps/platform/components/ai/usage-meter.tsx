@@ -17,6 +17,7 @@ const KIND_LABEL: Record<AiUsageKind, string> = {
   generate_post: "Generated posts",
   generate_ad: "Generated ads",
   generate_image: "Generated images",
+  generate_video: "Generated video",
   other: "Other",
 };
 

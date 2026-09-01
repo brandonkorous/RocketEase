@@ -15,7 +15,7 @@ vi.mock("@/db", () => ({
   },
 }));
 
-const { imageUnitEstimate } = await import("./estimate");
+const { imageUnitEstimate, videoUnitEstimate } = await import("./estimate");
 
 beforeEach(() => {
   rows.value = [];
@@ -59,5 +59,18 @@ describe("imageUnitEstimate", () => {
   it("treats a missing quantity as one image, never as a divide by zero", async () => {
     rows.value = [{ credits: "4.0000", quantity: null }];
     expect(await imageUnitEstimate("ws1")).toBe("About 4 credits per image, from your recent generations.");
+  });
+});
+
+describe("videoUnitEstimate", () => {
+  it("quotes per SECOND, because length is what the person is choosing", async () => {
+    // 48 credits for a 4-second clip is 12 a second.
+    rows.value = [{ credits: "48.0000", quantity: "4" }];
+    expect(await videoUnitEstimate("ws1")).toBe("About 12 credits per second, from your recent clips.");
+  });
+
+  it("says nothing before any clip has been generated", async () => {
+    rows.value = [];
+    expect(await videoUnitEstimate("ws1")).toBeNull();
   });
 });

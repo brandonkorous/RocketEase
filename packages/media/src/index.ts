@@ -8,11 +8,13 @@ export * from "./client";
 export * from "./adapter";
 export { mockAdapter, MOCK_MODELS, MOCK_POLLS_BEFORE_DONE, __resetMockJobs } from "./mock";
 export { openaiAdapter, azureOpenAiAdapter, OPENAI_MODELS, AZURE_OPENAI_MODELS, __resetOpenAiJobs } from "./openai";
+export { soraAdapter, SORA_MODELS, __resetSoraJobs } from "./sora";
 export { mockTranscribe, MOCK_TRANSCRIPT_CONFIDENCE, MOCK_FALLBACK_SECONDS } from "./mock/transcribe";
 
 import { availabilityFrom, type AdapterRegistry, type MediaAdapter } from "./adapter";
 import { mockAdapter } from "./mock";
 import { azureOpenAiAdapter, openaiAdapter } from "./openai";
+import { soraAdapter } from "./sora";
 
 /**
  * Adapters this deployment can use. Each decides for itself whether it is
@@ -22,7 +24,7 @@ import { azureOpenAiAdapter, openaiAdapter } from "./openai";
  * Remaining adapters (fal, vertex, runway, elevenlabs) register here as they land.
  */
 export function buildRegistry(extra: MediaAdapter[] = []): AdapterRegistry {
-  const all = [mockAdapter(), azureOpenAiAdapter(), openaiAdapter(), ...extra];
+  const all = [mockAdapter(), azureOpenAiAdapter(), openaiAdapter(), soraAdapter(), ...extra];
   return new Map(all.map((a) => [a.key, a]));
 }
 

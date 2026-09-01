@@ -87,15 +87,32 @@ configMapGenerator:
       # Actual spend is NOT this number — media_job.vendor_cost_usd comes from
       # the token usage the vendor reports back, which is what the monthly
       # ceiling accrues against.
-      - AI_MEDIA_RATES_JSON={"azure-gpt-image-2":0.05}
-      # A job caps at 4 images (lib/actions/media.ts), so $0.50 clears any real
-      # request and still stops one that has gone strange.
       #
-      # Which also means it cannot fire on any honest image job — the largest is
-      # $0.20. Watched refusing on 2026-09-01 by lowering this to 0.01 for one
-      # deploy (docs/bugs/B-005); video is what will make it bind for real, since
-      # Sora 2 at $0.10/s puts an 8-second clip at $0.80.
-      - MEDIA_CEILING_USD_PER_JOB=0.50
+      # Sora 2 bills PER SECOND and reports no usage at all, so its quantity is
+      # exactly the seconds we asked for and the cost is arithmetic rather than
+      # an estimate. $0.10/s is the published figure recorded in
+      # docs/research/ai-media-2026.md; Azure publishes no retail meter for
+      # sora, so this is the first number to revisit once real jobs have run.
+      - AI_MEDIA_RATES_JSON={"azure-gpt-image-2":0.05,"azure-sora-2":0.10}
+
+      # What the CUSTOMER is charged, for media whose vendor reports no tokens.
+      # Images do report tokens and bill through the normal credit formula, so
+      # they are deliberately absent here. Unset for a model means unpriced,
+      # which means null credits — never a free video by accident.
+      #
+      # 12 credits/second is a placeholder pending real cost data: it makes a
+      # 4-second clip 48 credits against an image's ~0.26, which is the right
+      # ORDER but not a researched price.
+      - AI_MEDIA_CREDIT_RATES_JSON={"azure-sora-2":12}
+      # $1.50 is set by VIDEO, not images. Sora 2 bills per second, so the
+      # three durations it accepts cost roughly $0.40 / $0.80 / $1.20 — this
+      # clears the longest with headroom and still refuses a job that has gone
+      # strange (two 12-second variants would be $2.40).
+      #
+      # It cannot fire on any honest IMAGE job, where the largest is 4 x $0.05.
+      # Watched refusing on 2026-09-01 by lowering it to 0.01 for one deploy
+      # (docs/bugs/B-005); video is the first thing that can trip it for real.
+      - MEDIA_CEILING_USD_PER_JOB=1.50
       # ~300 images/month/org. The blast radius of a loop, not a business limit.
       - MEDIA_CEILING_USD_PER_ORG_MONTH=25.00
     options:

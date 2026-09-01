@@ -12,7 +12,7 @@ import { presignGet } from "@/lib/storage";
 import { hasCapability, requireWorkspace } from "@/lib/session";
 import { loadBrandKit } from "@/lib/brand/store";
 import { canGenerate } from "@/lib/media/jobs";
-import { imageUnitEstimate } from "@/lib/media/estimate";
+import { imageUnitEstimate, videoUnitEstimate } from "@/lib/media/estimate";
 
 export const metadata: Metadata = { title: "Content" };
 
@@ -149,6 +149,7 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
     // Needs no concept and no text model: the action checks canGenerate, not
     // aiConfigured, so this surface is independent of AI drafting entirely.
     imageGeneration: { enabled: canGenerate("scene_still"), estimate: await imageUnitEstimate(workspaceId) },
+    videoGeneration: { enabled: canGenerate("hero_shot"), estimate: await videoUnitEstimate(workspaceId) },
     selected,
     matched: Number(matched),
     page,

@@ -71,7 +71,10 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
   (`feature_grant`, default closed, `hasFeature(orgId, "media.generation")`) — a fourth kind of "no",
   distinct from `lib/flags.ts` (global ops), entitlements (billing) and `can()` (role).
 - **Media generation**: `packages/media` is the adapter contract (`MediaAdapter`, model registry,
-  per-`JobKind` routing with a recorded `model_reason`, honest `{ unknown }` cost estimates);
+  per-`JobKind` routing with a recorded `model_reason`, honest `{ unknown }` cost estimates).
+  **What a vendor BILLS is not always the unit we estimate in** — Azure prices images per
+  token and publishes no per-image meter — so `cost.tokenRates` carries the real rate and
+  `vendor_cost_usd` is computed from reported usage, never from the estimate;
   `mock` exercises the whole loop with real decodable fixtures and zero spend. **There is exactly
   one image path**: every generation routes through the registry, so nothing calls a vendor
   directly and nothing escapes the ceiling. A model is a pinned catalog entry, never an env var.

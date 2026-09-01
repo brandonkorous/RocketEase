@@ -16,12 +16,12 @@ import { estimate } from "../cost";
 import type { ModelDescriptor } from "../io";
 import { MediaError, type MediaJobHandle, type RawOutput } from "../types";
 import { AZURE_OPENAI_MODELS, OPENAI_MODELS } from "./models";
-import { requestImages, type Transport } from "./transport";
+import { requestImages, type ImagesUsage, type Transport } from "./transport";
 
 /** Kept only until fetched; a stranded entry is pruned rather than held forever. */
 const RESULT_TTL_MS = 600_000;
 
-type Result = { handle: MediaJobHandle; outputs: RawOutput[]; count: number; at: number };
+type Result = { handle: MediaJobHandle; outputs: RawOutput[]; count: number; usage: ImagesUsage | null; at: number };
 
 /** Module-level, because buildRegistry() constructs a fresh adapter every call. */
 const results = new Map<string, Result>();
@@ -51,7 +51,29 @@ function imagesAdapter(cfg: AdapterConfig): MediaAdapter {
   // Namespaced so one adapter never reads the other's in-flight result.
   const slot = (idempotencyKey: string) => `${cfg.key}:${idempotencyKey}`;
 
-  const doneState = (r: Result) => ({ handle: r.handle, status: "succeeded" as const, progress: 100, usage: { quantity: r.count, unit: "images" as const } });
+  /**
+   * What was actually billed, from what the vendor reported — not the estimate.
+   * Undefined when either the rate or the usage is missing, because a cost of
+   * `null` reads as unknown while a wrong number reads as fact.
+   */
+  const costOf = (model: ModelDescriptor, usage: ImagesUsage | null): number | undefined => {
+    const rates = model.cost.tokenRates;
+    if (!rates || !usage) return undefined;
+    const usd = (usage.inputTokens * rates.inputUsdPerMillion + usage.outputTokens * rates.outputUsdPerMillion) / 1_000_000;
+    return Math.round(usd * 1e6) / 1e6;
+  };
+
+  const modelOf = (key: string) => cfg.models.find((m) => m.key === key);
+
+  const doneState = (r: Result) => {
+    const model = modelOf(r.handle.modelKey);
+    return {
+      handle: r.handle,
+      status: "succeeded" as const,
+      progress: 100,
+      usage: { quantity: r.count, unit: "images" as const, costUsd: model ? costOf(model, r.usage) : undefined },
+    };
+  };
 
   return {
     key: cfg.key,
@@ -69,7 +91,7 @@ function imagesAdapter(cfg: AdapterConfig): MediaAdapter {
       const count = Math.min(Math.max(1, spec.count ?? 1), model.io.outputs.count.max);
       // Recorded BEFORE the call: if this throws, reconcile must know we tried.
       attempted.add(slot(idempotencyKey));
-      const outputs = await requestImages(cfg.transport, model, spec, count);
+      const { outputs, usage } = await requestImages(cfg.transport, model, spec, count);
 
       const handle: MediaJobHandle = {
         adapter: cfg.key,
@@ -77,7 +99,7 @@ function imagesAdapter(cfg: AdapterConfig): MediaAdapter {
         remoteJobId: `${cfg.key}_img_${++counter}_${Date.now().toString(36)}`,
         idempotencyKey,
       };
-      results.set(slot(idempotencyKey), { handle, outputs, count, at: Date.now() });
+      results.set(slot(idempotencyKey), { handle, outputs, count, usage, at: Date.now() });
       return handle;
     },
 

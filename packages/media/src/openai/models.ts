@@ -27,6 +27,8 @@ const PRICING = "https://openai.com/api/pricing/";
 const TERMS = "https://openai.com/policies/services-agreement/";
 const AZURE_TERMS = "https://azure.microsoft.com/en-us/support/legal/";
 const DATA_PRIVACY = "https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/data-privacy";
+/** Azure's own retail price API — machine-readable, and what the bill is computed from. */
+const AZURE_PRICING = "https://prices.azure.com/api/retail/prices?$filter=productName eq 'Azure OpenAI Media'";
 
 const CHECKED_AT = "2026-08-30";
 
@@ -153,7 +155,32 @@ export const AZURE_OPENAI_MODELS: ModelDescriptor[] = [
         delivery: "bytes",
       },
     },
-    cost: { unit: "images", amountUsd: null, verified: false, sourceUrl: PRICING },
+    /*
+     * Azure bills this model PER TOKEN, not per image — there is no per-image
+     * meter on the price list at all. So `amountUsd` stays null (a deployment
+     * supplies its own rounded per-image rate for the pre-flight estimate) and
+     * the real money is computed from the usage the API reports back.
+     *
+     * Rates read from AZURE_PRICING on 2026-08-31, GlobalStandard, USD:
+     *   Image 2 txt inp Gl  $5.00 / 1M   (prompt)
+     *   Image 2 img opt Gl  $30.00 / 1M  (the generated image)
+     *
+     * Measured against this deployment the same day, so the per-image rate a
+     * deployment configures is grounded rather than guessed. Output tokens
+     * track CONTENT, not just size:
+     *   plain backdrop   1088x1088  medium    204 tokens   $0.006
+     *   plain backdrop   1088x1936  medium    148 tokens   $0.004
+     *   busy night scene 1088x1936  medium   1331 tokens   $0.040
+     *   busy night scene 1088x1936  high     5322 tokens   $0.160
+     * `medium` is the default this adapter gets, because it never sends one.
+     */
+    cost: {
+      unit: "images",
+      amountUsd: null,
+      verified: false,
+      sourceUrl: AZURE_PRICING,
+      tokenRates: { inputUsdPerMillion: 5.0, outputUsdPerMillion: 30.0 },
+    },
     // Unverified and deliberately conservative: 12.5a probes the bytes and
     // records what is actually there, so this field never overstates.
     provenance: { c2pa: false, watermark: null },

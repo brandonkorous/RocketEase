@@ -46,7 +46,23 @@ export type ModelOutputs = {
 export type ModelIO = { inputs: ModelInputs; outputs: ModelOutputs };
 
 /** Cost basis, verified against the vendor's own page or flagged as not. */
-export type ModelCost = { unit: CostUnit; amountUsd: number | null; verified: boolean; sourceUrl: string };
+export type ModelCost = {
+  unit: CostUnit;
+  amountUsd: number | null;
+  verified: boolean;
+  sourceUrl: string;
+  /**
+   * What the vendor BILLS, when that is not the unit above. Azure prices image
+   * generation per token, so a per-image `amountUsd` is a deployment's rounded
+   * approximation while this is the real rate — USD per MILLION tokens, the way
+   * every published price list quotes them.
+   *
+   * Present = a job's reported usage becomes a real `vendor_cost_usd`, and the
+   * monthly ceiling accrues against money actually spent. Absent = only the
+   * estimate exists, and the cost stays unknown rather than being guessed.
+   */
+  tokenRates?: { inputUsdPerMillion: number; outputUsdPerMillion: number };
+};
 
 export type ModelTerms = {
   commercialUse: boolean;

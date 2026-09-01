@@ -12,7 +12,24 @@ import { sizeFor } from "./models";
 
 export const TIMEOUT_MS = 120_000;
 
-export type ImagesReply = { data?: { b64_json?: string }[]; error?: { message?: string; code?: string; type?: string } };
+/** What the vendor says it billed. Absent on older api-versions, so never assumed. */
+export type ImagesUsage = { inputTokens: number; outputTokens: number };
+
+export type ImagesReply = {
+  data?: { b64_json?: string }[];
+  usage?: { input_tokens?: number; output_tokens?: number };
+  error?: { message?: string; code?: string; type?: string };
+};
+
+/** Bytes, plus what they cost in the only unit the vendor reports. */
+export type ImagesResult = { outputs: RawOutput[]; usage: ImagesUsage | null };
+
+/** Reported usage, or null. A partial reply is null rather than a half-counted bill. */
+function usageFrom(reply: ImagesReply | null): ImagesUsage | null {
+  const u = reply?.usage;
+  if (!u || typeof u.input_tokens !== "number" || typeof u.output_tokens !== "number") return null;
+  return { inputTokens: u.input_tokens, outputTokens: u.output_tokens };
+}
 
 /** Where to post, how to authenticate, and what the body must carry. */
 export type Transport = {
@@ -38,7 +55,7 @@ export function errorFor(status: number, body: ImagesReply | null): MediaError {
   return new MediaError("The image request didn't complete.", { category: "temporary", ambiguous: true, vendorCode: code });
 }
 
-export async function requestImages(t: Transport, model: ModelDescriptor, spec: GenerationSpec, count: number): Promise<RawOutput[]> {
+export async function requestImages(t: Transport, model: ModelDescriptor, spec: GenerationSpec, count: number): Promise<ImagesResult> {
   // Per MODEL, not per adapter: gpt-image-1 takes three fixed sizes, gpt-image-2
   // takes arbitrary ones and we ask for the placement's own resolution.
   const size = sizeFor(model, spec.aspect);
@@ -69,5 +86,5 @@ export async function requestImages(t: Transport, model: ModelDescriptor, spec: 
     d.b64_json ? [{ bytes: Buffer.from(d.b64_json, "base64"), claimedMimeType: "image/png" }] : [],
   );
   if (!outputs.length) throw new MediaError("The image endpoint returned no image.", { category: "unknown", retryable: false });
-  return outputs;
+  return { outputs, usage: usageFrom(reply) };
 }

@@ -35,7 +35,7 @@ describe("formatCostUsd", () => {
 
 describe("formatUnitEstimate", () => {
   it("prices one image", () => {
-    expect(formatUnitEstimate(0.05)).toBe("About $0.05 per image.");
+    expect(formatUnitEstimate(0.05)).toBe("Up to $0.05 per image.");
   });
 
   it("says nothing when there is no rate, rather than implying free", () => {

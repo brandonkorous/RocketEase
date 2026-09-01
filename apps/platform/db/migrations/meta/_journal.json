@@ -148,6 +148,13 @@
       "when": 1788083309237,
       "tag": "0020_stormy_mesmero",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788253680501,
+      "tag": "0021_fuzzy_naoko",
+      "breakpoints": true
     }
   ]
 }

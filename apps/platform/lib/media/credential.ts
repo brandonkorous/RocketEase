@@ -15,11 +15,30 @@
  */
 import type { AssetProvenance } from "@/db/schema/assets";
 
+export type CredentialState = AssetProvenance["c2pa"];
+
 export type CredentialSubject = {
   fileName: string;
   generatedByAi: boolean;
   provenance: AssetProvenance | null;
+  /**
+   * State of the file we will actually SEND, when that is not the original.
+   * Publishing an image sends a re-encoded rendition, and describing the
+   * original's credential would describe a file nobody receives.
+   */
+  delivered?: CredentialState | null;
 };
+
+/**
+ * What our own re-encode produced. Prefers the rendition's recorded probe; for
+ * rows written before we recorded one, a signed source cannot be assumed to have
+ * survived an encoder that carries no manifest — so it reads as stripped, and
+ * the gap errs toward disclosure rather than silence.
+ */
+export function deliveredCredential(source: CredentialState | undefined, recorded: CredentialState | null | undefined): CredentialState {
+  if (recorded) return recorded;
+  return source === "signed" || source === "stripped" ? "stripped" : "absent";
+}
 
 export type CredentialIssue = { severity: "warning"; code: string; message: string };
 
@@ -30,14 +49,14 @@ const AUTO_LABEL = "Networks that auto-label from credentials won't recognise it
  * rather than something that is missing.
  */
 export function credentialIssue(a: CredentialSubject): CredentialIssue | null {
-  const state = a.provenance?.c2pa;
+  const state = a.delivered ?? a.provenance?.c2pa;
   if (state === "signed") return null;
 
   if (state === "stripped") {
     return {
       severity: "warning",
       code: "credential_stripped",
-      message: `“${a.fileName}” arrived with a content credential and lost it when we re-encoded the file. ${AUTO_LABEL}`,
+      message: `“${a.fileName}” had a content credential and lost it when we re-encoded the file for publishing. ${AUTO_LABEL}`,
     };
   }
   if (a.generatedByAi) {

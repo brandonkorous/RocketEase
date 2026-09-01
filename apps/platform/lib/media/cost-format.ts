@@ -16,8 +16,15 @@ export function formatCostUsd(amountUsd: number | null | undefined): string | nu
   return `$${amountUsd.toFixed(amountUsd >= CENT ? 2 : 4)}`;
 }
 
-/** The line shown beside a Generate button. Null when no rate is configured. */
+/*
+ * The line shown beside a Generate button. Null when no rate is configured.
+ *
+ * "Up to", not "about": the configured rate is the CEILING's safety rate, rounded
+ * up past the busiest image measured so a limit errs toward refusing. Said as
+ * "about" it overstated a typical image roughly eightfold. See docs/bugs/B-004 —
+ * the real fix is to estimate from recorded vendor_cost_usd instead.
+ */
 export function formatUnitEstimate(amountUsd: number | null | undefined): string | null {
   const money = formatCostUsd(amountUsd);
-  return money && `About ${money} per image.`;
+  return money && `Up to ${money} per image.`;
 }

@@ -9,8 +9,8 @@ import { channel } from "@/db/schema/connections";
 import { contentItem, postVariant, type ContentItem, type PostVariant, type VariantValidation } from "@/db/schema/content";
 import { workspace } from "@/db/schema/app";
 import { wasNotScanned } from "./assets/scan-note";
-import { disclosureGap, readRequireAiDisclosure, toDisclosureInput } from "./disclosure";
-import { credentialIssue } from "./media/credential";
+import { disclosureGap, readRequireAiDisclosure, toDisclosureInput, undeclaredSyntheticGap } from "./disclosure";
+import { credentialIssue, deliveredCredential } from "./media/credential";
 import { getAdapter, toDescriptor } from "./providers";
 import { grantsForUse, rightsAssets } from "./rights/queries";
 import { rightsProblemsForPublish } from "./rights/rules";
@@ -41,12 +41,14 @@ export function inferFormat(assets: { kind: string }[], preferred?: PublishForma
 }
 
 /** Build provider MediaInput[] with signed URLs (1h) from asset ids, preserving order. Only ready+clean assets. */
-export async function mediaForAssets(assetIds: string[], opts: { forPublish?: boolean } = {}): Promise<{ media: MediaInput[]; problems: ValidationIssue[] }> {
-  if (assetIds.length === 0) return { media: [], problems: [] };
+export async function mediaForAssets(assetIds: string[], opts: { forPublish?: boolean } = {}): Promise<{ media: MediaInput[]; problems: ValidationIssue[]; generated: string[] }> {
+  if (assetIds.length === 0) return { media: [], problems: [], generated: [] };
   const rows = await db.select().from(asset).where(and(inArray(asset.id, assetIds), isNull(asset.deletedAt)));
   const rends = rows.length ? await db.select().from(assetRendition).where(inArray(assetRendition.assetId, rows.map((r) => r.id))) : [];
   const problems: ValidationIssue[] = [];
   const media: MediaInput[] = [];
+  /** Files the product knows a model made — the disclosure rule needs their names. */
+  const generated: string[] = [];
   for (const id of assetIds) {
     const a = rows.find((r) => r.id === id);
     if (!a) {
@@ -57,23 +59,29 @@ export async function mediaForAssets(assetIds: string[], opts: { forPublish?: bo
     if (a.scanStatus !== "clean") problems.push({ severity: "error", code: "asset_unscanned", message: `${a.fileName} hasn't passed the safety scan.`, field: "media" });
     // A `clean` nothing actually inspected must not read like a clean scan.
     else if (wasNotScanned(a.scanNote)) problems.push({ severity: "warning", code: "asset_not_scanned", message: `${a.fileName} was not virus-scanned — no scanner is configured for this deployment.`, field: "media" });
-    // A credential our own pipeline removed is a disclosure we removed (Art. 50).
-    const credential = credentialIssue(a);
-    if (credential) problems.push({ ...credential, field: "media" });
     // Providers pull the "web" rendition when it exists (already oriented/compressed), else the original.
     const web = rends.find((r) => r.assetId === a.id && r.kind === "preview" && a.kind === "image");
-    const key = opts.forPublish && web ? web.storageKey : a.storageKey;
+    const sending = opts.forPublish && web ? web : null;
+    const key = sending ? sending.storageKey : a.storageKey;
+    /*
+     * A credential our own pipeline removed is a disclosure we removed (Art. 50).
+     * Judged on the bytes publishing WILL send — `web`, not `sending` — so the
+     * warning reaches the composer and not only the worker that already sent it.
+     */
+    const credential = credentialIssue({ ...a, delivered: web ? deliveredCredential(a.provenance?.c2pa, web.credential) : null });
+    if (credential) problems.push({ ...credential, field: "media" });
+    if (a.generatedByAi) generated.push(a.fileName);
     media.push({
       url: await presignGet(key, 3600),
-      mimeType: opts.forPublish && web ? web.mimeType : a.mimeType,
-      bytes: opts.forPublish && web ? (web.bytes ?? undefined) : (a.bytes ?? undefined),
-      width: opts.forPublish && web ? (web.width ?? undefined) : (a.width ?? undefined),
-      height: opts.forPublish && web ? (web.height ?? undefined) : (a.height ?? undefined),
+      mimeType: sending ? sending.mimeType : a.mimeType,
+      bytes: sending ? (sending.bytes ?? undefined) : (a.bytes ?? undefined),
+      width: sending ? (sending.width ?? undefined) : (a.width ?? undefined),
+      height: sending ? (sending.height ?? undefined) : (a.height ?? undefined),
       durationSeconds: a.durationSeconds ?? undefined,
       altText: a.altText ?? undefined,
     });
   }
-  return { media, problems };
+  return { media, problems, generated };
 }
 
 /** Rights and authorisation clocks must still be live when the post actually goes out (M8.4). */
@@ -92,14 +100,17 @@ export async function validateVariant(item: ContentItem, v: PostVariant): Promis
     else if (ch.status === "action_required") issues.push({ severity: "error", code: "channel_action_required", message: `${ch.name} needs to be reconnected (${ch.health.message ?? "permissions changed"}).`, field: "settings" });
     if (!isEnabled(`${ch.provider}.publish.${v.format}`)) issues.push({ severity: "error", code: "format_disabled", message: `${v.format} posts to ${ch.network} are temporarily disabled.`, field: "media" });
     const r = resolveVariant(item, v);
-    const { media, problems } = await mediaForAssets(r.assetIds);
+    const { media, problems, generated } = await mediaForAssets(r.assetIds);
     issues.push(...problems);
     issues.push(...(await publishRightsIssues(item.workspaceId, ch.id, r.assetIds, v.scheduledAt)));
     try {
       const adapter = getAdapter(ch.provider);
       issues.push(...adapter.validate(toDescriptor(ch), { format: v.format, text: r.text, media, link: r.link, firstComment: r.firstComment, settings: v.settings, disclosure: toDisclosureInput(item.syntheticMedia) }));
-      const gap = disclosureGap(ch.capabilities, item.syntheticMedia, { required: await requireAiDisclosure(item.workspaceId), channelName: ch.name });
+      const required = await requireAiDisclosure(item.workspaceId);
+      const gap = disclosureGap(ch.capabilities, item.syntheticMedia, { required, channelName: ch.name });
       if (gap) issues.push({ ...gap, field: "settings" });
+      const undeclared = undeclaredSyntheticGap(generated, item.syntheticMedia, { required });
+      if (undeclared) issues.push({ ...undeclared, field: "settings" });
     } catch (e) {
       issues.push({ severity: "error", code: "provider_unavailable", message: e instanceof Error ? e.message : "Provider unavailable", field: "settings" });
     }

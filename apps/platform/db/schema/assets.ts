@@ -142,6 +142,13 @@ export const assetRendition = pgTable(
     width: integer("width"),
     height: integer("height"),
     bytes: integer("bytes"),
+    /**
+     * What survived OUR re-encode, probed from the bytes we produced. Publishing
+     * sends the rendition, not the original, so this — not the asset's own
+     * provenance — is what the credential warning must describe. Null on rows
+     * written before this was recorded.
+     */
+    credential: text("credential").$type<AssetProvenance["c2pa"]>(),
     createdAt: now("created_at"),
   },
   (t) => [uniqueIndex("asset_rendition_asset_kind_idx").on(t.assetId, t.kind)],

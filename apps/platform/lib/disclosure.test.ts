@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Capabilities } from "@rocketease/providers";
-import { SYNTHETIC_CHOICES, disclosureGap, previewFor, previewLine, readRequireAiDisclosure, toDisclosureInput } from "./disclosure";
+import { SYNTHETIC_CHOICES, disclosureGap, previewFor, previewLine, readRequireAiDisclosure, toDisclosureInput, undeclaredSyntheticGap } from "./disclosure";
 import type { SyntheticMedia } from "@/db/schema/content";
 
 const caps = (disclosure: Capabilities["disclosure"], reason?: string) =>
@@ -76,5 +76,40 @@ describe("readRequireAiDisclosure", () => {
     expect(readRequireAiDisclosure({})).toBe(false);
     expect(readRequireAiDisclosure({ requireAiDisclosure: "yes" })).toBe(false);
     expect(readRequireAiDisclosure({ requireAiDisclosure: true })).toBe(true);
+  });
+});
+
+describe("undeclaredSyntheticGap", () => {
+  it("warns when a generated file is attached and nothing was declared", () => {
+    const g = undeclaredSyntheticGap(["ai.png"], sm("none"), { required: false });
+    expect(g).toMatchObject({ severity: "warning", code: "synthetic_undeclared" });
+    expect(g?.message).toContain("“ai.png”");
+    expect(g?.message).toContain("Contains AI-generated media?");
+  });
+
+  it("blocks instead of warning when the workspace requires disclosure", () => {
+    expect(undeclaredSyntheticGap(["ai.png"], sm("none"), { required: true })).toMatchObject({ severity: "error" });
+  });
+
+  it("treats an unanswered item the same as an explicit no", () => {
+    expect(undeclaredSyntheticGap(["ai.png"], null, { required: false })?.code).toBe("synthetic_undeclared");
+  });
+
+  it("is not satisfied by 'AI-assisted text only' — the media is still synthetic", () => {
+    expect(undeclaredSyntheticGap(["ai.png"], sm("assisted"), { required: false })?.code).toBe("synthetic_undeclared");
+  });
+
+  it("says nothing once synthetic media is declared", () => {
+    expect(undeclaredSyntheticGap(["ai.png"], sm("synthetic_media"), { required: false })).toBeNull();
+  });
+
+  it("says nothing when no attached file was generated", () => {
+    expect(undeclaredSyntheticGap([], sm("none"), { required: true })).toBeNull();
+  });
+
+  it("names every generated file, and agrees with itself", () => {
+    const g = undeclaredSyntheticGap(["a.png", "b.png"], sm("none"), { required: false });
+    expect(g?.message).toContain("“a.png”, “b.png”");
+    expect(g?.message).toContain("were generated");
   });
 });

@@ -21,7 +21,9 @@ export type ComposerProps = { workspaceId: string; timezone: string; item: Compo
   /** Workspace UTM defaults (Settings → Tracking) used to pre-fill new drafts. */
   tracking: Utm };
 
-const LABEL = { now: "Publish now", draft: "Save as draft", review: "Request approval →", schedule: "Review & schedule →" } as const;
+// Each label names what pressing it does. "Review & schedule" did not: it wrote
+// the schedule straight away, and the word order promised a checkpoint first.
+const LABEL = { now: "Publish now", draft: "Save as draft", review: "Request approval →", schedule: "Schedule →" } as const;
 
 export function Composer(props: ComposerProps) {
   const { workspaceId, timezone, item, channels, assets, canPublish, approval, reviewers, templates, tracking } = props;

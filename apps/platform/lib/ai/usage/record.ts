@@ -3,7 +3,12 @@
  * Metering must never break a draft, so a write failure is logged and swallowed
  * — the person still gets their suggestion.
  */
-import "server-only";
+/*
+ * No `server-only` marker, deliberately. The worker meters media generation
+ * through this module (lib/media/finish.ts), and that marker throws outside a
+ * Next build — the same reason lib/media/jobs.ts and normalize.ts omit it.
+ * There is nothing request-scoped here; `@/db` already makes it server-side.
+ */
 import { db } from "@/db";
 import { aiUsage, type AiUsageKind } from "@/db/schema/ai-usage";
 import { log } from "@/lib/log";

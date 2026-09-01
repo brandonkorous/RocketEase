@@ -54,7 +54,7 @@ export const mediaJob = pgTable(
     state: text("state").$type<MediaJobState>().notNull().default("queued"),
     /** The vendor's own id, for reconciliation before any re-spend. */
     remoteJobId: text("remote_job_id"),
-    /** Delivery URLs expire (Sora: ~1 hour); the poller races this. */
+    /** Delivery URLs expire (Sora: 24h, measured); the poller races this. */
     outputExpiresAt: timestamp("output_expires_at", { withTimezone: true }),
 
     /** What was consumed, in the model's billed unit. */

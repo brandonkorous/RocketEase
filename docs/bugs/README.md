@@ -14,6 +14,7 @@ register; a finding that turns into work to do gets a bug file here.
 | [B-004](B-004-image-estimate-overstates-cost.md) | P1 | **fixed** | Generation was unmetered, priced in the wrong unit, and threw away the measurement |
 | [B-005](B-005-spend-ceiling-never-observed-refusing.md) | P2 | part | The spend ceiling cannot refuse anything the product can ask for |
 | [B-006](B-006-sora-called-a-path-that-does-not-exist.md) | P1 | **fixed** | Video generation called an Azure path that does not exist, and 14 tests agreed with it |
+| [B-007](B-007-failed-generation-is-invisible.md) | P1 | **fixed** | A generation that fails is invisible — no error, no state, nothing |
 
 **Severity** — P0 production down or data loss · P1 wrong public output, money, or
 a control that does not control · P2 wrong or misleading in-product · P3 cosmetic.

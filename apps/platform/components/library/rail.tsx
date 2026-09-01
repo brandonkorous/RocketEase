@@ -6,6 +6,7 @@ import { createFolder } from "@/lib/actions/folders";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 import { GeneratePanel } from "./generate-panel";
 import { GenerateVideoPanel } from "./generate-video-panel";
+import { GenerationStatus } from "./generation-status";
 import { LibIcon } from "./icons";
 import type { LibraryData } from "./types";
 
@@ -45,6 +46,7 @@ export function CollectionsRail({ data, nav }: { data: LibraryData; nav: Nav }) 
       {data.videoGeneration.enabled && canEdit && (
         <GenerateVideoPanel workspaceId={data.workspaceId} estimate={data.videoGeneration.estimate} />
       )}
+      <GenerationStatus rows={data.generations} />
     </aside>
   );
 }

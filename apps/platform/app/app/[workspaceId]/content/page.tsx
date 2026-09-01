@@ -13,6 +13,7 @@ import { hasCapability, requireWorkspace } from "@/lib/session";
 import { loadBrandKit } from "@/lib/brand/store";
 import { canGenerate } from "@/lib/media/jobs";
 import { imageUnitEstimate, videoUnitEstimate } from "@/lib/media/estimate";
+import { recentGenerations } from "@/lib/media/recent";
 
 export const metadata: Metadata = { title: "Content" };
 
@@ -150,6 +151,9 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
     // aiConfigured, so this surface is independent of AI drafting entirely.
     imageGeneration: { enabled: canGenerate("scene_still"), estimate: await imageUnitEstimate(workspaceId) },
     videoGeneration: { enabled: canGenerate("hero_shot"), estimate: await videoUnitEstimate(workspaceId) },
+    // A job that fails has to be visible somewhere, and this is where the
+    // toast told the person to look (docs/bugs/B-007).
+    generations: await recentGenerations(workspaceId),
     selected,
     matched: Number(matched),
     page,

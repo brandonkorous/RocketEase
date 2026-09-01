@@ -1,3 +1,4 @@
+import type { GenerationRow } from "@/lib/media/recent";
 import type { LightboxMedia } from "../shared/media-lightbox";
 
 export type AssetCard = {
@@ -29,6 +30,8 @@ export type LibraryData = {
   imageGeneration: { enabled: boolean; estimate: string | null };
   /** Separate from images: a different model, a different vendor bill, and it may be off on its own. */
   videoGeneration: { enabled: boolean; estimate: string | null };
+  /** In-flight and recently-failed jobs. Empty is the normal case. */
+  generations: GenerationRow[];
 };
 
 export const fmtBytes = (b: number | null) => (b == null ? "" : b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);

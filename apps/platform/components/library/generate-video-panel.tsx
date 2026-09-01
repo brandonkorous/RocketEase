@@ -32,16 +32,26 @@ export function GenerateVideoPanel({ workspaceId, estimate, products }: Props) {
   // Optional, and off by default: a reference constrains the shot, and most
   // clips do not want to open on a packshot.
   const [productAssetId, setProductAssetId] = useState("");
+  // Voice is opt-in, and captions ride on it: captions here are captions OF the
+  // speech, so there is nothing to write without a script.
+  const [voiceScript, setVoiceScript] = useState("");
+  const [captions, setCaptions] = useState(true);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
   const router = useRouter();
 
   const submit = async () => {
     setBusy(true);
-    const res = await generateVideo({ workspaceId, prompt, aspect, seconds, productAssetId: productAssetId || undefined });
+    const res = await generateVideo({
+      workspaceId, prompt, aspect, seconds,
+      productAssetId: productAssetId || undefined,
+      voiceScript: voiceScript.trim() || undefined,
+      captions: Boolean(voiceScript.trim()) && captions,
+    });
     setBusy(false);
     if (res.error) return toast.add({ title: res.error, type: "error" });
     setPrompt("");
+    setVoiceScript("");
     toast.add({ title: res.ok ?? "Generating.", type: "success" });
     router.refresh();
   };
@@ -83,6 +93,24 @@ export function GenerateVideoPanel({ workspaceId, estimate, products }: Props) {
           {productAssetId && <p className="text-xs text-secondary/70">The clip starts on this image, fitted to the frame on your brand colour.</p>}
         </div>
       )}
+      <div className="mt-2 flex flex-col gap-1">
+        <label htmlFor="gen-voice" className="text-xs font-medium">Voice-over <span className="text-secondary/70">(optional)</span></label>
+        <Textarea
+          id="gen-voice"
+          rows={2}
+          value={voiceScript}
+          onChange={(e) => setVoiceScript(e.target.value)}
+          placeholder="What should the voice say?"
+        />
+        {voiceScript.trim() && (
+          <label className="flex items-center gap-1.5 text-xs">
+            <input type="checkbox" className="checkbox checkbox-xs" checked={captions} disabled={busy} onChange={(e) => setCaptions(e.target.checked)} />
+            Burn in captions, in your brand colours
+          </label>
+        )}
+        {/* The picture decides the length, so say it before they write a page. */}
+        {voiceScript.trim() && <p className="text-xs text-secondary/70">Keep it to about {Math.max(1, Math.round(seconds * 2.2))} words — anything past {seconds}s is cut off.</p>}
+      </div>
       <Button className="mt-2 w-full" size="sm" color="primary" loading={busy} disabled={prompt.trim().length < 3} onClick={submit}>
         Generate clip
       </Button>

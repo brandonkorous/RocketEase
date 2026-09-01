@@ -32,12 +32,20 @@ const schema = z.object({
    * call (lib/media/hydrate-references.ts).
    */
   productAssetId: z.string().min(1).optional(),
+  /**
+   * Optional voice-over. Empty means no voice, and no voice means no captions —
+   * captions here are captions OF the speech, so there is nothing to write
+   * without it.
+   */
+  voiceScript: z.string().trim().max(1_200).optional(),
+  voiceId: z.string().trim().max(40).optional(),
+  captions: z.boolean().default(false),
 });
 
 export async function generateVideo(input: z.input<typeof schema>): Promise<VideoState> {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { error: "Describe the clip you want first." };
-  const { workspaceId: ws, prompt, aspect, seconds, productAssetId } = parsed.data;
+  const { workspaceId: ws, prompt, aspect, seconds, productAssetId, voiceScript, voiceId, captions } = parsed.data;
 
   return guard(async () => {
     const ctx = await requireCapability(ws, "content.create");
@@ -58,9 +66,10 @@ export async function generateVideo(input: z.input<typeof schema>): Promise<Vide
       organizationId: ctx.workspace.organizationId,
       workspaceId: ws,
       surface: "action:video.generate",
-      props: { seconds, aspect, model: res.modelKey, withProduct: Boolean(productAssetId) },
+      props: { seconds, aspect, model: res.modelKey, withProduct: Boolean(productAssetId), withVoice: Boolean(voiceScript), withCaptions: Boolean(voiceScript) && captions },
     });
     const opener = productAssetId ? " It opens on your product shot." : "";
-    return { ok: `Generating a ${seconds}-second clip.${opener} It takes a few minutes and lands in the library when it's ready.` };
+    const voice = voiceScript ? (captions ? " Voice-over and captions follow it." : " A voice-over follows it.") : "";
+    return { ok: `Generating a ${seconds}-second clip.${opener}${voice} It takes a few minutes and lands in the library when it's ready.` };
   });
 }

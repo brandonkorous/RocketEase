@@ -21,11 +21,12 @@
 import { MOCK_MODELS } from "./mock/models";
 import { AZURE_OPENAI_MODELS, OPENAI_MODELS } from "./openai/models";
 import { SORA_MODELS } from "./sora/models";
+import { SPEECH_MODELS } from "./speech/models";
 import { isRetired, type ModelDescriptor } from "./io";
 import type { JobKind } from "./types";
 
 /** Split to catalog/{video,image,audio}.ts once real models push this past 250 lines. */
-export const MODELS: ModelDescriptor[] = [...MOCK_MODELS, ...AZURE_OPENAI_MODELS, ...OPENAI_MODELS, ...SORA_MODELS];
+export const MODELS: ModelDescriptor[] = [...MOCK_MODELS, ...AZURE_OPENAI_MODELS, ...OPENAI_MODELS, ...SORA_MODELS, ...SPEECH_MODELS];
 
 const BY_KEY = new Map(MODELS.map((m) => [m.key, m]));
 

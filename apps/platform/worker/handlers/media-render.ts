@@ -11,16 +11,42 @@ import { burnCaptionTrack } from "@/lib/media/caption-job";
 import { renderPlanVariant } from "@/lib/media/render-job";
 import type { JobPayloads } from "@/lib/jobs/queues";
 import type { HandlerContext } from "./index";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { asset } from "@/db/schema/assets";
+import { runVoiceoverJob } from "@/lib/media/voice/job";
 
 export async function mediaRender(data: JobPayloads["media.render"], ctx: HandlerContext) {
+  if (data.kind === "voiceover") return voiceoverJob(data, ctx);
   if (data.kind === "caption_burn") return burnJob(data, ctx);
   if (data.kind === "assembly") return assemblyJob(data, ctx);
   return adJob(data, ctx);
 }
 
+type Voice = Extract<JobPayloads["media.render"], { kind: "voiceover" }>;
 type Ad = Extract<JobPayloads["media.render"], { kind: "ad_plan" }>;
 type Burn = Extract<JobPayloads["media.render"], { kind: "caption_burn" }>;
 type Assembly = Extract<JobPayloads["media.render"], { kind: "assembly" }>;
+
+async function voiceoverJob(data: Voice, ctx: HandlerContext) {
+  const l = ctx.log.child({ sourceAssetId: data.assetId });
+  const [row] = await db.select({ w: asset.workspaceId, o: asset.organizationId }).from(asset).where(eq(asset.id, data.assetId));
+  if (!row) return l.warn("voice-over skipped; the clip is gone");
+
+  const res = await runVoiceoverJob({
+    assetId: data.assetId,
+    workspaceId: row.w,
+    organizationId: row.o,
+    userId: data.userId,
+    script: data.script,
+    voiceId: data.voiceId,
+    captions: data.captions,
+  });
+  if ("error" in res) return l.warn("voice-over failed", { reason: res.error });
+  // Reported, never silent: a sentence cut off mid-word is a person's decision
+  // to make, not something to smooth over.
+  l.info("voice-over added", { assetId: res.assetId, cues: res.captionCues, truncatedVoiceBy: res.truncatedVoiceBy });
+}
 
 async function assemblyJob(data: Assembly, ctx: HandlerContext) {
   const l = ctx.log.child({ contentItemId: data.contentItemId, placement: data.placement, variantId: data.variantId });

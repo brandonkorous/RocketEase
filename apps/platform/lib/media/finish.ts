@@ -18,6 +18,7 @@ import { creditsForQuantity, parseCreditRates } from "./credit-rates";
 import { vendorCostUsd } from "./vendor-cost";
 import { normalizeOutputs } from "./normalize";
 import { loadVoice, rightsScopeForVoice } from "./voice/store";
+import { emit } from "@/lib/jobs/outbox";
 
 export type FinishResult = { assetIds: string[]; mismatches: string[] };
 
@@ -142,7 +143,33 @@ export async function completeMediaJob(
     assets: assetIds.length,
   });
 
+  await chainVoiceover(row, assetIds);
   return { assetIds, mismatches };
+}
+
+/**
+ * A clip that was asked for WITH a voice queues the voice-over now that the
+ * picture exists.
+ *
+ * Chained rather than done here: this function runs inside the poller and must
+ * stay fast, and the voice-over is ffmpeg work that belongs on the media role.
+ * The spec is the record of what was asked for, so a replay of the same job
+ * asks for the same thing.
+ */
+async function chainVoiceover(row: MediaJob, assetIds: string[]) {
+  const spec = row.spec as { voiceScript?: string; voiceId?: string; captions?: boolean };
+  const script = spec.voiceScript?.trim();
+  if (!script || assetIds.length === 0 || !row.requestedByUserId) return;
+  if (MEDIA_KIND_OF[row.jobKind as JobKind] !== "video") return;
+
+  await db.transaction(async (tx) => {
+    await emit(
+      tx,
+      "media.render",
+      { kind: "voiceover", assetId: assetIds[0], userId: row.requestedByUserId!, script, voiceId: spec.voiceId, captions: spec.captions === true },
+      { organizationId: row.organizationId, workspaceId: row.workspaceId, dedupeKey: `media.render:voiceover:${assetIds[0]}` },
+    );
+  });
 }
 
 /** The one terminal write for a job that did not produce assets. */

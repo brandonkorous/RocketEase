@@ -65,7 +65,12 @@ export type JobPayloads = {
 export type MediaRenderPayload =
   | { kind: "ad_plan"; contentItemId: string; placement: string; variantId: string }
   | { kind: "caption_burn"; assetId: string; captionTrackId: string; placement: string }
-  | { kind: "assembly"; contentItemId: string; placement: string; variantId: string };
+  | { kind: "assembly"; contentItemId: string; placement: string; variantId: string }
+  /**
+   * Voice-over onto an existing clip, with captions of it. Carries the script
+   * rather than a reference to one, so the job is replayable from its own row.
+   */
+  | { kind: "voiceover"; assetId: string; userId: string; script: string; voiceId?: string; captions: boolean };
 
 export type JobName = keyof JobPayloads;
 

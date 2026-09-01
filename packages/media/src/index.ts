@@ -15,6 +15,7 @@ import { availabilityFrom, type AdapterRegistry, type MediaAdapter } from "./ada
 import { mockAdapter } from "./mock";
 import { azureOpenAiAdapter, openaiAdapter } from "./openai";
 import { soraAdapter } from "./sora";
+import { speechAdapter } from "./speech";
 
 /**
  * Adapters this deployment can use. Each decides for itself whether it is
@@ -24,7 +25,7 @@ import { soraAdapter } from "./sora";
  * Remaining adapters (fal, vertex, runway, elevenlabs) register here as they land.
  */
 export function buildRegistry(extra: MediaAdapter[] = []): AdapterRegistry {
-  const all = [mockAdapter(), azureOpenAiAdapter(), openaiAdapter(), soraAdapter(), ...extra];
+  const all = [mockAdapter(), azureOpenAiAdapter(), openaiAdapter(), soraAdapter(), speechAdapter(), ...extra];
   return new Map(all.map((a) => [a.key, a]));
 }
 

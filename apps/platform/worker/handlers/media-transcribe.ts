@@ -20,7 +20,9 @@ import { getObjectBuffer } from "@/lib/storage";
 import type { HandlerContext } from "./index";
 
 const TRANSCRIBABLE = new Set(["audio", "video"]);
-const ADAPTER_ORDER = ["elevenlabs", "mock"];
+// azure-speech first: it is the one actually deployed. elevenlabs stays ahead
+// of mock so a real vendor always beats the fixture if one is ever configured.
+const ADAPTER_ORDER = ["azure-speech", "elevenlabs", "mock"];
 
 /** The first configured adapter that actually does speech to text. */
 function transcriber() {

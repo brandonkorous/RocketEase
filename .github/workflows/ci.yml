@@ -273,6 +273,13 @@ jobs:
             # reports itself unconfigured and no video control renders at all —
             # which looks like a missing feature, not a missing secret.
             AZURE_OPENAI_VIDEO_DEPLOYMENT AZURE_OPENAI_VIDEO_API_VERSION
+            # A FOURTH data plane, shared by /audio/speech and
+            # /audio/transcriptions. Voice-over is offered only when the speech
+            # pair is present, and captions only when the transcribe deployment
+            # is — so a missing one here reads as "the model isn't configured",
+            # which is true and unhelpful (docs/bugs/B-012).
+            AZURE_OPENAI_SPEECH_DEPLOYMENT AZURE_OPENAI_SPEECH_API_VERSION
+            AZURE_OPENAI_TRANSCRIBE_DEPLOYMENT
             STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET
             STRIPE_PRICE_WORKSPACE_MONTHLY STRIPE_PRICE_WORKSPACE_YEARLY
             STRIPE_METER_AI_CREDITS STRIPE_PRICE_AI_CREDIT_OVERAGE

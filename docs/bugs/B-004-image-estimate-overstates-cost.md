@@ -1,6 +1,11 @@
 # B-004 · P1 · Generation was unmetered, priced in the wrong unit, and threw away the measurement
 
-**Status** fixed 2026-09-01, awaiting live verification
+**Status** fixed and verified live 2026-09-01 (`c2e87a5`, `2e4379b`)
+
+**Verified** asset panel reads "Credits 0.26" (not dollars); the estimate reads "About 0.26
+credits per image, from your recent generations" and was ABSENT beforehand, when no job had
+credits yet — it quotes history or nothing. `/staff` shows "Our spend (month) $0.07".
+Settings → Billing counts "Generated images · 1 request · 0.26" beside "Generated posts".
 **Found** 2026-09-01. Originally filed as "the estimate is ~8x the real cost". That framing
 was wrong, and the user said so: the problem was never precision, it was the **unit**.
 **Where** `lib/media/finish.ts`, `lib/media/estimate.ts`, `db/schema/media.ts`,
@@ -59,6 +64,18 @@ image tokens is the honest reading of the definition, but the economics differ: 
 tokens cost us $30/M against text's $16.50/M, so an image credit costs us roughly 1.8x a
 text credit. That is a **pricing decision**, not an engineering one, and it is deliberately
 left alone rather than quietly baked into a per-model multiplier.
+
+## What this broke on the way through
+
+Routing metering through `lib/ai/usage/record.ts` pulled its `server-only` marker into the
+worker, which killed it at startup. The symptom was an e2e **inbox** failure — `channel.sync`
+never ran, so the panel that test waits on never appeared. Nothing pointed at media. Fixed in
+`2e4379b`, with `worker/imports.test.ts` now walking the worker's import graph so the rule in
+CLAUDE.md is enforced rather than merely written down.
+
+Sharing the meter also made an existing line of copy wrong: it said a credit is "1,000 words
+of generated text", which images do not produce. Now "1,000 tokens of generated output, text
+or image".
 
 ## Verification
 

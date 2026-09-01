@@ -41,7 +41,7 @@ export async function AiUsageMeter({ workspaceId }: { workspaceId: string }) {
         AI credits
       </h3>
       <p className="mt-1 text-sm text-secondary">
-        One credit is 1,000 words of generated text; what a draft reads counts at a fifth. The cap is hard — nothing is billed past it.
+        One credit is 1,000 tokens of generated output, text or image; what a draft reads counts at a fifth. The cap is hard — nothing is billed past it.
       </p>
       <div className="mt-4 flex items-baseline justify-between gap-3 text-xs">
         <span className="font-semibold">

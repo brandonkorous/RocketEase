@@ -45,18 +45,52 @@ configMapGenerator:
       - LOG_LEVEL=info
       - STORAGE_DRIVER=azure
       - AZURE_STORAGE_CONTAINER=media
+      # RocketEase's own operators, who reach /staff and grant betas. NOT a
+      # credential, and deliberately here rather than in Key Vault: granting
+      # operator access should need a reviewed change, not one silent az command.
+      #
+      # Bootstrap only — a `staff_user` row wins over this list, and the address
+      # must have a VERIFIED email before it is honoured.
+      - STAFF_EMAILS=bkorous@gmail.com
+      # BETA_FEATURES is deliberately NOT set here. It is the same kind of
+      # bootstrap, but a beta grant is per-TENANT state: putting organization ids
+      # in git makes every enrolment a deploy and every revocation a rollback.
+      # /staff writes an audited feature_grant row instead — which is why
+      # STAFF_EMAILS above has to work first.
+
       # Media generation spend. NOT secrets and NOT Terraform outputs — operator
       # choices, so they live in git where a change is reviewed.
       #
       # EMPTY MEANS NO LIMIT. And a per-job ceiling with no rate for the routed
       # model refuses EVERY job, by design ("we don't know what this costs" is
       # the worst reason to spend) — so these two move together or not at all.
-      - AI_MEDIA_RATES_JSON=
-      - MEDIA_CEILING_USD_PER_JOB=
-      - MEDIA_CEILING_USD_PER_ORG_MONTH=
+      #
+      # The rate is per IMAGE; Azure bills gpt-image-2 per TOKEN and publishes no
+      # per-image price, so this is measured, not copied. Against this deployment
+      # on 2026-08-31 a medium-quality image cost $0.004–$0.040 depending on how
+      # busy the picture is (packages/media/src/openai/models.ts records the
+      # readings). $0.08 is ~2x the busiest measured: an estimate rounds UP, so
+      # the ceiling errs toward refusing rather than toward spending.
+      #
+      # Actual spend is NOT this number — media_job.vendor_cost_usd comes from
+      # the token usage the vendor reports back, which is what the monthly
+      # ceiling accrues against.
+      - AI_MEDIA_RATES_JSON={"azure-gpt-image-2":0.08}
+      # A job caps at 4 images (lib/actions/media.ts), so $0.50 clears any real
+      # request and still stops one that has gone strange.
+      - MEDIA_CEILING_USD_PER_JOB=0.50
+      # ~300 images/month/org. The blast radius of a loop, not a business limit.
+      - MEDIA_CEILING_USD_PER_ORG_MONTH=25.00
     options:
-      # A rolling ConfigMap name would restart every pod on any edit; these
-      # values are read at request time, so a plain name is what we want.
+      # A rolling ConfigMap name would restart every pod on any edit, so the
+      # name stays plain. That is safe ONLY because the deploy job rewrites
+      # `newTag: latest` to the commit SHA: a config change always ships inside
+      # a commit, so the pod template changes and the rollout carries it.
+      #
+      # It is NOT safe by itself. `envFrom.configMapRef` is resolved once, at
+      # pod start — exactly like the secretRef the env-hash annotation exists
+      # for. Editing this ConfigMap in the cluster by hand changes nothing until
+      # something else forces a new ReplicaSet.
       disableNameSuffixHash: true
 
 # Secret `platform-env` (app config) and `db-admin` (migration credentials, Jobs

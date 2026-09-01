@@ -1,6 +1,6 @@
 # B-003 · P1 · "Review & schedule" schedules immediately — there is no review step
 
-**Status** fixed 2026-09-01, awaiting live verification
+**Status** fixed and verified live 2026-09-01 (`9f9e7bc`) — the button reads "Schedule →".
 **Found** 2026-09-01, live in production. I clicked it expecting a review and it
 scheduled a real post to the live Jotacular Page four minutes out. Caught and
 unscheduled; publish receipts confirm nothing was sent.

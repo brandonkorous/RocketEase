@@ -1,6 +1,12 @@
 # B-001 · P1 · We strip the C2PA content credential at publish and say nothing
 
-**Status** fixed 2026-09-01, awaiting live verification
+**Status** fixed and verified live 2026-09-01 (`9f9e7bc`)
+
+**Verified** the composer now warns: *"ai-image-2026-09-01-1.png" had a content
+credential and lost it when we re-encoded the file for publishing.* It persists whether or
+not synthetic media is declared — the credential is gone either way — and stays silent for
+a non-AI upload. This also settled the open question: the original really is C2PA-signed,
+so gpt-image-2 output carries a manifest and we were removing it.
 **Found** 2026-09-01, live in production, attaching a generated image to a Facebook post
 **Where** `apps/platform/worker/handlers/asset/image.ts`, `apps/platform/lib/content.ts`
 

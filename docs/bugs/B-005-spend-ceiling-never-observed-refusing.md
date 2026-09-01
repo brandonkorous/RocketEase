@@ -1,6 +1,7 @@
 # B-005 · P2 · The spend ceiling cannot refuse anything the product can ask for
 
-**Status** partially fixed — tests added 2026-09-01; still never observed live
+**Status** verified 2026-09-01 — the control works. The *design* problem (it cannot fire
+on any honest image job, and can only be exercised by deploying a wrong value) is still open.
 **Where** `deploy/k8s/overlays/production/kustomization.yaml`,
 `apps/platform/lib/media/ceiling.ts`
 
@@ -28,10 +29,15 @@ The pod's environment is also confirmed good: the ConfigMap holds all four value
 running pods are on the SHA that generated it, and `STAFF_EMAILS` from that same map is
 verified working live — `envFrom` loads the whole map or none of it.
 
-## What is still not verified
+## Watched refusing, 2026-09-01
 
-That a refusal renders as a toast in the browser rather than a crash. Watching it
-requires deploying a deliberately low ceiling, which needs a push.
+Lowered to $0.01 for one deploy and pressed Generate in the production Content Library:
+
+> That would cost about $0.05, above the $0.01 limit for a single generation.
+
+A red toast, not a crash. The library still showed 4 assets afterwards — the refusal
+happens before a row exists or an adapter is called, exactly as `prepareJob` intends.
+Restored to $0.50 in the next commit (`a80e012`).
 
 ## The better fix
 

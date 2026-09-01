@@ -1,0 +1,73 @@
+/*
+ * The images HTTP call, shared by OpenAI direct and Azure OpenAI.
+ *
+ * The two differ in exactly three places — the URL, the auth header, and
+ * whether the model rides in the path or the body — so they share everything
+ * else. Two copies would drift on error mapping, which is the part that decides
+ * whether the worker re-spends money.
+ */
+import type { ModelDescriptor } from "../io";
+import { MediaError, type GenerationSpec, type RawOutput } from "../types";
+
+export const TIMEOUT_MS = 120_000;
+
+/** Declared aspects → the only sizes the endpoint documents. */
+export const SIZES: Record<string, string> = { "1:1": "1024x1024", "3:2": "1536x1024", "2:3": "1024x1536" };
+
+export type ImagesReply = { data?: { b64_json?: string }[]; error?: { message?: string; code?: string; type?: string } };
+
+/** Where to post, how to authenticate, and what the body must carry. */
+export type Transport = {
+  url: (model: ModelDescriptor) => string;
+  headers: () => Record<string, string>;
+  /** Azure names the model in the URL path, so it is absent from the body. */
+  modelInBody: boolean;
+};
+
+/** Everything that can go wrong with one call, mapped to a category. */
+export function errorFor(status: number, body: ImagesReply | null): MediaError {
+  const code = body?.error?.code ?? body?.error?.type;
+  const message = body?.error?.message ?? `The image endpoint returned ${status}.`;
+  if (status === 401 || status === 403) return new MediaError("The image API key was rejected.", { category: "permission", vendorCode: code });
+  if (status === 404) return new MediaError("No such image deployment. Check the deployment name matches the model.", { category: "validation", vendorCode: code });
+  if (status === 429) return new MediaError("The image endpoint is rate limiting us.", { category: "rate_limit", vendorCode: code });
+  // Azure returns content_filter; OpenAI returns a moderation-shaped message.
+  if (status === 400 && /policy|moderation|safety|content_filter/i.test(`${code} ${message}`)) {
+    return new MediaError("The prompt was refused on content-policy grounds.", { category: "policy", retryable: false, vendorCode: code });
+  }
+  if (status === 400) return new MediaError(message, { category: "validation", vendorCode: code });
+  // 5xx: the request may well have been billed, so it is ambiguous, not just temporary.
+  return new MediaError("The image request didn't complete.", { category: "temporary", ambiguous: true, vendorCode: code });
+}
+
+export async function requestImages(t: Transport, model: ModelDescriptor, spec: GenerationSpec, count: number): Promise<RawOutput[]> {
+  const size = SIZES[spec.aspect ?? "1:1"];
+  // Routing should have caught this; refusing here costs nothing and a silently
+  // squared portrait is worse than a refusal.
+  if (!size) throw new MediaError(`This model doesn't render ${spec.aspect}.`, { category: "validation", retryable: false });
+
+  const body: Record<string, unknown> = { prompt: spec.prompt, n: count, size };
+  if (t.modelInBody) body.model = model.vendorModelId;
+
+  let res: Response;
+  try {
+    res = await fetch(t.url(model), {
+      method: "POST",
+      headers: { ...t.headers(), "content-type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch (cause) {
+    // We never learned whether it ran. That is the ambiguous case by definition.
+    throw new MediaError("The image request didn't complete.", { category: "temporary", ambiguous: true, cause });
+  }
+
+  const reply = (await res.json().catch(() => null)) as ImagesReply | null;
+  if (!res.ok) throw errorFor(res.status, reply);
+
+  const outputs = (reply?.data ?? []).flatMap<RawOutput>((d) =>
+    d.b64_json ? [{ bytes: Buffer.from(d.b64_json, "base64"), claimedMimeType: "image/png" }] : [],
+  );
+  if (!outputs.length) throw new MediaError("The image endpoint returned no image.", { category: "unknown", retryable: false });
+  return outputs;
+}

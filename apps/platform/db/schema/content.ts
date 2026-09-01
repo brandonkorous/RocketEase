@@ -58,6 +58,12 @@ export const contentItem = pgTable(
     tagIds: jsonb("tag_ids").$type<string[]>().notNull().default([]),
     /** null = never declared; the composer writes it the first time an author answers. */
     syntheticMedia: jsonb("synthetic_media").$type<SyntheticMedia>(),
+    /**
+     * The ad creative plan (M12.2). Deliberately UNTYPED here: the column can
+     * hold a plan written by an older build, so every read goes through
+     * lib/media/plan/schema.ts rather than trusting the shape.
+     */
+    adPlan: jsonb("ad_plan"),
     /** Earliest scheduled time across variants (for calendar/list summaries). */
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
     currentVersionId: text("current_version_id"),

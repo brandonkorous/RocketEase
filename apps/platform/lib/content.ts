@@ -10,6 +10,7 @@ import { contentItem, postVariant, type ContentItem, type PostVariant, type Vari
 import { workspace } from "@/db/schema/app";
 import { wasNotScanned } from "./assets/scan-note";
 import { disclosureGap, readRequireAiDisclosure, toDisclosureInput } from "./disclosure";
+import { credentialIssue } from "./media/credential";
 import { getAdapter, toDescriptor } from "./providers";
 import { grantsForUse, rightsAssets } from "./rights/queries";
 import { rightsProblemsForPublish } from "./rights/rules";
@@ -56,6 +57,9 @@ export async function mediaForAssets(assetIds: string[], opts: { forPublish?: bo
     if (a.scanStatus !== "clean") problems.push({ severity: "error", code: "asset_unscanned", message: `${a.fileName} hasn't passed the safety scan.`, field: "media" });
     // A `clean` nothing actually inspected must not read like a clean scan.
     else if (wasNotScanned(a.scanNote)) problems.push({ severity: "warning", code: "asset_not_scanned", message: `${a.fileName} was not virus-scanned — no scanner is configured for this deployment.`, field: "media" });
+    // A credential our own pipeline removed is a disclosure we removed (Art. 50).
+    const credential = credentialIssue(a);
+    if (credential) problems.push({ ...credential, field: "media" });
     // Providers pull the "web" rendition when it exists (already oriented/compressed), else the original.
     const web = rends.find((r) => r.assetId === a.id && r.kind === "preview" && a.kind === "image");
     const key = opts.forPublish && web ? web.storageKey : a.storageKey;

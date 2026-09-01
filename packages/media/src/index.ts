@@ -7,20 +7,22 @@
 export * from "./client";
 export * from "./adapter";
 export { mockAdapter, MOCK_MODELS, MOCK_POLLS_BEFORE_DONE, __resetMockJobs } from "./mock";
+export { openaiAdapter, azureOpenAiAdapter, OPENAI_MODELS, AZURE_OPENAI_MODELS, __resetOpenAiJobs } from "./openai";
+export { mockTranscribe, MOCK_TRANSCRIPT_CONFIDENCE, MOCK_FALLBACK_SECONDS } from "./mock/transcribe";
 
 import { availabilityFrom, type AdapterRegistry, type MediaAdapter } from "./adapter";
 import { mockAdapter } from "./mock";
+import { azureOpenAiAdapter, openaiAdapter } from "./openai";
 
 /**
  * Adapters this deployment can use. Each decides for itself whether it is
  * configured, so an unset key means a hidden capability rather than a crash —
  * the rule lib/ai/client.ts already follows for ANTHROPIC_API_KEY.
  *
- * Real adapters (fal, vertex, runway, openai, elevenlabs) register here as they
- * land in 12.2+.
+ * Remaining adapters (fal, vertex, runway, elevenlabs) register here as they land.
  */
 export function buildRegistry(extra: MediaAdapter[] = []): AdapterRegistry {
-  const all = [mockAdapter(), ...extra];
+  const all = [mockAdapter(), azureOpenAiAdapter(), openaiAdapter(), ...extra];
   return new Map(all.map((a) => [a.key, a]));
 }
 

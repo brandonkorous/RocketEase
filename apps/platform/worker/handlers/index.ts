@@ -24,6 +24,8 @@ import { billingReportUsage } from "./billing-report-usage";
 import { providerDeletion } from "./provider-deletion";
 import { mediaGenerate } from "./media-generate";
 import { mediaPoll } from "./media-poll";
+import { mediaRender } from "./media-render";
+import { mediaTranscribe } from "./media-transcribe";
 
 export type HandlerContext = { log: Logger; signal: AbortSignal };
 export type Handler<N extends JobName> = (data: JobPayloads[N], ctx: HandlerContext) => Promise<void>;
@@ -42,6 +44,8 @@ export const handlers: { [N in Exclude<JobName, "outbox.relay">]: Handler<N> } =
   "asset.process": assetProcess,
   "media.generate": mediaGenerate,
   "media.poll": mediaPoll,
+  "media.render": mediaRender,
+  "media.transcribe": mediaTranscribe,
   "inbox.sync": inboxSync,
   "inbox.reply": inboxReply,
   "quality.check": qualityCheck,

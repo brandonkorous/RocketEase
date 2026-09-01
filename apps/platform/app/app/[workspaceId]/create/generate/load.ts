@@ -4,7 +4,7 @@ import { NETWORK_LABEL } from "@/components/composer/types";
 import { aiConfigured } from "@/lib/ai/client";
 import { adCapable } from "@/lib/ai/generator/ads";
 import { listBriefs } from "@/lib/ai/generator/briefs";
-import { imagesConfigured } from "@/lib/ai/generator/images";
+import { canGenerate } from "@/lib/media/jobs";
 import { loadBrandKit } from "@/lib/brand/store";
 import { publishableChannels } from "@/lib/content";
 import { hasCapability, type WorkspaceContext } from "@/lib/session";
@@ -39,5 +39,5 @@ export async function loadGenerator(ctx: WorkspaceContext): Promise<GeneratorLoa
     configured: Boolean(kit.voice.tone || kit.identity.oneLiner || kit.messaging.valueProps.length),
     styled: Boolean(kit.visual.imagery.style || kit.visual.palette.length),
   };
-  return { kind: "ready", channels, savedBriefs, imagesEnabled: imagesConfigured(), brand };
+  return { kind: "ready", channels, savedBriefs, imagesEnabled: canGenerate("scene_still"), brand };
 }

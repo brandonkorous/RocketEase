@@ -134,6 +134,20 @@
       "when": 1788077742432,
       "tag": "0018_bitter_silver_samurai",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788082297953,
+      "tag": "0019_powerful_the_renegades",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1788083309237,
+      "tag": "0020_stormy_mesmero",
+      "breakpoints": true
     }
   ]
 }

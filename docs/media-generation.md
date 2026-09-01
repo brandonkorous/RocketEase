@@ -187,7 +187,8 @@ packages/media/src/
   fal/            the breadth adapter — FLUX, Seedream, Nano Banana, Kling, Seedance, Wan
   vertex/         Veo direct — IAM, audit logging, enterprise terms
   runway/         Gen-4.5, Aleph 2.0, Act-Two
-  openai/         Sora 2; Images (moved from lib/ai/generator/images.ts, behaviour unchanged)
+  openai/         Images — the first real adapter, direct AND via Azure OpenAI
+                  (one transport seam, two adapters). Sora 2 when someone reads its page
   elevenlabs/     tts, sfx, music, scribe, dubbing
 ```
 
@@ -196,6 +197,7 @@ One interface, because every vendor has the same three shapes:
 ```ts
 export interface MediaAdapter {
   readonly key: AdapterKey;
+  readonly synchronous?: boolean;                            // `start` did the whole job
   models(): ModelDescriptor[];
   estimate(spec: GenerationSpec): CostEstimate;              // never guesses; { unknown } instead
   start(spec: GenerationSpec, idempotencyKey: string): Promise<MediaJobHandle>;
@@ -207,7 +209,9 @@ export interface MediaAdapter {
 ```
 
 `start`/`poll`/`fetch` is the honest shape: a sync vendor implements `start` as "do it now" and
-`poll` as "already done," and the caller never branches. `MediaError` carries the same
+`poll` as "already done," and the caller never branches. `synchronous` says which kind it is, and
+that is not cosmetic: an adapter holding job state in memory cannot be started in the web process
+and polled in the worker, so `runMediaJobNow` queues everything that does not declare it. `MediaError` carries the same
 `category`/`retryable`/`ambiguous` triple as `ProviderError`, so the publish-worker discipline
 transfers directly — **an ambiguous generation is reconciled before any re-spend**, because a blind
 retry on an expensive render is a real bill.
@@ -485,9 +489,9 @@ Five stages, each independently shippable. 12.1 fixes a live defect on its own.
 | Stage | Contents | Unblocks |
 |---|---|---|
 | **12.1 Pipeline foundation** | `feature_grant` beta gate (§9a); ffmpeg in a dedicated media worker; video/audio probe, poster frame, transcode renditions; `ASSET_KINDS` += `audio`; `media_job` + `media.*` queues; `packages/media` with the registry, routing and the **mock adapter**; output normalization; cost instrumentation + hard ceiling; asset provenance and lineage columns | Correct video publish validation (a live defect); everything below |
-| **12.2 Static ad creative** | `AdPlan`; `ReferenceSet` bound to the brand kit; `product_still` / `scene_still` via fal; **deterministic type + logo compositing**; `ad-canvas-specs.ts` and the placement preflight; per-placement variants | The highest-quality-per-dollar output, and the compositing and preflight that video reuses wholesale |
-| **12.3 Voice & captions** | Scribe/Deepgram → `caption_track` with word timings; burned-in caption renditions + SRT/VTT sidecar; TTS voice-over with stock voices; `voice` table and the consent gate | Accessibility (WCAG 2.2 AA); the lowest-risk generation feature |
-| **12.4 Video assembly** | Shot generation routed per `JobKind`; assembly of generated + uploaded footage; audio mix with ducking and −14 LUFS; per-placement aspect renders; plan editing and re-render | "One brief, five placements" as a real, repeatable flow |
+| **12.2 Static ad creative** ✅ | `AdPlan` (`content_item.ad_plan`); `ReferenceSet` bound to the brand kit, downsampled with named drops; **deterministic type + logo compositing** (sharp/Pango, measured not estimated); `lib/media/canvas/specs.ts` + safe-zone geometry; two-phase preflight; per-placement variants on one axis; render fingerprints | The highest-quality-per-dollar output, and the compositing and preflight that video reuses wholesale |
+| **12.3 Voice & captions** ✅ | `caption_track` with word timings; cue rules; burned-in captions via **ASS/libass, margins from the placement safe zone**; SRT/VTT sidecar; `voice` table with the consent gate enforced twice (before spend, and through the asset's rights scope); nightly consent expiry | Accessibility (WCAG 2.2 AA); the lowest-risk generation feature |
+| **12.4 Video assembly** ✅ | Two-pass assembly (normalise every shot, then concat); composited type as an overlay layer; burned-in captions; audio mix with ducking and −14 LUFS; per-placement renders; **rights merged across every ingredient**; the picture decides the length | "One brief, five placements" as a real, repeatable flow |
 | **12.5 Advanced motion & provenance** | Reference-conditioned `product_motion`; `sequence`; `footage_edit` (Aleph); consent-gated `performance`; music generation + `platform_clearance`; C2PA re-signing | The headline capability, last — worthless without 12.1–12.4 |
 
 **Static before video** is deliberate and it is a change from the obvious ordering: static ads are

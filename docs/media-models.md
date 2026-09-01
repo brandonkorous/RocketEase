@@ -108,8 +108,15 @@ export type ModelDescriptor = {
 };
 ```
 
-Five rules the registry exists to enforce:
+Seven rules the registry exists to enforce:
 
+0. **The same model reached two ways is two entries.** `gpt-image-1` and
+   `azure-gpt-image-1` share weights and differ in terms, region and processor, so they are separate
+   descriptors with separate keys — a `media_job` that ran on Azure must read back as Azure forever,
+   not be retconned when a deployment moves. Azure sits ahead of the direct vendor in registry
+   order, so a deployment with both configured prefers it. Its `vendorModelId` becomes the Azure
+   DEPLOYMENT NAME in the URL path, which is why the deployment must be named after the model — and
+   why rule 1 still holds.
 1. **Vendor model ids are pinned exactly and never constructed.** No string interpolation, no
    "latest". A vendor renaming a model is a code change with a `checkedAt` bump, reviewed — not a
    config value that drifts and silently starts billing differently.
@@ -121,7 +128,11 @@ Five rules the registry exists to enforce:
 4. **`checkedAt` ages.** A descriptor not re-checked in 90 days surfaces in the same
    data-quality sweep that already runs (`quality.check`). Vendors ship monthly; a stale capability
    claim is how you promise a customer something that stopped being true.
-5. **The catalogue is browser-safe.** `packages/media/src/client.ts` re-exports descriptors with no
+5. **A synchronous adapter says so.** `MediaAdapter.synchronous` is what lets the concept card
+   hand back a picture inline while everything else takes the queue. Undeclared means queued, which
+   is the safe answer: an adapter that keeps job state in memory cannot be started in one process
+   and polled from another.
+6. **The catalogue is browser-safe.** `packages/media/src/client.ts` re-exports descriptors with no
    keys and no node dependencies, so the composer can render "why this model" without a round trip —
    the same split `packages/providers/src/client.ts` already makes.
 

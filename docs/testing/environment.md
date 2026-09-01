@@ -20,7 +20,7 @@ Vault via the CI `deploy` job (`.github/workflows/ci.yml`, the `required`/`optio
 | `CLAMAV_URL` | **optional — assume unset** | See watch-out W1. Scanning is a no-op that reports `clean`. |
 | `REPORT_CHROMIUM_PATH` | optional | Unset ⇒ reports render as HTML, no PDF. The UI is supposed to say so. Verify it does. |
 | `ANTHROPIC_API_KEY`, `AI_MODEL` | optional | Gates all text AI. |
-| `OPENAI_API_KEY`, `AI_IMAGE_MODEL` | optional | Gates image generation. |
+| `OPENAI_API_KEY` | optional | Gates image generation. The model is a registry entry, not an env var. |
 | `STRIPE_*` | optional | Gates Settings → Billing. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | optional | Tracing export; not a user-facing surface. |
 

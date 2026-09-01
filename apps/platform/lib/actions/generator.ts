@@ -5,10 +5,10 @@ import { db } from "@/db";
 import { AI_UNCONFIGURED, aiConfigured, aiGenerator } from "@/lib/ai/client";
 import { loadBrandContext, loadDraftChannels } from "@/lib/ai/context";
 import { saveBriefRow } from "@/lib/ai/generator/briefs";
-import { imageGeneratorFor } from "@/lib/ai/generator/image-assets";
-import { imagesConfigured, MAX_IMAGES } from "@/lib/ai/generator/images";
+import { generateConceptImages, MAX_IMAGES } from "@/lib/ai/generator/image-assets";
 import { runGenerator, runRegenerate } from "@/lib/ai/generator/run";
 import { brandImagePrompt } from "@/lib/brand/prompt";
+import { canGenerate } from "@/lib/media/jobs";
 import { loadBrandKit } from "@/lib/brand/store";
 import { draftFromConcept } from "@/lib/ai/generator/send";
 import { briefSchema, conceptWireSchema, type Brief, type Concept, type GeneratorResult } from "@/lib/ai/generator/types";
@@ -94,15 +94,14 @@ export async function generateImage(input: z.input<typeof imageSchema>): Promise
   const { workspaceId: ws, prompt, aspect, count, altText } = parsed.data;
   return guard(async () => {
     const ctx = await requireCapability(ws, "content.create");
-    if (!imagesConfigured()) return { error: "Image generation isn't configured." };
+    if (!canGenerate("scene_still")) return { error: "Image generation isn't configured." };
     const actor = { organizationId: ctx.workspace.organizationId, workspaceId: ws, userId: ctx.session.user.id };
-    const generator = imageGeneratorFor(actor, altText ?? null);
-    if (!generator) return { error: "Image generation isn't configured." };
     // The brand's visual direction is appended server-side, so every image from
     // this workspace follows the same palette and house style.
     const style = brandImagePrompt(await loadBrandKit(ws));
-    const res = await generator.generate([prompt, style].filter(Boolean).join("\n\n"), { aspect, count });
+    const res = await generateConceptImages(actor, [prompt, style].filter(Boolean).join("\n\n"), { aspect, count }, altText ?? null);
     if ("error" in res) return res;
+    if ("pending" in res) return { ok: res.pending };
     await track("ai.image.generated", { userId: actor.userId, organizationId: actor.organizationId, workspaceId: ws, surface: "action:generator.image", props: { count: res.assetIds.length, aspect, branded: Boolean(style) } });
     return { images: await previews(ws, res.assetIds) };
   });

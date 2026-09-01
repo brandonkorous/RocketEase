@@ -171,7 +171,7 @@ Positioning: **the honest social OS** — never a duplicate or phantom failure, 
 |---|---|---|
 | 9.1 | AI usage ledger + credits (`ai_usage`, monthly allowance, hard cap, usage meter) | ✅ |
 | 9.2 | Stripe billing — per-workspace subscription, Customer Portal, AI overage via Billing Meters, webhooks, Settings → Billing, entitlements + 7-day grace | ✅ |
-| 9.3 | Post & ad generator — brief → concepts per network + ad copy sets against network specs → draft in Create; env-gated image generation (`OPENAI_API_KEY` + `AI_IMAGE_MODEL`). Needs: `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_AI_ENABLED=1`; Stripe dashboard setup per `docs/billing.md` | ✅ |
+| 9.3 | Post & ad generator — brief → concepts per network + ad copy sets against network specs → draft in Create; env-gated image generation (`OPENAI_API_KEY`; routed through the media registry since 12.5). Needs: `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_AI_ENABLED=1`; Stripe dashboard setup per `docs/billing.md` | ✅ |
 
 ---
 
@@ -225,6 +225,9 @@ placement preflight, disclosure. Read before starting anything here:
 - **`docs/media-generation.md`** — the pipeline, data model, workers, build order
 - **`docs/media-models.md`** — model choices, output types, routing, and how the registry is managed
 - **`docs/plans/m12.1-media-foundation.md`** — the execution plan for stage 12.1 (work packages, gates, env)
+- **`docs/plans/m12.2-static-ad-creative.md`** — the execution plan for stage 12.2 (work packages, gates, findings)
+- **`docs/plans/m12.3-voice-captions.md`** — the execution plan for stage 12.3 (captions, consent, burn-in)
+- **`docs/plans/m12.4-video-assembly.md`** — the execution plan for stage 12.4 (assembly, audio mix, rights merge)
 - `docs/research/ai-media-2026.md` — the evidence behind all three
 
 **Build it, dogfood it, price it from measurement** (user decision, 2026-08-30). It ships behind a
@@ -243,10 +246,12 @@ learn. **That is a live defect in video publishing today**, before a frame is ge
 | # | Item | Status |
 |---|---|---|
 | 12.1 | **Pipeline foundation** — ✅ done 2026-08-30. Staff surface (`staff_user`, `requireStaff`, `/staff`); beta gate (`feature_grant`, `lib/features`, default closed); `packages/media` (registry, routing, cost, mock adapter with real decodable media); `media_job` + `media.*` queues + worker roles + a dedicated media Deployment with ffmpeg; ffprobe toolchain; `asset.process` split and extended (video/audio probe, poster, thumb); output normalization; cost instrumentation + hard ceiling; asset provenance and lineage. **Closes the live video-publishing defect.** 771 tests | ✅ |
-| 12.2 | Static ad creative — `AdPlan`; `ReferenceSet` bound to the brand kit; product/scene stills; **deterministic type + logo compositing**; `ad-canvas-specs.ts` and the placement preflight; per-placement variants | ☐ |
-| 12.3 | Voice & captions — Scribe/Deepgram → `caption_track` with word timings; burned-in caption renditions + SRT/VTT sidecar (almost no network takes a sidecar over its API; YouTube does); TTS voice-over with stock voices; `voice` table and the consent gate | ☐ |
-| 12.4 | Video assembly — shot generation routed per job kind; assembly of generated + uploaded footage; audio mix with ducking and −14 LUFS; per-placement aspect renders; plan editing and re-render | ☐ |
-| 12.5 | Advanced motion & provenance — reference-conditioned product motion; multi-shot sequences; footage editing (Aleph); consent-gated performance transfer; music generation + `platform_clearance`; C2PA re-signing | ☐ |
+| 12.2 | **Static ad creative** — ✅ done 2026-08-30. `AdPlan` on `content_item.ad_plan` (plan, not pixels); sourced canvas specs + safe-zone geometry; `ReferenceSet` downsampled to the routed model's ceiling with **named** drops; deterministic sharp/Pango compositing with **measured** type and reported font substitution; two-phase preflight (before a render for rights/clearance/resolution, after it for safe zones and overflow); render fingerprints so a stale render is detectable; `media.render` on the media worker. 897 tests | ✅ |
+| 12.3 | **Voice & captions** — ✅ done 2026-08-30. `caption_track` (word timings) + `voice` (consent block); words→cues with stated rules; SRT/VTT sidecar with round-trip parsing; **ASS burn-in through libass with margins from the placement's safe zone**, verified in the pixels; transcription contract + mock transcriber; `media.transcribe` reconciling against our own row; consent enforced twice (before spend, and via the asset's rights scope); owner-only replicas, audited; nightly consent expiry. 966 tests | ✅ |
+| 12.4 | **Video assembly** — ✅ done 2026-08-30. Two-pass assembly (normalise every shot to one canvas/fps/pixel format/audio layout, THEN concat — mixed formats otherwise stop after the first clip); the same composited type as an overlay layer; burned-in captions from the voice-over; audio mix with ducking and −14 LUFS; **rights merged across all ingredients on four axes**; the picture decides the length and a truncated voice-over is reported; `renderAdPlan` routes still-vs-cut from what the shots ARE. 1026 tests | ✅ |
+| 12.4a | **First real adapter, and the last bypass closed** — ✅ done 2026-08-30. `packages/media/src/openai` implements `MediaAdapter` for Images and is registered in the catalog with pinned `vendorModelId`, unverified cost/terms recorded as null rather than guessed. The concept card's image button no longer calls a vendor directly: it routes, is checked against the spending ceiling it previously bypassed, and writes a `media_job` recording model + reason. `AI_IMAGE_MODEL` is gone — the model is a registry entry. Adapters declare `synchronous`; anything else is queued. Routing rejects an aspect a model does not render. 1077 tests repo-wide (+28 here) | ✅ |
+| 12.5a | **Content credentials — probe, record, disclose** — ✅ done 2026-08-30. `lib/media/c2pa.ts` detects a C2PA manifest in the BYTES (JUMBF superbox, container-independent), so `ModelDescriptor.provenance.c2pa` is a claim we check rather than a fact we assert; disagreements land in `media_job.mismatches` beside the duration ones. Derived assets probe their own output instead of assuming a strip. A credential our pipeline removed is surfaced at publish time — the disclosure duty EU AI Act Art. 50 has carried since 2 Aug 2026, and the thing TikTok and Meta auto-label from. Detection, never validation. +22 tests here; 1117 repo-wide at completion | ✅ |
+| 12.5b | Advanced motion & re-signing — reference-conditioned product motion (Seedance); multi-shot sequences (Kling); footage editing (Aleph); consent-gated performance transfer (Act-Two); music generation + `platform_clearance`. **Blocked**: each needs real vendor credentials before a descriptor can be written, music needs a licensed-data vendor decision, and C2PA re-signing needs a signing certificate set by hand in Key Vault | ☐ |
 
 Dogfood corpus: seven live brands — `sparx.works`, `meetpiggles.com`, `jotacular.com`,
 `silicaui.com`, `wize.works`, `agconn.com`, `kanninja.com`. Private posting to a real network is

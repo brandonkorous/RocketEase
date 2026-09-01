@@ -12,10 +12,11 @@
 import { createHash } from "node:crypto";
 import type { RawOutput } from "@rocketease/media";
 import { db } from "@/db";
-import { asset, type AssetKind, type AssetProvenance } from "@/db/schema/assets";
+import { asset, type AssetKind, type RightsScope } from "@/db/schema/assets";
 import { audit } from "@/lib/audit";
 import { emit } from "@/lib/jobs/outbox";
 import { newObjectKey, putObject } from "@/lib/storage";
+import { credentialForOutput } from "./c2pa";
 import { mismatches, probeBuffer, wholeSeconds } from "./probe";
 import { sniffContainer } from "./sniff";
 
@@ -26,9 +27,18 @@ export type NormalizeInput = {
   mediaJobId: string;
   modelKey: string;
   outputs: RawOutput[];
-  /** Recorded on the asset so the disclosure chain survives our own pipeline. */
-  provenance: AssetProvenance;
+  /**
+   * What the MODEL says it attaches, plus where this output came from. Whether a
+   * credential is actually in the bytes is probed here, not taken on trust.
+   */
+  provenance: { claimsC2pa: boolean; watermark: string | null; chain: { action: string; adapter?: string; model?: string }[] };
   altText?: string | null;
+  /**
+   * What the output may be used for. A voice-over made under organic-only
+   * consent is an organic-only asset, so the rights preflight blocks it from an
+   * ad without anyone having to remember the consent record.
+   */
+  rightsScope?: RightsScope;
 };
 
 export type NormalizeResult = { assetIds: string[]; mismatches: string[] };
@@ -64,6 +74,11 @@ export async function normalizeOutputs(input: NormalizeInput): Promise<Normalize
       }).map((m) => `output ${i + 1} ${m}`),
     );
 
+    // Probe, never believe: the descriptor is the vendor's claim about their
+    // product, not a fact about these bytes (EU AI Act Art. 50 turns on the file).
+    const credential = credentialForOutput(buf, input.provenance.claimsC2pa);
+    if (credential.mismatch) allMismatches.push(`output ${i + 1} provenance: ${credential.mismatch}`);
+
     const name = fileName(sniffed.kind, sniffed.extension, i);
     const key = newObjectKey(actor.organizationId, actor.workspaceId, "original", name);
     await putObject(key, buf, sniffed.mimeType);
@@ -89,8 +104,9 @@ export async function normalizeOutputs(input: NormalizeInput): Promise<Normalize
           generatedByAi: true,
           generationModel: input.modelKey,
           mediaJobId: input.mediaJobId,
-          provenance: input.provenance,
+          provenance: { c2pa: credential.state, watermark: input.provenance.watermark, chain: input.provenance.chain },
           licenseSource: "ai_generated",
+          rightsScope: input.rightsScope ?? "both",
           uploadedByUserId: actor.userId,
         })
         .returning({ id: asset.id });

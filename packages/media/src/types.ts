@@ -91,6 +91,9 @@ export type GenerationSpec = {
   seed?: number;
   language?: string;
   voiceId?: string;
+  /** Description for the produced asset. Kept on the spec so a job finished by
+   * the poller hours later still lands with it. */
+  altText?: string;
   /** Set only when a person pinned a model in the UI; routing honours it. */
   modelKey?: string;
 };

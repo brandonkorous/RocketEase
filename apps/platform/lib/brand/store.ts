@@ -7,18 +7,10 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { workspace } from "@/db/schema/app";
-import { readBrandKit } from "./read";
-import type { BrandKit } from "./types";
 
-export async function loadWorkspaceSettings(workspaceId: string): Promise<Record<string, unknown> | null> {
-  const [ws] = await db.select({ settings: workspace.settings }).from(workspace).where(eq(workspace.id, workspaceId));
-  return ws?.settings ?? null;
-}
-
-export async function loadBrandKit(workspaceId: string): Promise<BrandKit> {
-  const settings = await loadWorkspaceSettings(workspaceId);
-  return readBrandKit(settings ?? {});
-}
+// Reads live in load.ts so the worker can use them; re-exported here so every
+// existing `from "@/lib/brand/store"` import keeps working.
+export { loadBrandKit, loadWorkspaceSettings } from "./load";
 
 /**
  * Merge one section into the stored kit. The legacy `brandVoice` key is dropped

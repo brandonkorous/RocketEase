@@ -11,15 +11,20 @@
  *   2. Retired models are never deleted — old media_job rows must still resolve.
  *   3. `indemnity: null` means the vendor does not say. Not the same as false.
  *
- * STAGE 12.1 SHIPS MOCK ENTRIES ONLY. Real descriptors land with their adapters
- * in 12.2+, each one read off the vendor's page by a person on `checkedAt`.
+ * Real descriptors are read off the vendor's page by a person on `checkedAt`.
+ *
+ * ORDER IS THE DEFAULT ROUTE. Mocks first, so a dev box with both
+ * MEDIA_ENABLE_MOCK=1 and a real key spends nothing. Then Azure ahead of the
+ * direct vendor: same weights, but the tenant's own region and the Azure
+ * agreement, so a deployment with both configured should prefer it.
  */
 import { MOCK_MODELS } from "./mock/models";
+import { AZURE_OPENAI_MODELS, OPENAI_MODELS } from "./openai/models";
 import { isRetired, type ModelDescriptor } from "./io";
 import type { JobKind } from "./types";
 
 /** Split to catalog/{video,image,audio}.ts once real models push this past 250 lines. */
-export const MODELS: ModelDescriptor[] = [...MOCK_MODELS];
+export const MODELS: ModelDescriptor[] = [...MOCK_MODELS, ...AZURE_OPENAI_MODELS, ...OPENAI_MODELS];
 
 const BY_KEY = new Map(MODELS.map((m) => [m.key, m]));
 

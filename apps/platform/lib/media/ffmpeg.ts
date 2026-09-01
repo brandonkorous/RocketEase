@@ -40,10 +40,13 @@ export type RunResult = { stdout: Buffer; stderr: string };
  * Run a media tool to completion. Rejects with MediaToolError; `missing` marks
  * "the binary is not here", which callers treat as unknown rather than failure.
  */
-export function run(bin: string, args: string[], opts: { timeoutMs?: number; input?: Buffer } = {}): Promise<RunResult> {
+export function run(bin: string, args: string[], opts: { timeoutMs?: number; input?: Buffer; cwd?: string } = {}): Promise<RunResult> {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, { windowsHide: true });
+    // cwd matters for filter arguments that name a file: ffmpeg's `subtitles=`
+    // parser treats `:` as a separator, so a Windows drive letter breaks it.
+    // Running IN the scratch directory lets callers pass a bare filename.
+    const child = spawn(bin, args, { windowsHide: true, cwd: opts.cwd });
     const out: Buffer[] = [];
     let err = "";
     let settled = false;

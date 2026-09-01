@@ -1,73 +1,33 @@
 /*
- * Generated images enter the library through the same door as an upload:
- * object storage → asset row → asset.process (renditions + scan hook). They
- * are flagged as AI-generated so the composer can suggest the synthetic-media
- * disclosure instead of leaving it to the author to remember.
+ * Images for a concept card, generated through the media pipeline.
+ *
+ * There is no second image path any more. This routes like every other
+ * generation — a model is chosen for a stated reason, the estimate is checked
+ * against the spending ceiling, and a media_job row records what ran — and the
+ * bytes enter the library through the same door as an upload.
+ *
+ * It runs inline rather than through the worker because the routed vendor
+ * answers in one call and the person is watching. run-now.ts hands a slow one
+ * to the poller instead.
  */
 import "server-only";
-import { db } from "@/db";
-import { asset } from "@/db/schema/assets";
-import { audit } from "@/lib/audit";
-import { emit } from "@/lib/jobs/outbox";
-import { newObjectKey, putObject } from "@/lib/storage";
-import { imageModel, imagesConfigured, renderImages, type GeneratedImage, type ImageGenerator, type ImageOptions } from "./images";
+import { runMediaJobNow } from "@/lib/media/run-now";
+import { conceptImageSpec, type ImageOptions } from "./image-spec";
 
 export type ImageActor = { organizationId: string; workspaceId: string; userId: string };
+export type ConceptImageResult = { assetIds: string[] } | { pending: string } | { error: string };
 
-const fileName = (extension: string, i: number) => `ai-image-${new Date().toISOString().slice(0, 10)}-${i + 1}${extension}`;
+export { MAX_IMAGES, type ImageAspect, type ImageOptions } from "./image-spec";
 
-/** One asset row per image, each queued for processing exactly like an upload. */
-async function store(actor: ImageActor, images: GeneratedImage[], altText: string | null): Promise<string[]> {
-  const ids: string[] = [];
-  for (const [i, img] of images.entries()) {
-    const name = fileName(img.extension, i);
-    const key = newObjectKey(actor.organizationId, actor.workspaceId, "original", name);
-    await putObject(key, img.bytes, img.mimeType);
-    const id = await db.transaction(async (tx) => {
-      const [row] = await tx
-        .insert(asset)
-        .values({
-          organizationId: actor.organizationId,
-          workspaceId: actor.workspaceId,
-          kind: "image",
-          storageKey: key,
-          fileName: name,
-          mimeType: img.mimeType,
-          bytes: img.bytes.byteLength,
-          title: name.replace(/\.[^.]+$/, ""),
-          altText,
-          uploadStatus: "processing",
-          generatedByAi: true,
-          generationModel: imageModel(),
-          uploadedByUserId: actor.userId,
-        })
-        .returning({ id: asset.id });
-      await emit(tx, "asset.process", { assetId: row.id }, { organizationId: actor.organizationId, workspaceId: actor.workspaceId, dedupeKey: `asset.process:${row.id}` });
-      return row.id;
-    });
-    ids.push(id);
-    await audit({
-      action: "asset.upload",
-      actorUserId: actor.userId,
-      organizationId: actor.organizationId,
-      workspaceId: actor.workspaceId,
-      targetType: "asset",
-      targetId: id,
-      summary: { after: { fileName: name, kind: "image", bytes: img.bytes.byteLength, generatedByAi: true, model: imageModel() } },
-    });
-  }
-  return ids;
-}
-
-/** null when unconfigured — callers hide the button rather than offering a dead one. */
-export function imageGeneratorFor(actor: ImageActor, altText: string | null = null): ImageGenerator | null {
-  if (!imagesConfigured()) return null;
-  return {
-    model: imageModel(),
-    async generate(prompt: string, opts: ImageOptions) {
-      const rendered = await renderImages(prompt, opts);
-      if ("error" in rendered) return { error: rendered.error };
-      return { assetIds: await store(actor, rendered.images, altText) };
-    },
-  };
+export async function generateConceptImages(
+  actor: ImageActor,
+  prompt: string,
+  opts: ImageOptions,
+  altText: string | null = null,
+): Promise<ConceptImageResult> {
+  const run = await runMediaJobNow({ ...actor, spec: conceptImageSpec(prompt, opts, altText) });
+  if ("error" in run) return run;
+  // Nothing failed — this model takes minutes, so the library is where it lands.
+  if ("pending" in run) return { pending: "The image is being generated. It'll appear in the library when it's done." };
+  return { assetIds: run.assetIds };
 }

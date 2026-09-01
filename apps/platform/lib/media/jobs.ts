@@ -14,7 +14,9 @@ import {
   isRouted,
   parseRates,
   routeJob,
+  modelsForJob,
   type CostEstimate,
+  type ModelDescriptor,
   type GenerationSpec,
   type RoutingPolicy,
 } from "@rocketease/media";
@@ -24,6 +26,8 @@ import { audit } from "@/lib/audit";
 import { emit } from "@/lib/jobs/outbox";
 import { log } from "@/lib/log";
 import { checkCeiling } from "./ceiling";
+import { checkVoice } from "./voice/store";
+import type { UsageScope } from "./voice/policy";
 
 export type CreateJobInput = {
   organizationId: string;
@@ -31,11 +35,27 @@ export type CreateJobInput = {
   userId: string;
   spec: GenerationSpec;
   policy?: RoutingPolicy;
+  /**
+   * What the output is for. Only consulted when a voice is involved, where an
+   * organic-only consent cannot carry a paid ad. Defaults to the narrower of
+   * the two — and the produced asset also inherits the consent's scope, so a
+   * wrong answer here is caught again by the rights preflight.
+   */
+  usage?: UsageScope;
 };
 
 export type CreateJobResult = { mediaJobId: string; modelKey: string; modelReason: string; estimate: CostEstimate } | { error: string };
 
 const rates = () => parseRates(process.env.AI_MEDIA_RATES_JSON, (m) => log.warn(m));
+
+/** Models this deployment can actually run for a job kind, in registry order. */
+export function modelsAvailableFor(jobKind: GenerationSpec["jobKind"], now?: Date) {
+  const isConfigured = availabilityFrom(buildRegistry());
+  return modelsForJob(jobKind, now).filter((m) => isConfigured(m.adapter));
+}
+
+/** Whether to offer the control at all — no configured model means no button. */
+export const canGenerate = (jobKind: GenerationSpec["jobKind"]) => modelsAvailableFor(jobKind).length > 0;
 
 /** What a generate button shows before anything is spent. */
 export function previewJob(spec: GenerationSpec, policy?: RoutingPolicy) {
@@ -45,35 +65,66 @@ export function previewJob(spec: GenerationSpec, policy?: RoutingPolicy) {
   return { model: routed.model, reason: routed.reason, estimate: estimateCost(routed.model, spec, rates()) };
 }
 
-export async function createMediaJob(input: CreateJobInput): Promise<CreateJobResult> {
+export type PreparedJob = { model: ModelDescriptor; reason: string; estimate: CostEstimate; idempotencyKey: string };
+
+/**
+ * Everything that can refuse, in the order that costs least. All of it runs
+ * before a row exists and long before an adapter is touched, so a refusal leaves
+ * no half-state. Shared by the queued path and the inline one.
+ */
+export async function prepareJob(input: CreateJobInput): Promise<PreparedJob | { error: string }> {
   const preview = previewJob(input.spec, input.policy);
   if ("error" in preview) return { error: preview.error ?? "No model can run this request." };
+
+  // Consent BEFORE spend. A refused voice must never reach a vendor.
+  if (input.spec.voiceId) {
+    const voice = await checkVoice(input.workspaceId, input.spec.voiceId, input.usage ?? "organic");
+    if ("error" in voice) return { error: voice.error };
+  }
 
   const ceiling = await checkCeiling(input.organizationId, preview.estimate);
   if ("error" in ceiling) return { error: ceiling.error };
 
-  // One key per request. Reusing it is what makes a retry safe; generating it
-  // here means the vendor sees the same key for every attempt at this job.
-  const idempotencyKey = `media_${randomUUID()}`;
+  // One key per request. Reusing it is what makes a retry safe; minting it here
+  // means the vendor sees the same key for every attempt at this job.
+  return { ...preview, idempotencyKey: `media_${randomUUID()}` };
+}
 
+/** The media_job row for a prepared request, in whichever state the caller starts it. */
+export function jobValues(input: CreateJobInput, prepared: PreparedJob, state: "queued" | "running") {
+  return {
+    organizationId: input.organizationId,
+    workspaceId: input.workspaceId,
+    jobKind: input.spec.jobKind,
+    adapter: prepared.model.adapter,
+    modelKey: prepared.model.key,
+    vendorModelId: prepared.model.vendorModelId,
+    modelReason: prepared.reason,
+    spec: input.spec as unknown as Record<string, unknown>,
+    seed: input.spec.seed ?? null,
+    idempotencyKey: prepared.idempotencyKey,
+    state,
+    requestedByUserId: input.userId,
+  };
+}
+
+/** Audited the same way whichever path ran it — the spend is what is being recorded. */
+export async function auditGeneration(input: CreateJobInput, prepared: PreparedJob, mediaJobId: string) {
+  await audit({
+    action: "media.generate",
+    actorUserId: input.userId,
+    organizationId: input.organizationId,
+    workspaceId: input.workspaceId,
+    targetType: "media_job",
+    targetId: mediaJobId,
+    summary: { after: { jobKind: input.spec.jobKind, model: prepared.model.key, reason: prepared.reason } },
+  });
+}
+
+/** The queued path: one row and one job, in one transaction, through the outbox. */
+export async function enqueueJob(input: CreateJobInput, prepared: PreparedJob): Promise<CreateJobResult> {
   const id = await db.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(mediaJob)
-      .values({
-        organizationId: input.organizationId,
-        workspaceId: input.workspaceId,
-        jobKind: input.spec.jobKind,
-        adapter: preview.model.adapter,
-        modelKey: preview.model.key,
-        vendorModelId: preview.model.vendorModelId,
-        modelReason: preview.reason,
-        spec: input.spec as unknown as Record<string, unknown>,
-        seed: input.spec.seed ?? null,
-        idempotencyKey,
-        state: "queued",
-        requestedByUserId: input.userId,
-      })
-      .returning({ id: mediaJob.id });
+    const [row] = await tx.insert(mediaJob).values(jobValues(input, prepared, "queued")).returning({ id: mediaJob.id });
     await emit(tx, "media.generate", { mediaJobId: row.id }, {
       organizationId: input.organizationId,
       workspaceId: input.workspaceId,
@@ -82,15 +133,11 @@ export async function createMediaJob(input: CreateJobInput): Promise<CreateJobRe
     return row.id;
   });
 
-  await audit({
-    action: "media.generate",
-    actorUserId: input.userId,
-    organizationId: input.organizationId,
-    workspaceId: input.workspaceId,
-    targetType: "media_job",
-    targetId: id,
-    summary: { after: { jobKind: input.spec.jobKind, model: preview.model.key, reason: preview.reason } },
-  });
+  await auditGeneration(input, prepared, id);
+  return { mediaJobId: id, modelKey: prepared.model.key, modelReason: prepared.reason, estimate: prepared.estimate };
+}
 
-  return { mediaJobId: id, modelKey: preview.model.key, modelReason: preview.reason, estimate: preview.estimate };
+export async function createMediaJob(input: CreateJobInput): Promise<CreateJobResult> {
+  const prepared = await prepareJob(input);
+  return "error" in prepared ? prepared : enqueueJob(input, prepared);
 }

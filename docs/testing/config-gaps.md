@@ -13,7 +13,7 @@ Secrets live in Key Vault and reach the app through the CI `deploy` job's `optio
 | 1 | `ANTHROPIC_API_KEY`, `AI_MODEL` | Key Vault | **All text AI is off.** `/create/generate` says "AI drafting isn't configured". Caption variants, the post and ad generator, repurposing, inbox reply drafts and every brand-kit-grounded prompt are unavailable and untestable (F-015). |
 | 2 | `NEXT_PUBLIC_AI_ENABLED=1` | GitHub repo **variable** | Even with a key, AI entry points may not render — this is build-time (see below). Set both. |
 | 3 | `CLAMAV_URL` | Key Vault + a ClamAV sidecar | **No malware scanning.** Assets are passed without inspection (F-002). Now recorded honestly rather than as a silent "clean", but the control is still absent. |
-| 4 | `OPENAI_API_KEY`, `AI_IMAGE_MODEL` | Key Vault | No image generation. |
+| 4 | `OPENAI_API_KEY` | Key Vault | No image generation. |
 | 5 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*`, `STRIPE_METER_AI_CREDITS`, `BILLING_*` | Key Vault | Billing is off. Settings → Billing says so clearly, and nothing is charged or gated. Fine for now; required before anyone pays. |
 | 6 | `REPORT_CHROMIUM_PATH` | Key Vault | Reports render as HTML with no PDF. The UI is supposed to say so — confirm before a client sees one. |
 | 7 | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME` | Key Vault | No trace export. M0.14 is still open on this. |

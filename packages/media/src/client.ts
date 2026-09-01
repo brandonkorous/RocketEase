@@ -8,3 +8,4 @@ export * from "./io";
 export { MODELS, modelByKey, modelLabel, modelsForJob, availableModels, describeCatalog, type AdapterAvailability, type CatalogEntry } from "./catalog";
 export { routeJob, isRouted, type RoutingPolicy, type RoutingResult, type RoutingRejection } from "./routing";
 export { estimate, quantityFor, parseRates, totalEstimate } from "./cost";
+export * from "./transcribe";

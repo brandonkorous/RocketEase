@@ -72,12 +72,54 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
   distinct from `lib/flags.ts` (global ops), entitlements (billing) and `can()` (role).
 - **Media generation**: `packages/media` is the adapter contract (`MediaAdapter`, model registry,
   per-`JobKind` routing with a recorded `model_reason`, honest `{ unknown }` cost estimates);
-  `mock` exercises the whole loop with real decodable fixtures and zero spend. Generation is a SPEND
+  `mock` exercises the whole loop with real decodable fixtures and zero spend. **There is exactly
+  one image path**: every generation routes through the registry, so nothing calls a vendor
+  directly and nothing escapes the ceiling. A model is a pinned catalog entry, never an env var.
+  An adapter declares `synchronous` when `start` does the whole job — `runMediaJobNow` runs those
+  inline and QUEUES everything else, because an adapter holding job state in memory cannot be
+  started in the web process and polled in the worker.
+- **Content credentials** (M12.5a, `docs/plans/m12.5a-provenance.md`): `lib/media/c2pa.ts` PROBES
+  the bytes for a C2PA manifest (JUMBF superbox, one container-independent path) — a model
+  descriptor's `provenance.c2pa` is the vendor's CLAIM, checked like a claimed duration, and a
+  disagreement is a recorded mismatch. It **detects, never validates**: nothing says "verified"
+  without the trust list. Precision beats recall — a bounded scan reports `bounded`, so `absent` is
+  never overstated. A credential our own re-encode removed is `stripped`, worded as something that
+  happened and surfaced at publish time; blocking is wrong, because a caption label is a real
+  disclosure and re-signing needs a certificate we don't have. Generation is a SPEND
   mutation: `media.generate` is `stately`/`retryLimit: 0` and **reconciles against the vendor before
   any re-spend**. `lib/media/` probes rather than believes — ffprobe decides duration and dimensions,
   and an unavailable tool records unknown, never 0. `WORKER_ROLE=media` runs ffmpeg work
   (`asset.process`, `media.*`) in its own Deployment. See `docs/media-generation.md`,
   `docs/media-models.md`, `docs/plans/m12.1-media-foundation.md`.
+- **Ad creative** (M12.2, `docs/plans/m12.2-static-ad-creative.md`): an `AdPlan` is a PLAN, not a
+  picture — it lives on `content_item.ad_plan` (untyped column, always read through
+  `lib/media/plan/schema.ts`). **Type is composited, never diffused**: `lib/media/compose/` draws the
+  price, CTA, logo and legal line with sharp/Pango from the brand kit, and it MEASURES type rather
+  than estimating it. `lib/media/canvas/specs.ts` holds sourced placement geometry — dimensions block,
+  safe zones warn, because nobody publishes 14/35/6 in a readable form. A variant differs on exactly
+  ONE axis, and an axis with nothing to change is `inert`, never a duplicate render. The renderer
+  reports (where overlays landed, which fonts it got); `lib/media/preflight/` judges. A derived asset
+  INHERITS its source's rights envelope. Brand logos are storage keys, not asset ids — see
+  `lib/media/locator.ts`.
+- **Captions & voice** (M12.3, `docs/plans/m12.3-voice-captions.md`): **words are the source of
+  truth** — cues are derived on every read (`lib/media/captions/cues.ts`) and the SRT/VTT sidecar is
+  regenerated whenever words change, so nothing goes stale. Burned-in pixels are the DEFAULT, not
+  the fallback: only YouTube takes a sidecar over its API. Burn-in is ASS through libass
+  (`captions/ass.ts`), and its bottom margin comes from the placement's safe zone, so captions clear
+  the Reels chrome by construction. `lib/media/voice/policy.ts` is the consent gate — stock voices
+  need nothing, `cloned`/`likeness` need a complete, unexpired, unrevoked record; enforced twice
+  (before spend in `createMediaJob`, and again because the asset inherits the consent's rights
+  scope). Registering a replica is owner-only and audited; withdrawal is a record, never a delete.
+- **Video assembly** (M12.4, `docs/plans/m12.4-video-assembly.md`): **two passes, always** —
+  `lib/media/video/assemble.ts` normalises every shot to one canvas/fps/pixel format/audio layout
+  BEFORE concatenating, because the concat demuxer needs identical streams and a mixed-format join
+  produces a file that stops after two seconds with no error anywhere. The audio graph is built as a
+  testable string (`video/audio.ts`): bed attenuated, ducked against the voice via
+  `sidechaincompress` with a padded key, `amix` with `normalize=0`, then `loudnorm` to −14 LUFS. The
+  **picture decides the length** (`-shortest`); a voice-over that gets cut off is reported, never
+  silent. `lib/media/rights-merge.ts` takes the narrowest of EVERY ingredient across four
+  independent axes (scope, expiry, licence, per-network clearance) — inheriting from one "base"
+  asset gets three of them wrong. Still-vs-cut is routed from what the shots ARE, not a flag.
 - **Storage**: `lib/storage/` — one API, two drivers chosen by `STORAGE_DRIVER`: `s3.ts` (MinIO locally at :5090, console :5091) and `azure.ts` (Azure Blob in production; Azure has **no** S3-compatible API, so it is a real driver, not a re-pointed endpoint). Browser uploads go straight to storage via presigned PUT; `asset.process` makes renditions and runs the scan hook. Unscanned/expired-rights assets can't publish.
 - **Conversion tracking** (`lib/tracking`, `docs/tracking.md`): GA4 / Shopify / signed webhook sources write `conversion_fact` via `tracking.sync`. Site-reported and ad-reported conversions never double-count — a paid `utm_medium` belongs to the ad platform, everything else to the tracking source; ROAS is paid-medium revenue ÷ spend. `lib/tracking/availability.ts` owns every "why is this unavailable" string; never show a missing conversion metric as 0.
 - **Inbox**: `packages/providers` inbox contract (`fetchInbox`/`reply`/`findReply`/`inboxItemsFromWebhook`, `inbox-types.ts`). Ingestion is `lib/engagement/ingest.ts` (idempotent on channel+remoteId) fed by `inbox.sync` polling (worker tick every 2 min) and `POST /api/webhooks/[provider]` → `webhook_receipt` → `webhook.process`. Outbound replies are `message` rows in `queued` state delivered by `inbox.reply`; an ambiguous provider result is reconciled with `findReply` before any resend (ENG-003). The mock store lives in the worker process, so local "simulate incoming" goes through the webhook receipt path, never a direct in-process call.

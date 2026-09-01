@@ -34,7 +34,7 @@ are absent, confirm against `environment.md` before filing — absence may be co
 | U-04 | AI caption variants in the composer | Insert as an editable draft | ☐ |
 | U-05 | Repurpose an existing post | Works | ☐ |
 | U-06 | Inbox reply drafts | Grounded in brand voice; still require a human send | ☐ |
-| U-07 | Image generation | Gated by `OPENAI_API_KEY` + `AI_IMAGE_MODEL`. Brand kit appended to the prompt | ☐ |
+| U-07 | Image generation | Gated by `OPENAI_API_KEY` (or `MEDIA_ENABLE_MOCK=1`). Brand kit appended to the prompt; a `media_job` row records the model and reason | ☐ |
 | U-08 | AI usage ledger (M9.1) | Credits metered; usage meter accurate | ☐ |
 | U-09 | Monthly allowance and **hard cap** | Cap actually stops spend — no surprise bill | ☐ |
 | U-10 | Behaviour at the cap | Explained clearly, not a raw error | ☐ |

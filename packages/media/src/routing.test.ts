@@ -108,4 +108,59 @@ describe("routeJob", () => {
     const r = routeJob(spec({ jobKind: "product_still" }), { isConfigured: all, policy: { prefer: { product_still: "mock-image" } } });
     expect(isRouted(r) && r.reason).toContain("preferred by this workspace");
   });
+  it("rejects an aspect the model does not render, rather than squaring it silently", () => {
+    const r = routeJob(spec({ jobKind: "scene_still", aspect: "21:9" }), { isConfigured: all });
+    expect(isRouted(r)).toBe(false);
+    if (isRouted(r)) return;
+    expect(r.error).toContain("not 21:9");
+  });
+
+  it("ignores aspect for a model that has none — audio has no shape", () => {
+    const r = routeJob(spec({ jobKind: "voiceover", aspect: "1:1", durationSeconds: 10 }), { isConfigured: all });
+    expect(isRouted(r) && r.model.key).toBe("mock-audio");
+  });
+});
+
+describe("routing with a real adapter registered", () => {
+  const onlyOpenAi = (adapter: string) => adapter === "openai";
+
+  it("routes a scene still to GPT Image when it is the only thing configured", () => {
+    const r = routeJob(spec({ jobKind: "scene_still" }), { isConfigured: onlyOpenAi });
+    expect(isRouted(r) && r.model.key).toBe("gpt-image-1");
+    expect(isRouted(r) && r.reason).toContain("mock-image the mock adapter isn't configured");
+  });
+
+  it("prefers the mock locally, so a dev box with both keys spends nothing", () => {
+    const r = routeJob(spec({ jobKind: "scene_still" }), { isConfigured: all });
+    expect(isRouted(r) && r.model.key).toBe("mock-image");
+  });
+
+  it("will NOT route a product still to it — fidelity is a different job", () => {
+    const r = routeJob(spec({ jobKind: "product_still" }), { isConfigured: onlyOpenAi });
+    expect(isRouted(r)).toBe(false);
+  });
+
+  it("refuses it when the workspace requires an indemnity the vendor doesn't state", () => {
+    const policy: RoutingPolicy = { requireIndemnity: true };
+    const r = routeJob(spec({ jobKind: "scene_still" }), { isConfigured: onlyOpenAi, policy });
+    expect(isRouted(r)).toBe(false);
+    if (isRouted(r)) return;
+    expect(r.error).toContain("doesn't state an indemnity");
+  });
+  it("prefers AZURE over the direct vendor when both are configured", () => {
+    const bothOpenAi = (a: string) => a === "openai" || a === "azure-openai";
+    const r = routeJob(spec({ jobKind: "scene_still" }), { isConfigured: bothOpenAi });
+    expect(isRouted(r) && r.model.key).toBe("azure-gpt-image-1");
+    expect(isRouted(r) && r.model.adapter).toBe("azure-openai");
+  });
+
+  it("falls back to the direct vendor when Azure isn't configured", () => {
+    const r = routeJob(spec({ jobKind: "scene_still" }), { isConfigured: onlyOpenAi });
+    expect(isRouted(r) && r.model.key).toBe("gpt-image-1");
+  });
+
+  it("keeps the deployment name pinned — Azure's path segment is the model id", () => {
+    const r = routeJob(spec({ jobKind: "scene_still" }), { isConfigured: (a) => a === "azure-openai" });
+    expect(isRouted(r) && r.model.vendorModelId).toBe("gpt-image-1");
+  });
 });

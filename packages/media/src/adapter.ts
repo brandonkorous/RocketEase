@@ -11,11 +11,20 @@
  */
 import type { ModelDescriptor } from "./io";
 import type { CostEstimate, GenerationSpec, MediaJobHandle, MediaJobState, RawOutput } from "./types";
+import type { Transcript, TranscribeRequest } from "./transcribe";
 
 export type WebhookRequest = { headers: Record<string, string>; body: string };
 
 export interface MediaAdapter {
   readonly key: string;
+
+  /**
+   * True when `start` does the whole job, so a caller may run it inline and
+   * hand back the result. Everything else must go through the queue: an
+   * adapter that keeps job state in memory cannot be started in one process
+   * and polled from another.
+   */
+  readonly synchronous?: boolean;
 
   /** Descriptors this adapter can actually serve in this deployment. */
   models(): ModelDescriptor[];
@@ -42,6 +51,13 @@ export interface MediaAdapter {
    * which must throw so the caller does not re-spend on a false negative.
    */
   reconcile(idempotencyKey: string): Promise<MediaJobState | null>;
+
+  /**
+   * Optional: speech to text. A different shape from generation because the
+   * input is bytes that already exist and the output is structure, not bytes.
+   * An image vendor has no business pretending to do this.
+   */
+  transcribe?(req: TranscribeRequest): Promise<Transcript>;
 
   /** Optional: vendors that call back instead of being polled. */
   parseWebhook?(req: WebhookRequest): MediaJobState | null;

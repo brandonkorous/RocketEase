@@ -25,6 +25,10 @@ spec:
           env:
             - name: WORKER_ROLE
               value: media
+            # Without this, scratch.ts falls back to tmpdir() — the container's
+            # writable layer — and the 20Gi volume below is mounted and unused.
+            - name: MEDIA_SCRATCH_DIR
+              value: /scratch
           envFrom:
             - secretRef: { name: platform-env }
             - configMapRef: { name: platform-config }

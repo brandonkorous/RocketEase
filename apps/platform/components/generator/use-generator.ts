@@ -77,7 +77,10 @@ export function useGenerator(workspaceId: string, channels: GeneratorChannel[]) 
     const prompt = [c.hook, c.body].filter(Boolean).join(" ").slice(0, 1_200);
     const res = await generateImage({ workspaceId, prompt, aspect: "square", count: 1, altText: c.altText });
     setBusy(null);
-    if (res.error || !res.images?.length) return fail(res.error ?? "No image came back.");
+    if (res.error) return fail(res.error);
+    // A model that takes minutes finishes in the worker; that is not a failure.
+    if (res.ok) return toast.add({ title: res.ok, type: "success" });
+    if (!res.images?.length) return fail("No image came back.");
     setImages((m) => ({ ...m, [c.id]: [...(m[c.id] ?? []), ...res.images!] }));
     toast.add({ title: "Image added to the library. It's marked AI-generated.", type: "success" });
   };

@@ -15,6 +15,7 @@ import { db } from "@/db";
 import { mediaJob } from "@/db/schema/media";
 import type { JobPayloads } from "@/lib/jobs/queues";
 import { emit } from "@/lib/jobs/outbox";
+import { endMediaJob } from "@/lib/media/finish";
 import type { HandlerContext } from "./index";
 
 export async function mediaGenerate(data: JobPayloads["media.generate"], ctx: HandlerContext) {
@@ -30,7 +31,7 @@ export async function mediaGenerate(data: JobPayloads["media.generate"], ctx: Ha
   const model = modelByKey(row.modelKey);
   const adapter = buildRegistry().get(row.adapter);
   if (!model || !adapter?.configured()) {
-    await failJob(row.id, "unconfigured", `The ${row.adapter} adapter isn't configured, so nothing was generated.`);
+    await endMediaJob(row.id, { category: "unconfigured", note: `The ${row.adapter} adapter isn't configured, so nothing was generated.` });
     return;
   }
 
@@ -63,13 +64,6 @@ export async function mediaGenerate(data: JobPayloads["media.generate"], ctx: Ha
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     l.error("media job submission failed", { err });
-    await failJob(row.id, "unknown", "The model didn't accept the request. Nothing was generated.", message);
+    await endMediaJob(row.id, { category: "unknown", note: "The model didn't accept the request. Nothing was generated.", detail: message });
   }
-}
-
-async function failJob(id: string, category: string, note: string, detail?: string) {
-  await db
-    .update(mediaJob)
-    .set({ state: "failed", errorCategory: category, errorNote: note, finishedAt: new Date(), updatedAt: new Date(), mismatches: detail ? [detail] : [] })
-    .where(eq(mediaJob.id, id));
 }

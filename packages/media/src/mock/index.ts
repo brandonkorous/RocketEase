@@ -18,6 +18,7 @@ import type { MediaAdapter, WebhookRequest } from "../adapter";
 import { estimate } from "../cost";
 import type { ModelDescriptor } from "../io";
 import { MOCK_MODELS } from "./models";
+import { mockTranscribe } from "./transcribe";
 import { renderFixture } from "./fixtures";
 import { MediaError, type GenerationSpec, type MediaJobHandle, type MediaJobState, type RawOutput } from "../types";
 
@@ -106,6 +107,11 @@ export function mockAdapter(): MediaAdapter {
       } catch {
         return null;
       }
+    },
+
+    async transcribe(req) {
+      if (!this.configured()) throw new MediaError("Mock media adapter is off.", { category: "unconfigured" });
+      return mockTranscribe(req);
     },
 
     async cancel(handle) {

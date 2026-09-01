@@ -52,7 +52,20 @@ export type JobPayloads = {
   "media.generate": { mediaJobId: string };
   /** Advance running generations, and pull bytes the moment one completes. */
   "media.poll": { mediaJobId?: string };
+  /**
+   * The ffmpeg/sharp render queue: ad composites now, caption burn-in here,
+   * assembly and loudness in 12.4. One queue because they share a worker, a
+   * scratch disk and a CPU budget — and because a render is a render.
+   */
+  "media.render": MediaRenderPayload;
+  /** Speech to text for one asset → a caption_track with word timings. */
+  "media.transcribe": { assetId: string; language?: string; force?: boolean };
 };
+
+export type MediaRenderPayload =
+  | { kind: "ad_plan"; contentItemId: string; placement: string; variantId: string }
+  | { kind: "caption_burn"; assetId: string; captionTrackId: string; placement: string }
+  | { kind: "assembly"; contentItemId: string; placement: string; variantId: string };
 
 export type JobName = keyof JobPayloads;
 
@@ -105,6 +118,14 @@ export const QUEUES: Record<JobName, QueuePolicy> = {
   "media.generate": { policy: "stately", retryLimit: 0, expireInSeconds: 900, role: "media" },
   // Races the vendor's URL expiry (Sora: ~1 hour), so it polls tightly.
   "media.poll": { policy: "singleton", retryLimit: 3, retryDelay: 15, retryBackoff: true, expireInSeconds: 900, role: "media" },
+  // Compositing spends CPU, not money, and is deterministic: the same plan makes
+  // the same file, so a retry is always safe. `stately` keeps one render per
+  // (item, placement, variant) in flight rather than racing itself.
+  "media.render": { policy: "stately", retryLimit: 3, retryDelay: 10, retryBackoff: true, expireInSeconds: 600, role: "media" },
+  // Spends money, but pennies per clip, and the result lands in OUR caption_track
+  // — so the handler reconciles against that row before calling a vendor again,
+  // which makes an ordinary retry safe without a stately queue.
+  "media.transcribe": { ...STANDARD, retryLimit: 3, expireInSeconds: 1800, role: "media" },
 };
 
 export const JOB_NAMES = Object.keys(QUEUES) as JobName[];

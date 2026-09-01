@@ -9,7 +9,7 @@ import { and, eq, inArray, lt } from "drizzle-orm";
 import { buildRegistry, modelByKey, type MediaJobState as VendorState } from "@rocketease/media";
 import { db } from "@/db";
 import { mediaJob, type MediaJob } from "@/db/schema/media";
-import { normalizeOutputs } from "@/lib/media/normalize";
+import { completeMediaJob, endMediaJob } from "@/lib/media/finish";
 import type { JobPayloads } from "@/lib/jobs/queues";
 import type { HandlerContext } from "./index";
 
@@ -51,64 +51,21 @@ async function advance(row: MediaJob, ctx: HandlerContext) {
   }
 
   if (state.status === "failed" || state.status === "cancelled") {
-    await db
-      .update(mediaJob)
-      .set({
-        state: state.status,
-        errorCategory: state.error?.category ?? "unknown",
-        errorNote: state.error?.message ?? "The model didn't return anything.",
-        finishedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(mediaJob.id, row.id));
+    await endMediaJob(row.id, {
+      state: state.status,
+      category: state.error?.category ?? "unknown",
+      note: state.error?.message ?? "The model didn't return anything.",
+    });
     l.info("media job ended", { state: state.status });
     return;
   }
 
   // Succeeded: fetch NOW, before the URL expires.
   try {
-    const outputs = await adapter.fetch(state);
-    const { assetIds, mismatches } = await normalizeOutputs({
-      actor: { organizationId: row.organizationId, workspaceId: row.workspaceId, userId: row.requestedByUserId },
-      mediaJobId: row.id,
-      modelKey: row.modelKey,
-      outputs,
-      provenance: {
-        // What the model attached. Our own render will strip it later; that is
-        // recorded then, so the chain never silently loses a credential.
-        c2pa: model.provenance.c2pa ? "signed" : "absent",
-        watermark: model.provenance.watermark,
-        chain: [{ action: "generated", adapter: row.adapter, model: row.modelKey }],
-      },
-    });
-
-    await db
-      .update(mediaJob)
-      .set({
-        state: "succeeded",
-        assetIds,
-        mismatches,
-        quantity: state.usage ? String(state.usage.quantity) : null,
-        unit: state.usage?.unit ?? null,
-        // Null when the vendor says nothing — never a guessed 0.
-        vendorCostUsd: state.usage?.costUsd === undefined ? null : String(state.usage.costUsd),
-        outputExpiresAt: state.expiresAt ? new Date(state.expiresAt) : null,
-        finishedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(mediaJob.id, row.id));
+    const { assetIds, mismatches } = await completeMediaJob(row, model, adapter, state);
     l.info("media job succeeded", { assets: assetIds.length, mismatches: mismatches.length });
   } catch (err) {
     l.error("media output fetch failed", { err });
-    await db
-      .update(mediaJob)
-      .set({
-        state: "failed",
-        errorCategory: "temporary",
-        errorNote: "The model finished, but its output couldn't be retrieved before it expired.",
-        finishedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(mediaJob.id, row.id));
+    await endMediaJob(row.id, { category: "temporary", note: "The model finished, but its output couldn't be retrieved before it expired." });
   }
 }

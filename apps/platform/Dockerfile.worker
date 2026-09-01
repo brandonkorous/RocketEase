@@ -25,7 +25,13 @@ FROM deps AS runner
 # ffmpeg/ffprobe: the media worker probes uploads, extracts poster frames, and
 # will render. Without them the pipeline records durations as UNKNOWN rather
 # than guessing — correct, but it degrades the product silently, so install it.
-RUN apk add --no-cache ffmpeg
+#
+# Fonts: the compositor draws a client's price and CTA in the brand's typeface
+# (M12.2). fontconfig makes the generic families resolve; DejaVu and Noto give
+# broad coverage so non-Latin copy renders as glyphs rather than tofu; Inter is
+# the product's own typeface (design.md). A family that is still missing is
+# REPORTED as a substitution, never swapped silently.
+RUN apk add --no-cache ffmpeg fontconfig font-dejavu font-noto font-inter
 COPY packages/ui packages/ui
 # Source-only, like @rocketease/ui: package.json exports point straight at src/*.ts
 # and it is listed in transpilePackages, so there is nothing to build — but without

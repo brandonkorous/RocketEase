@@ -30,7 +30,9 @@ export const MOCK_MODELS: ModelDescriptor[] = [
       outputs: {
         container: "png",
         resolutions: ["1024x1024", "1024x1536", "1536x1024"],
-        aspects: ["1:1", "4:5", "9:16", "16:9"],
+        // A deliberate superset: every aspect the composer can ask for is
+        // exercisable locally, so routing is not what fails on a dev box.
+        aspects: ["1:1", "4:5", "9:16", "16:9", "3:2", "2:3"],
         audio: "none",
         count: { min: 1, max: 4 },
         delivery: "bytes",

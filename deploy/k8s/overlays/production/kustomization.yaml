@@ -45,6 +45,15 @@ configMapGenerator:
       - LOG_LEVEL=info
       - STORAGE_DRIVER=azure
       - AZURE_STORAGE_CONTAINER=media
+      # Media generation spend. NOT secrets and NOT Terraform outputs — operator
+      # choices, so they live in git where a change is reviewed.
+      #
+      # EMPTY MEANS NO LIMIT. And a per-job ceiling with no rate for the routed
+      # model refuses EVERY job, by design ("we don't know what this costs" is
+      # the worst reason to spend) — so these two move together or not at all.
+      - AI_MEDIA_RATES_JSON=
+      - MEDIA_CEILING_USD_PER_JOB=
+      - MEDIA_CEILING_USD_PER_ORG_MONTH=
     options:
       # A rolling ConfigMap name would restart every pod on any edit; these
       # values are read at request time, so a plain name is what we want.

@@ -47,6 +47,11 @@ function rejectionFor(m: ModelDescriptor, spec: GenerationSpec, policy: RoutingP
     const allowed = d?.allowed ? d.allowed.join(" or ") : d ? `${d.min}–${d.max}` : "no duration";
     return `it accepts ${allowed} seconds, not ${spec.durationSeconds}`;
   }
+  // An empty aspect list means aspect does not apply (audio, text). A non-empty
+  // one is a closed set: silently squaring a 9:16 request is a wrong picture.
+  if (spec.aspect && m.io.outputs.aspects.length && !m.io.outputs.aspects.includes(spec.aspect)) {
+    return `it renders ${m.io.outputs.aspects.join(", ")}, not ${spec.aspect}`;
+  }
   const refs = spec.references?.filter((r) => r.role !== "source" && r.role !== "driving").length ?? 0;
   if (refs > 0 && (m.io.inputs.referenceImages?.max ?? 0) === 0) return "it takes no reference images";
   if (spec.references?.some((r) => r.role === "source") && !m.io.inputs.sourceVideo) return "it cannot edit existing footage";

@@ -1,0 +1,1 @@
+ALTER TABLE "content_item" ADD COLUMN "ad_plan" jsonb;

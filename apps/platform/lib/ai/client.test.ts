@@ -22,6 +22,7 @@ beforeEach(() => {
   construct.mockReset();
   delete process.env.ANTHROPIC_API_KEY;
   delete process.env.AI_MODEL;
+  delete process.env.ANTHROPIC_BASE_URL;
 });
 afterEach(() => {
   delete process.env.ANTHROPIC_API_KEY;
@@ -79,5 +80,35 @@ describe("with a key configured", () => {
     const res = await generate(prompt);
     expect(construct).toHaveBeenCalledWith({ apiKey: "test-key" });
     expect(JSON.stringify(res)).not.toContain("test-key");
+  });
+});
+
+describe("Microsoft Foundry", () => {
+  test("points the SDK at the Foundry data plane when one is configured", async () => {
+    process.env.ANTHROPIC_API_KEY = "k";
+    process.env.ANTHROPIC_BASE_URL = "https://ai-rocketease-prod-eus2.services.ai.azure.com/anthropic";
+    const { generate } = await load();
+    create.mockResolvedValue({ content: [{ type: "text", text: "hi" }], usage: {} });
+    await generate(prompt);
+    expect(construct).toHaveBeenCalledWith({ apiKey: "k", baseURL: "https://ai-rocketease-prod-eus2.services.ai.azure.com/anthropic" });
+  });
+
+  test("goes direct to Anthropic when no base URL is set", async () => {
+    process.env.ANTHROPIC_API_KEY = "k";
+    const { generate } = await load();
+    create.mockResolvedValue({ content: [{ type: "text", text: "hi" }], usage: {} });
+    await generate(prompt);
+    expect(construct).toHaveBeenCalledWith({ apiKey: "k", baseURL: undefined });
+  });
+
+  test("rebuilds the client when the key rotates, rather than holding the old one", async () => {
+    process.env.ANTHROPIC_API_KEY = "old";
+    const { generate } = await load();
+    create.mockResolvedValue({ content: [{ type: "text", text: "hi" }], usage: {} });
+    await generate(prompt);
+    process.env.ANTHROPIC_API_KEY = "new";
+    await generate(prompt);
+    expect(construct).toHaveBeenCalledTimes(2);
+    expect(construct).toHaveBeenLastCalledWith({ apiKey: "new", baseURL: undefined });
   });
 });

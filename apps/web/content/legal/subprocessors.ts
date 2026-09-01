@@ -42,16 +42,18 @@ export const SUBPROCESSORS: LegalDoc = {
           table: {
             head: ["Subprocessor", "Purpose", "Data", "Location"],
             rows: [
-              ["Anthropic, PBC", "Generating post copy and captions when you use AI drafting", "Your prompt and the brand information you have entered", "United States"],
-              ["Microsoft Corporation (Azure OpenAI Service)", "Generating images when you use AI image generation", "Your image prompt and your brand kit's visual direction — palette and style notes — which we append to it", "United States"],
+              ["Microsoft Corporation (Foundry)", "Generating post copy and captions when you use AI drafting", "Your prompt and the brand information you have entered", "United States — inference is pinned to the US data zone"],
+              ["Microsoft Corporation (Azure OpenAI Service)", "Generating images when you use AI image generation", "Your image prompt and your brand kit's visual direction — palette and style notes — which we append to it", "Stored in the United States; **generation may be processed in any region where the model runs**"],
               ["Stripe, Inc.", "Subscription billing, payment processing, usage metering, invoices", "Billing contact, plan, subscription and payment status. **Stripe is a controller for payment card data; we never receive your card number**", "United States"],
               ["Google LLC", "\"Sign in with Google\", where you choose it", "Email address, name and profile picture from your Google account", "United States"],
               ["Apple Inc.", "\"Sign in with Apple\", where you choose it", "Email address (or private relay address) and name", "United States"],
             ],
           },
         },
-        "**Image generation runs inside our own Azure tenancy**, on a resource we control in the United States. Your prompt is not sent to OpenAI; Microsoft processes it under the same agreement that covers our hosting and databases.",
-        "**Neither AI provider trains on your prompts or outputs.** We use their APIs under terms that exclude training on customer inputs and outputs and apply zero or short data-retention windows.",
+        "**Image generation runs inside our own Azure tenancy**, on a resource we control, under the same Microsoft agreement that covers our hosting and databases. Your prompt is not sent to OpenAI. The image models we use are offered only as a *global* deployment, which means generation itself may run in any region where Microsoft hosts that model; anything Microsoft stores stays in the United States.",
+        "**Your prompts and outputs are not used to train anyone's models.** Microsoft states that prompts and completions are not available to OpenAI or other model providers, are not used to improve their models or services, and are not used to train foundation models ([Azure data, privacy and security](https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/data-privacy)).",
+        "**Anthropic, PBC** remains involved in a limited way: Claude runs on Microsoft's infrastructure and your prompts and completions stay within Azure, but usage metadata — and any content Anthropic's safety systems flag — reaches Anthropic under its data-use terms.",
+        "**Microsoft screens for abuse.** If automated systems flag a prompt as potentially violating Microsoft's code of conduct, a sample may be retained and reviewed by authorised Microsoft staff. That is Microsoft's safety process, not ours, and we do not receive the results.",
       ],
     },
     {

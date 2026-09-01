@@ -27,10 +27,26 @@ export type AiUsageMeta = { organizationId: string; workspaceId: string; userId?
 
 export const isBudgetExceeded = (res: GenerateResult) => "error" in res && res.code === "budget_exceeded";
 
-let cached: Anthropic | null = null;
+/**
+ * Where the Messages API lives. Unset means Anthropic direct; in production it
+ * is our own Microsoft Foundry resource, which speaks the SAME API and accepts
+ * the x-api-key header this SDK already sends. Claude either way — Foundry is a
+ * different front door, not a different model.
+ */
+export const aiBaseUrl = () => process.env.ANTHROPIC_BASE_URL || undefined;
+
+/**
+ * Keyed on the config, not memoised blindly: a key rotated in Key Vault used to
+ * need a process restart to take effect, because the first client built lived
+ * for the life of the pod.
+ */
+let cached: { key: string; client: Anthropic } | null = null;
 function client(): Anthropic {
-  cached ??= new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  return cached;
+  const key = `${process.env.ANTHROPIC_API_KEY}|${aiBaseUrl() ?? ""}`;
+  if (cached?.key !== key) {
+    cached = { key, client: new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, baseURL: aiBaseUrl() }) };
+  }
+  return cached.client;
 }
 
 /** One completion. Never throws; prompt and response text are never logged. */

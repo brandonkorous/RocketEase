@@ -13,6 +13,7 @@ import { enqueueInboxSyncs } from "@/lib/engagement/schedule";
 import { enqueueInsightsIngests } from "@/lib/analytics/schedule";
 import { enqueueAdsSyncs } from "@/lib/campaigns/schedule";
 import { enqueueTrackingSyncs } from "@/lib/tracking/schedule";
+import { enqueueMediaPolls } from "@/lib/media/schedule";
 import { enqueueDueReports } from "./handlers/report-run";
 import { scheduleNightly, scheduleAutomationSweep, scheduleRecycling } from "./ticks";
 
@@ -44,6 +45,10 @@ export async function startGeneralSchedules(boss: PgBoss): Promise<void> {
   every(30 * 60_000, 40_000, "ads sync enqueue", enqueueAdsSyncs);
   // Conversion sources: GA4/Shopify restate recent days; re-pull a 3-day tail every hour.
   every(60 * 60_000, 50_000, "tracking sync enqueue", enqueueTrackingSyncs);
+  // Running generations. Tight, because this one is racing a delivery URL that
+  // expires with money already spent behind it (docs/bugs/B-008). The media
+  // worker executes the sweep; this only asks for it.
+  every(15_000, 5_000, "media poll enqueue", enqueueMediaPolls);
 
   // Nightly maintenance (5.7 data quality, M7 reliability): cron-scheduled singletons.
   await scheduleNightly(boss);

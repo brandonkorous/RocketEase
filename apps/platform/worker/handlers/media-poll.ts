@@ -1,14 +1,19 @@
 /*
  * Advance running generations, and pull the bytes the moment one completes.
  *
- * The deadline is real: vendor delivery URLs expire (Sora: ~1 hour), and a
- * paid-for render we failed to fetch is money burned for nothing. So a
+ * The deadline is real: vendor delivery URLs expire (Sora: 24h, measured), and
+ * a paid-for render we failed to fetch is money burned for nothing. So a
  * succeeded job is fetched and normalized in the same tick, not queued for later.
+ *
+ * This runs on a SWEEP from the general worker's ticker, every 15 seconds.
+ * media.generate's single per-job emit is not enough on its own — a clip is
+ * still rendering when it fires, every time (docs/bugs/B-008).
  */
 import { and, eq, inArray, lt } from "drizzle-orm";
 import { buildRegistry, modelByKey, type MediaJobState as VendorState } from "@rocketease/media";
 import { db } from "@/db";
 import { mediaJob, type MediaJob } from "@/db/schema/media";
+import { deliveryWindowClosed } from "@/lib/media/delivery-window";
 import { completeMediaJob, endMediaJob } from "@/lib/media/finish";
 import type { JobPayloads } from "@/lib/jobs/queues";
 import type { HandlerContext } from "./index";
@@ -46,6 +51,13 @@ async function advance(row: MediaJob, ctx: HandlerContext) {
   }
 
   if (state.status === "running" || state.status === "queued") {
+    // Past the delivery window the bytes are gone whether or not it finishes,
+    // so polling forever would only keep a spinner turning over nothing.
+    if (deliveryWindowClosed(row.createdAt, model.io.outputs.urlTtlSeconds)) {
+      await endMediaJob(row.id, { category: "temporary", note: "The model never finished, and the window to collect its output has now closed." });
+      l.warn("media job abandoned; delivery window closed");
+      return;
+    }
     await db.update(mediaJob).set({ updatedAt: new Date() }).where(eq(mediaJob.id, row.id));
     return;
   }

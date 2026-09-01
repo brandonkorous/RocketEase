@@ -126,7 +126,8 @@ describe("routing with a real adapter registered", () => {
 
   it("routes a scene still to GPT Image when it is the only thing configured", () => {
     const r = routeJob(spec({ jobKind: "scene_still" }), { isConfigured: onlyOpenAi });
-    expect(isRouted(r) && r.model.key).toBe("gpt-image-1");
+    // The LIVE model, not the one retiring on 2026-10-23 that sits behind it.
+    expect(isRouted(r) && r.model.key).toBe("gpt-image-2");
     expect(isRouted(r) && r.reason).toContain("mock-image the mock adapter isn't configured");
   });
 
@@ -156,7 +157,14 @@ describe("routing with a real adapter registered", () => {
 
   it("falls back to the direct vendor when Azure isn't configured", () => {
     const r = routeJob(spec({ jobKind: "scene_still" }), { isConfigured: onlyOpenAi });
-    expect(isRouted(r) && r.model.key).toBe("gpt-image-1");
+    expect(isRouted(r) && r.model.key).toBe("gpt-image-2");
+  });
+
+  it("never routes to the retired gpt-image-1, before or after its date", () => {
+    for (const now of [new Date("2026-09-01"), new Date("2026-11-01")]) {
+      const r = routeJob(spec({ jobKind: "scene_still" }), { isConfigured: onlyOpenAi, now });
+      expect(isRouted(r) && r.model.key, now.toISOString()).toBe("gpt-image-2");
+    }
   });
 
   it("keeps the deployment name pinned — Azure's path segment is the model id", () => {

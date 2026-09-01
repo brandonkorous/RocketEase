@@ -31,15 +31,19 @@ describe("conceptImageSpec", () => {
     }
   });
 
-  it("REFUSES honestly on gpt-image-1, which cannot render a 9:16 frame", () => {
-    const spec = conceptImageSpec("a street", { aspect: "portrait", count: 1 }, null);
-    const r = routeJob(spec, { isConfigured: (k) => k === "openai" });
-    expect(r).not.toHaveProperty("model");
-    expect("error" in r && r.error).toContain("not 9:16");
+  it("routes on the direct vendor too — gpt-image-2 renders every one of them", () => {
+    for (const a of ["square", "portrait", "landscape"] as const) {
+      const spec = conceptImageSpec("a street", { aspect: a, count: 1 }, null);
+      const r = routeJob(spec, { isConfigured: (k) => k === "openai" });
+      expect(r, a).toHaveProperty("model");
+      // Never the retired one, whatever the aspect.
+      expect("model" in r && r.model.key).toBe("gpt-image-2");
+    }
   });
 
-  it("still serves a square on the direct vendor", () => {
-    const spec = conceptImageSpec("a street", { aspect: "square", count: 1 }, null);
-    expect(routeJob(spec, { isConfigured: (k) => k === "openai" })).toHaveProperty("model");
+  it("never picks gpt-image-1 — it is retired, and could not do 9:16 anyway", () => {
+    const spec = conceptImageSpec("a street", { aspect: "portrait", count: 1 }, null);
+    const r = routeJob(spec, { isConfigured: (k) => k === "openai", now: new Date("2026-11-01") });
+    expect("model" in r && r.model.key).toBe("gpt-image-2");
   });
 });

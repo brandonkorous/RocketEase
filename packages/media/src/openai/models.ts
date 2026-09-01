@@ -1,9 +1,10 @@
 /*
  * OpenAI image models — direct, and the different model we run on Azure.
  *
- * These are NOT the same descriptor with a different adapter. The Azure account
- * deploys gpt-image-2 and OpenAI direct is pinned to gpt-image-1, because the
- * choice was forced by a deprecation date rather than by preference:
+ * These are NOT one descriptor with two adapters: same weights, different
+ * processor, different terms, and separate keys so a media_job that ran on
+ * Azure reads back as Azure forever. gpt-image-1 is kept and RETIRED rather
+ * than deleted, because the choice was forced by a deprecation date:
  *
  *   gpt-image-1      inference-deprecates 2026-10-23   <- seven weeks out
  *   gpt-image-1.5    2026-12-16
@@ -15,9 +16,9 @@
  *
  * Capabilities below are from Microsoft Learn's image-generation page and
  * OpenAI's gpt-image-2 model page, both read on 2026-08-30. What nobody has
- * read off a page is still null: the per-image rate, indemnity, training
- * opt-out, and whether outputs carry a C2PA manifest (12.5a probes the bytes
- * for that rather than believing this field).
+ * read off a page is still null: the per-image rate, indemnity, and whether
+ * outputs carry a C2PA manifest (12.5a probes the bytes for that rather than
+ * believing this field).
  */
 import type { ModelDescriptor } from "../io";
 
@@ -25,6 +26,7 @@ const DOCS = "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/how-to/d
 const PRICING = "https://openai.com/api/pricing/";
 const TERMS = "https://openai.com/policies/services-agreement/";
 const AZURE_TERMS = "https://azure.microsoft.com/en-us/support/legal/";
+const DATA_PRIVACY = "https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/data-privacy";
 
 const CHECKED_AT = "2026-08-30";
 
@@ -59,6 +61,7 @@ const GPT_IMAGE_2_SIZES: Record<string, string> = {
 
 const SIZES_BY_MODEL: Record<string, Record<string, string>> = {
   "gpt-image-1": GPT_IMAGE_1_SIZES,
+  "gpt-image-2": GPT_IMAGE_2_SIZES,
   "azure-gpt-image-2": GPT_IMAGE_2_SIZES,
 };
 
@@ -69,7 +72,34 @@ export function sizeFor(model: ModelDescriptor, aspect: string | undefined): str
   return map[aspect ?? "1:1"] ?? null;
 }
 
+// ORDER IS THE DEFAULT ROUTE (see catalog.ts). The live model comes first; the
+// retired one is kept only so an old media_job still resolves to a name.
 export const OPENAI_MODELS: ModelDescriptor[] = [
+  {
+    key: "gpt-image-2",
+    adapter: "openai",
+    vendorModelId: "gpt-image-2",
+    label: "GPT Image 2",
+    kind: "image",
+    jobs: ["scene_still"],
+    io: {
+      inputs: { text: true },
+      outputs: {
+        container: "png",
+        resolutions: Object.values(GPT_IMAGE_2_SIZES),
+        aspects: Object.keys(GPT_IMAGE_2_SIZES),
+        audio: "none",
+        count: { min: 1, max: 10 },
+        delivery: "bytes",
+      },
+    },
+    cost: { unit: "images", amountUsd: null, verified: false, sourceUrl: PRICING },
+    provenance: { c2pa: false, watermark: null },
+    // OpenAI's own terms, not Microsoft's. Nobody here has read them, so these
+    // stay null - unlike the Azure entry below, which was verified today.
+    terms: { commercialUse: true, indemnity: null, trainingOptOut: null, sourceUrl: TERMS },
+    checkedAt: CHECKED_AT,
+  },
   {
     key: "gpt-image-1",
     adapter: "openai",
@@ -128,7 +158,11 @@ export const AZURE_OPENAI_MODELS: ModelDescriptor[] = [
     // records what is actually there, so this field never overstates.
     provenance: { c2pa: false, watermark: null },
     // Same weights, processed under the Azure agreement rather than OpenAI's.
-    terms: { commercialUse: true, indemnity: null, trainingOptOut: null, sourceUrl: AZURE_TERMS },
+    // trainingOptOut VERIFIED 2026-08-30 against DATA_PRIVACY: prompts and
+    // completions are not available to OpenAI, are not used to improve any
+    // provider's models, and are not used to train foundation models. That is a
+    // property of Azure, not of the model - hence true here and null above.
+    terms: { commercialUse: true, indemnity: null, trainingOptOut: true, sourceUrl: DATA_PRIVACY },
     checkedAt: CHECKED_AT,
   },
 ];

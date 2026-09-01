@@ -67,9 +67,37 @@ Caption copy, checked line by line against the rules above:
 3. Publish to Facebook · Jotacular with the media declared as **synthetic**.
 4. Confirm live: the post exists, the label is on it, credits are recorded.
 
+## What the platform adds to the prompt, unasked
+
+Worth knowing before writing one: the workspace appends the brand kit's art
+direction to whatever you type. Read back off a live job, it sent the art
+direction, the five brand hex values, the always/never lists, the
+keep-out-of-frame list, and:
+
+> Do not draw the brand's logo, wordmark, or any lettering — the logo is placed
+> afterwards from the real file.
+
+So the prompt above only has to carry the *shot*. Style is already handled, and
+asking for type in the prompt fights the system rather than using it.
+
+## Bugs this run has found so far
+
+Three, all P1, all only visible in a live run:
+
+| | What | Why no test caught it |
+|---|---|---|
+| B-006 | The Sora path we wrote to does not exist | 14 tests, fixtures written from the same wrong guess as the code |
+| B-007 | A failed generation is invisible | Nothing read back state that was being written correctly |
+| B-008 | Every generation stranded — polled once, never again | The handler was right; nothing called it a second time |
+
+B-007 and B-008 are the same shape: **code that was written, correct, and never
+reached.** A handler with no caller is invisible to every test that calls the
+handler.
+
 ## State
 
-- B-006 (wrong Sora path) — fixed, deploying as of 11:40.
-- B-007 (failed generation invisible) — fixed, committed, **not yet pushed**
-  (pushing cancels the running deploy; CI has `cancel-in-progress`).
-- No clip has been generated yet. Both video prices are still placeholders.
+- All three fixed and pushed (`de611ad`), deploying.
+- One clip is submitted and stranded by B-008. Its bytes live 24h, so the new
+  sweep should collect it on its own — which is the fix proving itself.
+- Both video prices are still placeholders: `$0.10/s` vendor, `12 credits/s`
+  customer. The first successful clip is what replaces them with measurement.

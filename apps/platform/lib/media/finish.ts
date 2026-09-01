@@ -25,7 +25,9 @@ export type FinishResult = { assetIds: string[]; mismatches: string[] };
 const creditRates = () => parseCreditRates(process.env.AI_MEDIA_CREDIT_RATES_JSON, (m) => log.warn(m));
 const vendorRates = () => parseRates(process.env.AI_MEDIA_RATES_JSON, (m) => log.warn(m));
 
-const USAGE_KIND: Partial<Record<MediaKind, AiUsageKind>> = { image: "generate_image", video: "generate_video" };
+// Audio included: without it a voice-over is generated, charged to US, and
+// billed to the customer as nothing at all.
+const USAGE_KIND: Partial<Record<MediaKind, AiUsageKind>> = { image: "generate_image", video: "generate_video", audio: "generate_voice" };
 
 /**
  * Charge the customer in credits.

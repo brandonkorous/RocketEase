@@ -55,6 +55,20 @@ export async function speak(c: SpeechConfig, body: SpeakInput): Promise<Uint8Arr
   return bytes;
 }
 
+/** Extension whisper will accept for a mime type, defaulting to the common one. */
+const AUDIO_EXTENSIONS: Record<string, string> = {
+  "audio/mpeg": ".mp3",
+  "audio/mp3": ".mp3",
+  "audio/mp4": ".m4a",
+  "audio/wav": ".wav",
+  "audio/x-wav": ".wav",
+  "audio/webm": ".webm",
+  "audio/ogg": ".ogg",
+  "audio/flac": ".flac",
+  "video/mp4": ".mp4",
+};
+export const extensionFor = (mimeType: string): string => AUDIO_EXTENSIONS[mimeType.split(";")[0].trim().toLowerCase()] ?? ".mp3";
+
 /** The raw shape whisper's verbose_json returns. Seconds, not milliseconds. */
 type WhisperResponse = {
   language?: string;
@@ -78,7 +92,10 @@ export async function transcribeAudio(
 ): Promise<WhisperResponse> {
   const url = `${c.endpoint.replace(/\/+$/, "")}/openai/deployments/${encodeURIComponent(deployment)}/audio/transcriptions?api-version=${c.apiVersion}`;
   const form = new FormData();
-  form.set("file", new Blob([body.bytes as BlobPart], { type: body.mimeType }), "audio");
+  // The FILENAME matters: whisper sniffs the container from its extension and
+  // answers 400 for a part called "audio" with no suffix, whatever the
+  // Content-Type says. That cost a live run (docs/bugs/B-015).
+  form.set("file", new Blob([body.bytes as BlobPart], { type: body.mimeType }), `audio${extensionFor(body.mimeType)}`);
   form.set("response_format", "verbose_json");
   form.set("timestamp_granularities[]", "word");
   if (body.language) form.set("language", body.language);

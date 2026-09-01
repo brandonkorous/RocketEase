@@ -42,6 +42,18 @@ export type CreateJobInput = {
    * wrong answer here is caught again by the rights preflight.
    */
   usage?: UsageScope;
+  /**
+   * A key the CALLER can reproduce, for work that runs inside a retrying queue.
+   *
+   * The default is a fresh UUID, which is right when a person pressed a button:
+   * two presses are two requests. It is wrong when the caller is a job that
+   * retries, because every attempt then mints a new key, creates a new row and
+   * spends again — which is exactly what a voice-over did on its first live run
+   * (docs/bugs/B-014). Given here, the unique index on (workspace,
+   * idempotencyKey) makes the second attempt find the first instead of paying
+   * twice.
+   */
+  idempotencyKey?: string;
 };
 
 export type CreateJobResult = { mediaJobId: string; modelKey: string; modelReason: string; estimate: CostEstimate } | { error: string };
@@ -86,8 +98,9 @@ export async function prepareJob(input: CreateJobInput): Promise<PreparedJob | {
   if ("error" in ceiling) return { error: ceiling.error };
 
   // One key per request. Reusing it is what makes a retry safe; minting it here
-  // means the vendor sees the same key for every attempt at this job.
-  return { ...preview, idempotencyKey: `media_${randomUUID()}` };
+  // means the vendor sees the same key for every attempt at this job. A caller
+  // that is itself retried supplies its own, so its attempts share one.
+  return { ...preview, idempotencyKey: input.idempotencyKey ?? `media_${randomUUID()}` };
 }
 
 /** The media_job row for a prepared request, in whichever state the caller starts it. */

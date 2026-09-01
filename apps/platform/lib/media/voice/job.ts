@@ -16,7 +16,10 @@
  * written to a caption_track, because they are the source of truth and a person
  * has to be able to fix a misheard one and re-burn.
  */
+import { createHash } from "node:crypto";
+import { and, eq as eqOp } from "drizzle-orm";
 import { buildRegistry } from "@rocketease/media";
+import { mediaJob } from "@/db/schema/media";
 import { asset } from "@/db/schema/assets";
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
@@ -47,15 +50,28 @@ export async function runVoiceoverJob(input: VoiceoverJobInput): Promise<Voiceov
   if (!source || source.workspaceId !== input.workspaceId || source.deletedAt) return { error: "That clip is no longer in the library." };
   if (source.kind !== "video") return { error: "A voice-over can only go on a video." };
 
+  /*
+   * A key this job can reproduce. media.render retries up to three times, and a
+   * fresh key per attempt means a fresh vendor call and a second bill — which
+   * is what happened on the first live run (docs/bugs/B-014). Derived from the
+   * clip and the exact script, so a retry finds the first attempt and a genuine
+   * re-request with different words does not.
+   */
+  const key = `media_vo_${createHash("sha256").update(`${input.assetId}:${input.voiceId ?? ""}:${input.script}`).digest("hex").slice(0, 32)}`;
+
+  const already = await existingVoice(input.workspaceId, key);
+  if (already) log.info("reusing the voice-over from an earlier attempt; not re-spending", { assetId: already });
+
   // Metered like any other generation — never a free side-effect of a video.
-  const spoken = await runMediaJobNow({
+  const spoken = already ? { assetIds: [already] } : await runMediaJobNow({
+    idempotencyKey: key,
     organizationId: input.organizationId,
     workspaceId: input.workspaceId,
     userId: input.userId,
     spec: { jobKind: "voiceover", prompt: input.script, ...(input.voiceId ? { voiceId: input.voiceId } : {}) },
   });
   if ("error" in spoken) return { error: spoken.error };
-  if ("pending" in spoken) return { error: "The voice model queued the job; voice-over expects an immediate answer." };
+  if (!("assetIds" in spoken)) return { error: "The voice model queued the job; voice-over expects an immediate answer." };
 
   const [voiceAsset] = await db.select().from(asset).where(eq(asset.id, spoken.assetIds[0]));
   if (!voiceAsset) return { error: "The voice-over was generated but could not be read back." };
@@ -91,4 +107,13 @@ export async function runVoiceoverJob(input: VoiceoverJobInput): Promise<Voiceov
     log.warn("voice-over was cut off by the picture", { assetId: stored.assetId, seconds: muxed.truncatedVoiceBy });
   }
   return { assetId: stored.assetId, truncatedVoiceBy: muxed.truncatedVoiceBy, captionCues: caption?.cues.length ?? 0 };
+}
+
+/** The asset a previous attempt at this exact voice-over already produced. */
+async function existingVoice(workspaceId: string, key: string): Promise<string | null> {
+  const [row] = await db
+    .select({ state: mediaJob.state, assetIds: mediaJob.assetIds })
+    .from(mediaJob)
+    .where(and(eqOp(mediaJob.workspaceId, workspaceId), eqOp(mediaJob.idempotencyKey, key)));
+  return row?.state === "succeeded" && row.assetIds.length ? row.assetIds[0] : null;
 }

@@ -14,6 +14,7 @@ import { CANVAS_SPECS, type CanvasSpec } from "../canvas/specs";
 import { buildCues, type Cue } from "../captions/cues";
 import { styleForPlacement, type CaptionStyle } from "../captions/ass";
 import { loadBrandKit } from "@/lib/brand/load";
+import { log } from "@/lib/log";
 import type { CaptionWord } from "@/db/schema/voice";
 
 /** The transcriber we actually deploy, ahead of the fixture. */
@@ -54,12 +55,25 @@ type Input = {
   workspaceId: string;
 };
 
-/** Cues, or null when nothing can transcribe — never a caption of guessed timings. */
+/**
+ * Cues, or null when nothing can transcribe — never a caption of guessed timings.
+ *
+ * A transcription failure DEGRADES rather than fails: captions are the optional
+ * half, and losing a paid-for voice-over because whisper was rate-limited would
+ * throw away the valuable part to protect the decoration. whisper here is
+ * 1 request per minute, so that is a real case and not a theoretical one.
+ */
 export async function captionsFor(input: Input): Promise<CaptionResult | null> {
   const adapter = ADAPTER_ORDER.map((k) => input.registry.get(k)).find((a) => a?.configured() && a.transcribe);
   if (!adapter?.transcribe) return null;
 
-  const t = await adapter.transcribe({ bytes: input.bytes, mimeType: input.mimeType, idempotencyKey: `vo:${input.workspaceId}:${input.bytes.byteLength}` });
+  let t: Awaited<ReturnType<NonNullable<typeof adapter.transcribe>>>;
+  try {
+    t = await adapter.transcribe({ bytes: input.bytes, mimeType: input.mimeType, idempotencyKey: `vo:${input.workspaceId}:${input.bytes.byteLength}` });
+  } catch (err) {
+    log.warn("captions skipped; the voice-over is kept", { err });
+    return null;
+  }
   const words: CaptionWord[] = t.words.map((w) => ({ text: w.text, startMs: w.startMs, endMs: w.endMs }));
   if (words.length === 0) return null;
 

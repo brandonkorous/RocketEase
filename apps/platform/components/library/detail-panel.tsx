@@ -91,7 +91,10 @@ function EditForm({ a, workspaceId, collections, onClose }: { a: AssetCard; work
   const [state, action, pending] = useActionState<ActionState, FormData>(updateAsset, {});
   const { notify, run, pending: busy } = useActionFeedback();
   const [tags, setTags] = useState<string[]>(a.tags);
-  useEffect(() => setTags(a.tags), [a.id, a.tags]);
+  // Reset when a DIFFERENT asset is selected. Depending on a.tags would reset
+  // on every parent render — it is a fresh array each time — and quietly throw
+  // away tags the person was part-way through editing.
+  useEffect(() => setTags(a.tags), [a.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => notify(state), [state, notify]);
   return (
     <form action={action} className="mt-4 flex flex-col gap-3">

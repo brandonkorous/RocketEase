@@ -88,9 +88,14 @@ configMapGenerator:
       # the token usage the vendor reports back, which is what the monthly
       # ceiling accrues against.
       - AI_MEDIA_RATES_JSON={"azure-gpt-image-2":0.05}
-      # A job caps at 4 images (lib/actions/media.ts), so $0.50 clears any real
-      # request and still stops one that has gone strange.
-      - MEDIA_CEILING_USD_PER_JOB=0.50
+      # TEMPORARY, 2026-09-01: lowered below the cost of a single image so the
+      # refusal can be watched in the production UI at all. Restored to 0.50 in
+      # the very next commit — see docs/bugs/B-005.
+      #
+      # Normally: a job caps at 4 images (lib/actions/media.ts), so $0.50 clears
+      # any real request and still stops one that has gone strange. Which is
+      # also why it had never once fired: the largest honest job is $0.20.
+      - MEDIA_CEILING_USD_PER_JOB=0.01
       # ~300 images/month/org. The blast radius of a loop, not a business limit.
       - MEDIA_CEILING_USD_PER_ORG_MONTH=25.00
     options:

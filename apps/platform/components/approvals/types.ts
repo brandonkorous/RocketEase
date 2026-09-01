@@ -6,7 +6,7 @@ export type ApprovalRow = {
   requester: string; requesterId: string | null; assignee: Reviewer | null; dueAt: string | null; dueLabel: string | null; overdue: boolean; createdAt: string; note: string | null; scheduleOnApprove: string | null; versionId: string; stale: boolean;
   canDecide: boolean; decideReason: string | null; canCancel: boolean;
 };
-export type Snapshot = { text: string; link: string | null; firstComment: string | null; schedule: string | null; media: { id: string; url: string | null; alt: string }[] };
+export type Snapshot = { text: string; link: string | null; firstComment: string | null; schedule: string | null; media: { id: string; kind: string; url: string | null; fullUrl: string | null; alt: string }[] };
 export type VersionRow = { id: string; number: number; reason: string; by: string | null; at: string; current: boolean };
 export type TimelineRow = { kind: string; label: string; by: string; at: string };
 export type CommentRow = { id: string; by: string; image: string | null; body: string; at: string; mine: boolean; resolved: boolean; field: string | null; assetId: string | null; parentId: string | null };

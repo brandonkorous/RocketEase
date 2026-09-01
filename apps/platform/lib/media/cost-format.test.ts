@@ -3,7 +3,7 @@
  * media is routinely sub-cent, and two decimals render a real charge as "$0.00".
  */
 import { describe, expect, it } from "vitest";
-import { formatCostUsd, formatUnitEstimate } from "./cost-format";
+import { formatCostUsd } from "./cost-format";
 
 describe("formatCostUsd", () => {
   it("keeps four decimals under a cent, so a real charge never reads as free", () => {
@@ -30,15 +30,5 @@ describe("formatCostUsd", () => {
     expect(formatCostUsd(Number.NaN)).toBeNull();
     expect(formatCostUsd(Number.POSITIVE_INFINITY)).toBeNull();
     expect(formatCostUsd(-1)).toBeNull();
-  });
-});
-
-describe("formatUnitEstimate", () => {
-  it("prices one image", () => {
-    expect(formatUnitEstimate(0.05)).toBe("Up to $0.05 per image.");
-  });
-
-  it("says nothing when there is no rate, rather than implying free", () => {
-    expect(formatUnitEstimate(null)).toBeNull();
   });
 });

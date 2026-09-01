@@ -4,8 +4,9 @@ import Link from "next/link";
 import { Input, Radio, Textarea } from "@wizeworks/silicaui-react";
 import { workspacePath } from "@/lib/nav";
 import { NetMark } from "../../net-mark";
+import { PlayBadge, useMediaLightbox } from "../../shared/media-lightbox";
 import { LivePreview } from "../live-preview";
-import { NETWORK_LABEL, type Approval, type ComposerChannel, type Method, type Reviewer } from "../types";
+import { lightboxMedia, NETWORK_LABEL, type Approval, type ComposerChannel, type Method, type Reviewer } from "../types";
 import type { ComposerState } from "../use-composer";
 
 function Section({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
@@ -54,15 +55,20 @@ export function TextStep({ s }: { s: ComposerState }) {
 }
 
 export function MediaStep({ s, onPick }: { s: ComposerState; onPick: () => void }) {
+  const { open, lightbox } = useMediaLightbox(lightboxMedia(s.chosenAssets));
   return (
     <Section title="Media" aside={`${s.assetIds.length} of 10`}>
       <div className="grid grid-cols-3 gap-2">
-        {s.chosenAssets.map((a) => (
+        {s.chosenAssets.map((a, i) => (
           <div key={a.id} className="relative aspect-square overflow-hidden rounded-lg border border-base-300 bg-base-200">
-            {a.thumbUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={a.thumbUrl} alt={a.altText ?? ""} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs uppercase text-secondary/70">{a.kind}</div>}
+            <button type="button" onClick={() => open(i)} className="block h-full w-full cursor-zoom-in" aria-label={`View ${a.fileName} larger`}>
+              {a.thumbUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={a.thumbUrl} alt={a.altText ?? ""} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs uppercase text-secondary/70">{a.kind}</div>}
+              {a.kind === "video" && <PlayBadge />}
+            </button>
             <button type="button" onClick={() => s.setAssetIds((ids) => ids.filter((x) => x !== a.id))} className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white" aria-label={`Remove ${a.fileName}`}>×</button>
           </div>
         ))}
+        {lightbox}
         <button type="button" onClick={onPick} className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-base-300 text-sm text-secondary"><span className="text-2xl leading-none">+</span>Add media</button>
       </div>
       <p className="text-xs text-secondary/70">Media is optional for text posts. Images without alt text are flagged before publishing.</p>

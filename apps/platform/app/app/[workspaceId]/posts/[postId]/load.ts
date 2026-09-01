@@ -5,6 +5,7 @@ import { asset, assetRendition } from "@/db/schema/assets";
 import { user } from "@/db/schema/auth";
 import { contentVersion, type ContentItem, type PostVariant } from "@/db/schema/content";
 import type { CommentRow } from "@/components/post-comments";
+import type { PostThumb } from "@/components/post-detail/media";
 import { presignGet } from "@/lib/storage";
 import { formatInZone } from "@/lib/time";
 
@@ -26,9 +27,9 @@ export async function loadComments(itemId: string, viewerId: string, tz: string)
   }));
 }
 
-export type Thumb = { id: string; url: string | null; alt: string };
+export type Thumb = PostThumb;
 
-/** Presigned thumbnails for the shared assets (renditions when they exist). */
+/** Presigned thumbnails for the shared assets (renditions when they exist), plus the original the lightbox opens. */
 export async function loadContent(item: ContentItem, variants: PostVariant[]): Promise<{ thumbs: Thumb[] }> {
   const ids = [...new Set([...item.sharedAssetIds, ...variants.flatMap((v) => v.assetIdsOverride ?? [])])];
   if (!ids.length) return { thumbs: [] };
@@ -40,6 +41,11 @@ export async function loadContent(item: ContentItem, variants: PostVariant[]): P
     const a = assets.find((x) => x.id === id);
     return a?.kind === "image" ? presignGet(a.storageKey) : null;
   };
-  const thumbs = await Promise.all(item.sharedAssetIds.map(async (id) => ({ id, url: await urlFor(id), alt: assets.find((a) => a.id === id)?.altText ?? "" })));
+  const thumbs = await Promise.all(
+    item.sharedAssetIds.map(async (id) => {
+      const a = assets.find((x) => x.id === id);
+      return { id, kind: a?.kind ?? "image", url: await urlFor(id), fullUrl: a ? await presignGet(a.storageKey) : null, alt: a?.altText ?? "", fileName: a?.fileName ?? "" };
+    }),
+  );
   return { thumbs };
 }

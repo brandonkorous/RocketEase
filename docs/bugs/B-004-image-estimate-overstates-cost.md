@@ -1,38 +1,67 @@
-# B-004 · P2 · The image estimate shows the ceiling's safety rate, ~8x the real cost
+# B-004 · P1 · Generation was unmetered, priced in the wrong unit, and threw away the measurement
 
-**Status** partially fixed 2026-09-01 — reads "Up to $0.05" instead of "About $0.05", which stops it overstating. The real fix (estimate from recorded vendor_cost_usd) is still open.
-**Found** 2026-09-01, live — Content Library said "About $0.05 per image" beside an
-asset whose recorded `vendor_cost_usd` was **$0.0060**.
-**Where** `apps/platform/lib/media/estimate.ts`, `AI_MEDIA_RATES_JSON`
+**Status** fixed 2026-09-01, awaiting live verification
+**Found** 2026-09-01. Originally filed as "the estimate is ~8x the real cost". That framing
+was wrong, and the user said so: the problem was never precision, it was the **unit**.
+**Where** `lib/media/finish.ts`, `lib/media/estimate.ts`, `db/schema/media.ts`,
+`components/library/detail-panel.tsx`
 
-## Symptom
+## What was actually wrong
 
-One number is doing two jobs. `AI_MEDIA_RATES_JSON={"azure-gpt-image-2":0.05}` is
-deliberately rounded **up** past the busiest image measured ($0.040), so the per-job
-ceiling errs toward refusing. The library then shows that same number to the author as
-"About $0.05 per image".
+Three things, found by comparing media generation against how text drafting already works.
+Text was right; media was the outlier.
 
-Measured against this deployment, medium quality: $0.004 plain, $0.040 busy, $0.0060 and
-$0.0154 on the two real generations. So the estimate overstates a typical image by
-roughly 8x.
+| | Text drafting | Media generation (before) |
+|---|---|---|
+| Tokens stored | yes | **no** — captured, then discarded |
+| Credits charged | yes | **no** — free to the customer |
+| Shown to the customer | credits | **vendor dollars** |
 
-## Why it matters
+**1. We showed customers our cost of goods.** The Content Library is workspace-scoped, and
+it displayed `$0.0076` — what *we* pay Azure. That hands over our margin and anchors a
+price before we have set one. Drafting never did this; it shows credits.
 
-Rounding up is right for a ceiling and wrong for an estimate. An author deciding whether
-to generate four variants is told $0.20 when it will cost about $0.03. Being wrong in the
-cautious direction is still being wrong, and it teaches people to distrust the figure.
+**2. We threw the tokens away.** The transport captured input/output tokens, multiplied by
+a configured rate, stored the dollars and dropped the counts. Dollars are *derived*; tokens
+are the measurement. When the rate turned out to be wrong — $0.05 configured against
+$0.0076 actual — nothing could be recomputed, because the reading was gone. Same principle
+as ffprobe: probe, never believe.
+
+**3. Generation was not billed at all.** No credits consumed. Free to the customer, pure
+cost to us. Defensible while it sat behind a beta grant; not defensible for long.
+
+The original "estimate is 8x off" complaint was a symptom of #1. The estimate was quoting
+`AI_MEDIA_RATES_JSON`, which is the **ceiling's safety rate** — deliberately rounded up past
+the busiest image measured so a spend limit errs toward refusing. That is correct for a
+limit and wrong for a quote, but chasing a more accurate *dollar* figure would have been
+polishing the wrong thing.
 
 ## Fix
 
-Separate the two. Keep the configured rate as the ceiling's safety rate. Derive the
-displayed estimate from what this deployment has actually been charged — `media_job.
-vendor_cost_usd` is recorded on every completion now, so a median over recent jobs for
-the routed model is available and self-correcting.
+- `media_job` gains `input_tokens`, `output_tokens`, `credits`. `MediaUsage.tokens` carries
+  them out of the adapter instead of being dropped.
+- `completeMediaJob` writes to the **same `ai_usage` ledger** with the **same `creditsFor()`
+  formula** as drafting, under a new `generate_image` kind. One ledger, one formula, so a
+  credit means one thing across the product. Null when the vendor reported no tokens — a
+  job we cannot measure is not one we may invent a charge for.
+- The library detail panel shows **credits**; "Not billed" is said out loud.
+- Vendor dollars move to `/staff` as a per-org monthly total. Moving them off the customer
+  screen would otherwise have deleted the only place spend was readable, which CLAUDE.md
+  requires — so the requirement is met for the right audience rather than dropped.
+- The estimate now reports the **median credits per image from this workspace's own recent
+  generations**, and says nothing at all when there is no history. Self-correcting, and it
+  never quotes a rate as though it were a measurement.
 
-Fall back to the configured rate when there is no history yet, and say which it is —
-"about $0.01 per image, from your last 20" reads differently from a list price.
+## The decision this does NOT make
+
+Applying the existing credit formula (1 credit = 1,000 output tokens, input at a fifth) to
+image tokens is the honest reading of the definition, but the economics differ: image output
+tokens cost us $30/M against text's $16.50/M, so an image credit costs us roughly 1.8x a
+text credit. That is a **pricing decision**, not an engineering one, and it is deliberately
+left alone rather than quietly baked into a per-model multiplier.
 
 ## Verification
 
-Library estimate tracks observed cost after a handful of generations; a fresh workspace
-with no history still shows a figure rather than nothing.
+Generate an image; the library shows credits, not dollars. `/staff` shows the org's monthly
+vendor spend. `media_job` carries the token counts. The Settings usage meter counts
+"Generated images" alongside drafting. A workspace with no history shows no estimate.

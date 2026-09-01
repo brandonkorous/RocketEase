@@ -81,13 +81,12 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
   const ids = rows.map((r) => r.a.id);
   const rends = ids.length ? await db.select().from(assetRendition).where(inArray(assetRendition.assetId, ids)) : [];
 
-  // What each generated asset cost. Recorded since M12.1 and shown nowhere
-  // until now, which left the number the monthly ceiling accrues against
-  // unreadable outside a psql session against production.
+  // What each generated asset cost the CUSTOMER, in credits. Vendor dollars
+  // stay off this screen — they are our cost of goods (docs/bugs/B-004).
   const jobIds = rows.map((r) => r.a.mediaJobId).filter((v): v is string => Boolean(v));
   const jobs = jobIds.length
     ? await db
-        .select({ id: mediaJob.id, modelKey: mediaJob.modelKey, cost: mediaJob.vendorCostUsd, reason: mediaJob.modelReason })
+        .select({ id: mediaJob.id, modelKey: mediaJob.modelKey, credits: mediaJob.credits, reason: mediaJob.modelReason })
         .from(mediaJob)
         .where(inArray(mediaJob.id, jobIds))
     : [];
@@ -95,9 +94,9 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
   /** null unless this asset came from a media job we can still resolve. */
   const generationOf = (a: typeof asset.$inferSelect): AssetCard["generation"] => {
     const job = a.mediaJobId ? jobById.get(a.mediaJobId) : null;
-    if (!job) return a.generatedByAi ? { model: "AI-generated", costUsd: null, reason: null } : null;
+    if (!job) return a.generatedByAi ? { model: "AI-generated", credits: null, reason: null } : null;
     // numeric() comes back as a string; null stays null rather than becoming 0.
-    return { model: job.modelKey, costUsd: job.cost === null ? null : Number(job.cost), reason: job.reason };
+    return { model: job.modelKey, credits: job.credits === null ? null : Number(job.credits), reason: job.reason };
   };
 
   const toCard = async (a: typeof asset.$inferSelect, uploader: string | null): Promise<AssetCard> => {
@@ -149,7 +148,7 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
     assets: cards,
     // Needs no concept and no text model: the action checks canGenerate, not
     // aiConfigured, so this surface is independent of AI drafting entirely.
-    imageGeneration: { enabled: canGenerate("scene_still"), estimate: imageUnitEstimate() },
+    imageGeneration: { enabled: canGenerate("scene_still"), estimate: await imageUnitEstimate(workspaceId) },
     selected,
     matched: Number(matched),
     page,

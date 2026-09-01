@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@wizeworks/silicaui-react";
 import { workspacePath } from "@/lib/nav";
-import type { ComposerAsset } from "./types";
+import { ExpandButton, PlayBadge, useMediaLightbox } from "../shared/media-lightbox";
+import { lightboxMedia, type ComposerAsset } from "./types";
 import { filesFromPaste, useMediaUpload } from "./use-media-upload";
 
 type Props = { assets: ComposerAsset[]; selected: string[]; onChange: (ids: string[]) => void; onClose: () => void; workspaceId: string };
@@ -142,6 +143,7 @@ function Empty({ onPick }: { onPick: () => void }) {
 type GridProps = { assets: ComposerAsset[]; local: string[]; toggle: (id: string) => void; pending: number; uploading: number };
 
 function AssetGrid({ assets, local, toggle, pending, uploading }: GridProps) {
+  const { open, lightbox } = useMediaLightbox(lightboxMedia(assets));
   return (
     <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
       {Array.from({ length: pending + uploading }).map((_, i) => (
@@ -151,10 +153,10 @@ function AssetGrid({ assets, local, toggle, pending, uploading }: GridProps) {
           </div>
         </li>
       ))}
-      {assets.map((a) => {
+      {assets.map((a, i) => {
         const idx = local.indexOf(a.id);
         return (
-          <li key={a.id}>
+          <li key={a.id} className="relative">
             <button
               type="button"
               onClick={() => a.scanClean && toggle(a.id)}
@@ -173,10 +175,13 @@ function AssetGrid({ assets, local, toggle, pending, uploading }: GridProps) {
               {idx >= 0 && (
                 <span className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-base-content text-xs font-bold text-base-100">{idx + 1}</span>
               )}
+              {a.kind === "video" && <PlayBadge />}
             </button>
+            <ExpandButton onClick={() => open(i)} label={`View ${a.fileName} larger`} className="absolute bottom-2 right-2" />
           </li>
         );
       })}
+      {lightbox}
     </ul>
   );
 }

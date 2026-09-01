@@ -8,6 +8,7 @@ import { AppPage, PageHeader } from "@/components/page-frame";
 import { PostActions } from "@/components/post-actions";
 import { PostComments } from "@/components/post-comments";
 import { Destinations } from "@/components/post-detail/destinations";
+import { PostMedia } from "@/components/post-detail/media";
 import { Performance } from "@/components/post-detail/performance";
 import { PublishReceipts } from "@/components/post-detail/publish-receipt";
 import { Reuse } from "@/components/post-detail/reuse";
@@ -85,9 +86,7 @@ export default async function PostPage({ params }: { params: Promise<{ workspace
             <h2 id="content-h" className="text-base font-semibold">Content</h2>
             <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{item.sharedText || <em className="text-secondary/70">No shared text</em>}</p>
             {item.link && <a href={item.link} className="mt-2 block truncate text-sm text-info" target="_blank" rel="noreferrer">{item.link}</a>}
-            {content.thumbs.length > 0 && (
-              <ul className="mt-4 flex flex-wrap gap-2">{content.thumbs.map((t) => (<li key={t.id} className="h-20 w-20 overflow-hidden rounded-field border border-base-300 bg-base-200">{t.url && /* eslint-disable-next-line @next/next/no-img-element */ <img src={t.url} alt={t.alt} className="h-full w-full object-cover" />}</li>))}</ul>
-            )}
+            {content.thumbs.length > 0 && <PostMedia thumbs={content.thumbs} />}
           </section>
           <Reuse workspaceId={workspaceId} itemId={item.id} title={item.title} canCreate={hasCapability(ctx.workspace, "content.create")} recs={recs} />
         </div>

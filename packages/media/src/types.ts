@@ -119,8 +119,14 @@ export type MediaJobState = {
   outputUrls?: string[];
   expiresAt?: string;
   error?: MediaError;
-  /** What the vendor says it charged or consumed, when it says anything. */
-  usage?: { quantity: number; unit: CostUnit; costUsd?: number };
+  /**
+   * What the vendor says it charged or consumed, when it says anything.
+   *
+   * `tokens` is the MEASUREMENT; costUsd is derived from it and a rate we
+   * configure. Keeping only the money throws away the one number that can be
+   * re-priced when a rate turns out to be wrong — which is what happened.
+   */
+  usage?: { quantity: number; unit: CostUnit; costUsd?: number; tokens?: { inputTokens: number; outputTokens: number } };
 };
 
 /** Bytes as the vendor delivered them, before normalization probes and stores. */

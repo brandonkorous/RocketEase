@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@wizeworks/silicaui-react";
+import { ExpandButton, PlayBadge, useMediaLightbox } from "../shared/media-lightbox";
 import { FIELD_LABEL, TIMELINE_DOT, anchorKey, type Anchor, type ApprovalDetailData, type CommentRow } from "./types";
 
 type AnchorProps = { comments: CommentRow[]; anchor: Anchor; onAnchor: (a: Anchor) => void };
@@ -35,6 +36,10 @@ function Field({ field, label, children, ...rest }: AnchorProps & { field: strin
 
 export function Preview({ d, ...rest }: { d: ApprovalDetailData } & AnchorProps) {
   const media = d.snapshot?.media ?? [];
+  /* The grid caps at four tiles; the lightbox carries every attached asset. */
+  const slides = media.filter((m) => (m.kind === "image" || m.kind === "video") && m.fullUrl).map((m) => ({ id: m.id, kind: m.kind as "image" | "video", src: m.fullUrl, alt: m.alt }));
+  const slideOf = new Map(slides.map((s, i) => [s.id, i]));
+  const { open, lightbox } = useMediaLightbox(slides);
   return (
     <div className="rounded-xl border border-base-300">
       {media.length > 0 && (
@@ -42,13 +47,19 @@ export function Preview({ d, ...rest }: { d: ApprovalDetailData } & AnchorProps)
           {media.slice(0, 4).map((m) => {
             const a = { field: null, assetId: m.id };
             const active = anchorKey(rest.anchor) === anchorKey(a);
+            const at = slideOf.get(m.id);
             return (
-              <button key={m.id} type="button" onClick={() => rest.onAnchor(a)} aria-pressed={active} aria-label={`Comment on ${m.alt || "this image"}`} className={`relative aspect-square bg-base-200 ${active ? "ring-2 ring-base-content ring-inset" : ""}`}>
-                {m.url && /* eslint-disable-next-line @next/next/no-img-element */ <img src={m.url} alt={m.alt} className="h-full w-full object-cover" />}
-                <span className="absolute right-1.5 top-1.5 rounded-field bg-base-100/90 px-1.5 py-0.5 text-xs">💬{openAt(rest.comments, a).length > 0 && <span className="ml-0.5 font-semibold">{openAt(rest.comments, a).length}</span>}</span>
-              </button>
+              <div key={m.id} className="relative">
+                <button type="button" onClick={() => rest.onAnchor(a)} aria-pressed={active} aria-label={`Comment on ${m.alt || "this image"}`} className={`relative block aspect-square w-full bg-base-200 ${active ? "ring-2 ring-base-content ring-inset" : ""}`}>
+                  {m.url && /* eslint-disable-next-line @next/next/no-img-element */ <img src={m.url} alt={m.alt} className="h-full w-full object-cover" />}
+                  {m.kind === "video" && <PlayBadge />}
+                  <span className="absolute right-1.5 top-1.5 rounded-field bg-base-100/90 px-1.5 py-0.5 text-xs">💬{openAt(rest.comments, a).length > 0 && <span className="ml-0.5 font-semibold">{openAt(rest.comments, a).length}</span>}</span>
+                </button>
+                {at != null && <ExpandButton onClick={() => open(at)} label="View larger" className="absolute bottom-1.5 right-1.5" />}
+              </div>
             );
           })}
+          {lightbox}
         </div>
       )}
       <div className="flex flex-col gap-1 p-2">

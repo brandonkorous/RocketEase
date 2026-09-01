@@ -5,6 +5,7 @@ import { Mark } from "@rocketease/ui/icons";
 import { Wordmark } from "@rocketease/ui/brand";
 import { BetaControl } from "@/components/staff/beta-control";
 import { StaffList } from "@/components/staff/staff-list";
+import { formatCostUsd } from "@/lib/media/cost-format";
 import { hasEnvAdmins, requireStaff } from "@/lib/staff";
 import { listStaff, listStaffOrganizations } from "@/lib/staff/queries";
 
@@ -56,6 +57,7 @@ export default async function StaffPage() {
                   <th>Workspaces</th>
                   <th>Created</th>
                   <th>Media generation</th>
+                  <th>Our spend (month)</th>
                 </tr>
               </thead>
               <tbody>
@@ -78,6 +80,10 @@ export default async function StaffPage() {
                             cell={{ ...b, expiresAt: b.expiresAt?.toISOString() ?? null }}
                           />
                         ))}
+                    </td>
+                    {/* Vendor cost, not credits: what the monthly ceiling accrues against. */}
+                    <td className="tabular-nums">
+                      {o.mediaSpendUsd > 0 ? formatCostUsd(o.mediaSpendUsd) : <span className="text-secondary">&mdash;</span>}
                     </td>
                   </tr>
                 ))}

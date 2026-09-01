@@ -7,14 +7,43 @@
  * what we record as having been charged.
  */
 import { eq } from "drizzle-orm";
-import type { MediaAdapter, MediaJobState as VendorState, ModelDescriptor } from "@rocketease/media";
+import { MEDIA_KIND_OF, type JobKind, type MediaAdapter, type MediaJobState as VendorState, type MediaKind, type ModelDescriptor } from "@rocketease/media";
 import { db } from "@/db";
 import { log } from "@/lib/log";
 import { mediaJob, type MediaJob } from "@/db/schema/media";
+import type { AiUsageKind } from "@/db/schema/ai-usage";
+import { creditsToColumn } from "@/lib/ai/usage/credits";
+import { recordAiUsage } from "@/lib/ai/usage/record";
 import { normalizeOutputs } from "./normalize";
 import { loadVoice, rightsScopeForVoice } from "./voice/store";
 
 export type FinishResult = { assetIds: string[]; mismatches: string[] };
+
+/** Images today; a video kind earns its own line when video ships. */
+const USAGE_KIND: Partial<Record<MediaKind, AiUsageKind>> = { image: "generate_image" };
+
+/**
+ * Charge the customer in credits, from the tokens the vendor metered.
+ *
+ * Null when the vendor reported no tokens: a job we cannot measure is not a job
+ * we may invent a charge for. The cost is passed rather than derived, because
+ * AI_PRICES_JSON prices text deployments and knows nothing about image models.
+ */
+async function chargeCredits(row: MediaJob, state: VendorState) {
+  const tokens = state.usage?.tokens;
+  const kind = USAGE_KIND[MEDIA_KIND_OF[row.jobKind as JobKind]];
+  if (!tokens || !kind) return null;
+  return recordAiUsage({
+    organizationId: row.organizationId,
+    workspaceId: row.workspaceId,
+    userId: row.requestedByUserId,
+    kind,
+    model: row.modelKey,
+    inputTokens: tokens.inputTokens,
+    outputTokens: tokens.outputTokens,
+    costUsd: state.usage?.costUsd ?? null,
+  });
+}
 
 /**
  * A voice-over inherits its consent's scope, so organic-only consent produces an
@@ -36,6 +65,12 @@ export async function completeMediaJob(
   state: VendorState,
 ): Promise<FinishResult> {
   const outputs = await adapter.fetch(state);
+  /*
+   * Metered in the SAME ledger and the SAME formula as drafting, so one credit
+   * means one thing across the product. Generation was previously free to the
+   * customer and pure cost to us (docs/bugs/B-004).
+   */
+  const billed = await chargeCredits(row, state);
   const { assetIds, mismatches } = await normalizeOutputs({
     actor: { organizationId: row.organizationId, workspaceId: row.workspaceId, userId: row.requestedByUserId },
     mediaJobId: row.id,
@@ -61,8 +96,11 @@ export async function completeMediaJob(
       mismatches,
       quantity: state.usage ? String(state.usage.quantity) : null,
       unit: state.usage?.unit ?? null,
+      inputTokens: state.usage?.tokens?.inputTokens ?? null,
+      outputTokens: state.usage?.tokens?.outputTokens ?? null,
       // Null when the vendor says nothing — never a guessed 0.
       vendorCostUsd: state.usage?.costUsd === undefined ? null : String(state.usage.costUsd),
+      credits: billed === null ? null : creditsToColumn(billed.credits),
       outputExpiresAt: state.expiresAt ? new Date(state.expiresAt) : null,
       finishedAt: new Date(),
       updatedAt: new Date(),
@@ -84,6 +122,7 @@ export async function completeMediaJob(
     quantity: state.usage?.quantity ?? null,
     unit: state.usage?.unit ?? null,
     costUsd: state.usage?.costUsd ?? "unknown",
+    credits: billed?.credits ?? "unbilled",
     assets: assetIds.length,
   });
 

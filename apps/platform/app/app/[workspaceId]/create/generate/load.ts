@@ -41,5 +41,5 @@ export async function loadGenerator(ctx: WorkspaceContext): Promise<GeneratorLoa
     configured: Boolean(kit.voice.tone || kit.identity.oneLiner || kit.messaging.valueProps.length),
     styled: Boolean(kit.visual.imagery.style || kit.visual.palette.length),
   };
-  return { kind: "ready", channels, savedBriefs, imagesEnabled: canGenerate("scene_still"), imageEstimate: imageUnitEstimate(), brand };
+  return { kind: "ready", channels, savedBriefs, imagesEnabled: canGenerate("scene_still"), imageEstimate: await imageUnitEstimate(workspaceId), brand };
 }

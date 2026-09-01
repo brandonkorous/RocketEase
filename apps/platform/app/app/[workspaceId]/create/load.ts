@@ -67,7 +67,7 @@ async function loadAssets(workspaceId: string): Promise<ComposerAsset[]> {
   return Promise.all(
     rows.map(async (a) => {
       const t = rends.find((r) => r.assetId === a.id);
-      return { id: a.id, kind: a.kind as "image" | "video", fileName: a.fileName, altText: a.altText, thumbUrl: t ? await presignGet(t.storageKey) : a.kind === "image" ? await presignGet(a.storageKey) : null, previewUrl: a.kind === "video" ? await presignGet(a.storageKey) : null, scanClean: a.scanStatus === "clean", width: a.width, height: a.height };
+      return { id: a.id, kind: a.kind as "image" | "video", fileName: a.fileName, altText: a.altText, thumbUrl: t ? await presignGet(t.storageKey) : a.kind === "image" ? await presignGet(a.storageKey) : null, previewUrl: await presignGet(a.storageKey), scanClean: a.scanStatus === "clean", width: a.width, height: a.height };
     }),
   );
 }

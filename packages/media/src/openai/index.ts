@@ -71,7 +71,14 @@ function imagesAdapter(cfg: AdapterConfig): MediaAdapter {
       handle: r.handle,
       status: "succeeded" as const,
       progress: 100,
-      usage: { quantity: r.count, unit: "images" as const, costUsd: model ? costOf(model, r.usage) : undefined },
+      // The token counts travel with the money. They are what the vendor
+      // actually metered; the dollars are our arithmetic on top of them.
+      usage: {
+        quantity: r.count,
+        unit: "images" as const,
+        costUsd: model ? costOf(model, r.usage) : undefined,
+        tokens: r.usage ?? undefined,
+      },
     };
   };
 

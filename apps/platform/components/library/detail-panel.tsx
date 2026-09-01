@@ -9,8 +9,9 @@ import { useActionFeedback } from "@/lib/use-action-feedback";
 import { workspacePath } from "@/lib/nav";
 import { daysUntil, remainingLabel } from "@/lib/rights/format";
 import { NetMark } from "../net-mark";
-import { formatCostUsd } from "@/lib/media/cost-format";
-import { fmtBytes, fmtDate, type AssetCard, type CollectionRow } from "./types";
+import { ExpandButton, useMediaLightbox } from "../shared/media-lightbox";
+import { formatCredits } from "@/lib/ai/usage/credits";
+import { fmtBytes, fmtDate, viewableMedia, type AssetCard, type CollectionRow } from "./types";
 
 type Props = { a: AssetCard; workspaceId: string; canEdit: boolean; timezone: string; collections: CollectionRow[]; onClose: () => void };
 
@@ -40,11 +41,14 @@ export function DetailPanel({ a, workspaceId, canEdit, timezone, collections, on
 }
 
 /**
- * What this image cost to make. Written to media_job since M12.1 and readable
- * NOWHERE until now — which mattered, because the monthly spend ceiling accrues
- * against exactly this number, so a vendor that quietly stopped reporting usage
- * would have disarmed the ceiling with nothing on any screen to show it.
- * "Not reported" is therefore said out loud rather than shown as free.
+ * What this image cost the CUSTOMER, in credits — the one unit the product
+ * bills in, so an image and a draft are comparable.
+ *
+ * Deliberately not vendor dollars. This screen is workspace-scoped, and what we
+ * pay Azure is cost of goods; showing it hands over our margin and anchors a
+ * price. Our own spend stays on media_job, the "media job charged" log line and
+ * the ceiling. "Not billed" is said out loud rather than shown as free, because
+ * an unmetered job is the case worth spotting.
  */
 function Generation({ g }: { g: NonNullable<AssetCard["generation"]> }) {
   return (
@@ -52,8 +56,8 @@ function Generation({ g }: { g: NonNullable<AssetCard["generation"]> }) {
       <h3 id="gen-info" className="text-sm font-semibold">AI-generated</h3>
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
         <dt className="text-secondary/70">Model</dt><dd className="text-right">{g.model}</dd>
-        <dt className="text-secondary/70">Cost</dt>
-        <dd className="text-right">{formatCostUsd(g.costUsd) ?? <span className="text-secondary/70">Not reported</span>}</dd>
+        <dt className="text-secondary/70">Credits</dt>
+        <dd className="text-right">{g.credits === null ? <span className="text-secondary/70">Not billed</span> : formatCredits(g.credits)}</dd>
       </dl>
       {g.reason && <p className="mt-1 text-xs text-secondary/70">{g.reason}</p>}
     </section>
@@ -62,9 +66,23 @@ function Generation({ g }: { g: NonNullable<AssetCard["generation"]> }) {
 
 function Preview({ a }: { a: AssetCard }) {
   const src = a.previewUrl ?? a.originalUrl;
+  const { open, lightbox } = useMediaLightbox(viewableMedia([a]));
   return (
-    <div className="mt-3 overflow-hidden rounded-lg bg-base-200">
-      {a.kind === "image" && src ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={src} alt={a.altText ?? ""} className="max-h-65 w-full object-cover" /> : a.kind === "video" && a.originalUrl ? <video src={a.originalUrl} controls className="max-h-65 w-full" /> : <div className="p-8 text-center text-sm text-secondary/70">{a.uploadStatus === "ready" ? "No preview" : "Processing…"}</div>}
+    <div className="relative mt-3 overflow-hidden rounded-lg bg-base-200">
+      {a.kind === "image" && src ? (
+        <button type="button" onClick={() => open(0)} className="block w-full cursor-zoom-in" aria-label={`View ${a.title ?? a.fileName} full size`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt={a.altText ?? ""} className="max-h-65 w-full object-cover" />
+        </button>
+      ) : a.kind === "video" && a.originalUrl ? (
+        <>
+          <video src={a.originalUrl} controls className="max-h-65 w-full" />
+          <ExpandButton onClick={() => open(0)} label={`View ${a.title ?? a.fileName} full size`} className="absolute right-2 top-2" />
+        </>
+      ) : (
+        <div className="p-8 text-center text-sm text-secondary/70">{a.uploadStatus === "ready" ? "No preview" : "Processing…"}</div>
+      )}
+      {lightbox}
     </div>
   );
 }

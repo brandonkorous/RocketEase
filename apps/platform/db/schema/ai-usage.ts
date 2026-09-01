@@ -12,7 +12,7 @@ import { index, integer, numeric, pgTable, text, timestamp } from "drizzle-orm/p
 import { organization, user } from "./auth";
 import { workspace } from "./app";
 
-export const AI_USAGE_KINDS = ["caption", "repurpose", "reply", "generate_post", "generate_ad", "other"] as const;
+export const AI_USAGE_KINDS = ["caption", "repurpose", "reply", "generate_post", "generate_ad", "generate_image", "other"] as const;
 export type AiUsageKind = (typeof AI_USAGE_KINDS)[number];
 
 export const aiUsage = pgTable(

@@ -1,10 +1,17 @@
+import type { LightboxMedia } from "../shared/media-lightbox";
+
 export type AssetCard = {
   id: string; kind: "image" | "video" | "document" | "audio"; fileName: string; title: string | null; altText: string | null; caption: string | null; mimeType: string;
   bytes: number | null; width: number | null; height: number | null; durationSeconds: number | null; uploadStatus: string; scanStatus: string; scanNote: string | null;
   processingError: string | null; rightsNote: string | null; rightsExpiresAt: string | null; rightsScope: "organic" | "paid" | "both"; folderId: string | null; tags: string[]; thumbUrl: string | null; previewUrl: string | null;
   originalUrl: string | null; renditions: { kind: string; width: number | null; height: number | null; bytes: number | null }[]; usedIn: Record<string, number>; createdAt: string; uploadedBy: string | null;
   /** Present only for an AI-generated asset. `costUsd` is null when the vendor reported nothing. */
-  generation: { model: string; costUsd: number | null; reason: string | null } | null;
+  /**
+   * `credits` is what the CUSTOMER was billed — the same unit drafting uses.
+   * Vendor dollars are our cost of goods and deliberately not on this screen;
+   * they live on media_job, the "media job charged" log line and the ceiling.
+   */
+  generation: { model: string; credits: number | null; reason: string | null } | null;
 };
 export type CollectionRow = { id: string; name: string; count: number };
 export type RecentRow = { id: string; fileName: string; bytes: number | null; createdAt: string; thumbUrl: string | null };
@@ -25,3 +32,19 @@ export type LibraryData = {
 export const fmtBytes = (b: number | null) => (b == null ? "" : b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);
 export const fmtDur = (s: number | null) => (s == null ? null : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`);
 export const fmtDate = (iso: string, tz: string) => new Intl.DateTimeFormat("en-US", { timeZone: tz, dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
+
+/**
+ * The subset of a library page the lightbox can show, in grid order. Documents
+ * and audio have nothing to enlarge, so they are left out entirely — callers
+ * look an asset up by id rather than assuming its grid position.
+ */
+export const viewableMedia = (assets: AssetCard[]): LightboxMedia[] =>
+  assets
+    .filter((a) => a.kind === "image" || a.kind === "video")
+    .map((a) => ({
+      id: a.id,
+      kind: a.kind as "image" | "video",
+      src: a.kind === "video" ? a.originalUrl ?? a.previewUrl : a.previewUrl ?? a.originalUrl ?? a.thumbUrl,
+      alt: a.altText,
+      caption: a.title ?? a.fileName,
+    }));

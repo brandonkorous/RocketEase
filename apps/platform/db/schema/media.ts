@@ -60,8 +60,17 @@ export const mediaJob = pgTable(
     /** What was consumed, in the model's billed unit. */
     quantity: numeric("quantity", { precision: 14, scale: 4 }),
     unit: text("unit"),
+    /**
+     * What the vendor METERED. Azure bills gpt-image-2 per token, so these are
+     * the reading and vendorCostUsd is arithmetic on top of a rate we configure.
+     * Kept so a job can be re-priced when a rate turns out to be wrong.
+     */
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
     /** What it actually cost us. Null when unknown — never 0 as a stand-in. */
     vendorCostUsd: numeric("vendor_cost_usd", { precision: 12, scale: 6 }),
+    /** What the CUSTOMER was billed, in the product's one unit (lib/ai/usage/credits.ts). */
+    credits: numeric("credits", { precision: 12, scale: 4 }),
 
     assetIds: jsonb("asset_ids").$type<string[]>().notNull().default([]),
     /** User-facing reason, never the raw vendor payload. */

@@ -1,11 +1,13 @@
 import "server-only";
-import { count, eq } from "drizzle-orm";
+import { count, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { organization, user } from "@/db/schema/auth";
 import { workspace } from "@/db/schema/app";
 import { featureGrant } from "@/db/schema/features";
 import { staffUser, type StaffRole } from "@/db/schema/staff";
+import { mediaJob } from "@/db/schema/media";
 import { describeGrants, type GrantDescription } from "@/lib/features";
+import { startOfMonth } from "@/lib/media/ceiling-policy";
 
 export type StaffOrgRow = {
   id: string;
@@ -15,6 +17,12 @@ export type StaffOrgRow = {
   workspaces: number;
   /** One entry per known beta, so the table has no gaps to interpret. */
   betas: GrantDescription[];
+  /**
+   * What WE have paid a vendor for this org's generations this month — our cost
+   * of goods, and what the monthly ceiling accrues against. It lives here and
+   * not in the workspace, where it would hand a customer our margin.
+   */
+  mediaSpendUsd: number;
 };
 
 /**
@@ -28,6 +36,14 @@ export async function listStaffOrganizations(now = new Date()): Promise<StaffOrg
     db.select().from(featureGrant),
   ]);
 
+  // Sum, not per-job: the ceiling is monthly and this is the number it uses.
+  const spend = await db
+    .select({ organizationId: mediaJob.organizationId, total: sql<string>`coalesce(sum(${mediaJob.vendorCostUsd}), 0)` })
+    .from(mediaJob)
+    .where(gte(mediaJob.createdAt, startOfMonth(now)))
+    .groupBy(mediaJob.organizationId);
+  const spentBy = new Map(spend.map((r) => [r.organizationId, Number(r.total) || 0]));
+
   const sizeOf = new Map(counts.map((c) => [c.organizationId, Number(c.n)]));
   const grantsByOrg = new Map<string, typeof grants>();
   for (const g of grants) grantsByOrg.set(g.organizationId, [...(grantsByOrg.get(g.organizationId) ?? []), g]);
@@ -39,6 +55,7 @@ export async function listStaffOrganizations(now = new Date()): Promise<StaffOrg
     createdAt: o.createdAt,
     workspaces: sizeOf.get(o.id) ?? 0,
     betas: describeGrants(o.id, grantsByOrg.get(o.id) ?? [], now),
+    mediaSpendUsd: spentBy.get(o.id) ?? 0,
   }));
 }
 

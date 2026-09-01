@@ -90,7 +90,7 @@ export default async function ApprovalsPage({ params, searchParams }: { params: 
     const previewAssetIds = snapshot?.sharedAssetIds ?? [];
     const pThumbs = previewAssetIds.length ? await db.select().from(assetRendition).where(and(inArray(assetRendition.assetId, previewAssetIds), eq(assetRendition.kind, "preview"))) : [];
     const pOrig = previewAssetIds.length ? await db.select({ id: asset.id, key: asset.storageKey, kind: asset.kind, alt: asset.altText }).from(asset).where(inArray(asset.id, previewAssetIds)) : [];
-    const media = await Promise.all(previewAssetIds.map(async (id) => { const t = pThumbs.find((r) => r.assetId === id); const o = pOrig.find((a) => a.id === id); return { id, url: t ? await presignGet(t.storageKey) : o?.kind === "image" ? await presignGet(o.key) : null, alt: o?.alt ?? "" }; }));
+    const media = await Promise.all(previewAssetIds.map(async (id) => { const t = pThumbs.find((r) => r.assetId === id); const o = pOrig.find((a) => a.id === id); return { id, kind: o?.kind ?? "image", url: t ? await presignGet(t.storageKey) : o?.kind === "image" ? await presignGet(o.key) : null, fullUrl: o ? await presignGet(o.key) : null, alt: o?.alt ?? "" }; }));
     detail = {
       ...row,
       snapshot: snapshot ? { text: snapshot.sharedText, link: snapshot.link, firstComment: snapshot.variants.find((v) => v.firstComment)?.firstComment ?? null, schedule: snapshot.variants.find((v) => v.scheduledAt)?.scheduledAt ?? null, media } : null,

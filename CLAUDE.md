@@ -86,9 +86,15 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
   `mock` exercises the whole loop with real decodable fixtures and zero spend. **There is exactly
   one image path**: every generation routes through the registry, so nothing calls a vendor
   directly and nothing escapes the ceiling. A model is a pinned catalog entry, never an env var.
-  **Spend must be readable, not merely recorded**: `vendor_cost_usd` is logged on
-  every completion and shown on the asset's detail panel, because it is what the monthly
-  ceiling accrues against and a silent null would disarm that ceiling. Image generation is
+  **Spend must be readable, not merely recorded** — but by the RIGHT audience.
+  `vendor_cost_usd` is our cost of goods: logged on every completion and shown on `/staff`,
+  because it is what the monthly ceiling accrues against and a silent null would disarm it.
+  It is NOT shown in a workspace, where it hands a customer our margin. Customers see
+  **credits**, the one unit drafting already bills in, written to the same `ai_usage` ledger
+  by the same `creditsFor()` formula. And the TOKENS are kept (`media_job.input_tokens` /
+  `output_tokens`): they are what the vendor metered, dollars are arithmetic on a rate we
+  configure, and keeping only the money means a wrong rate can never be recomputed — which
+  is exactly what happened (docs/bugs/B-004). Image generation is
   reachable WITHOUT the text model (`generateImage` checks `canGenerate`, never
   `aiConfigured`) — two vendors, two keys, so one being down must not take the other with
   it. An adapter declares `synchronous` when `start` does the whole job — `runMediaJobNow` runs those

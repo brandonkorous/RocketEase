@@ -5,13 +5,14 @@ import { useState } from "react";
 import { Input, Label, Switch, Textarea } from "@wizeworks/silicaui-react";
 import { workspacePath } from "@/lib/nav";
 import { NetMark } from "../library-screen";
+import { PlayBadge, useMediaLightbox } from "../shared/media-lightbox";
 import { ChannelOverride } from "./channel-override";
 import { HashtagSets } from "./hashtag-sets";
 import { AiCaption } from "./ai-caption";
 import { DisclosureSection } from "./disclosure";
 import type { ComposerChannel } from "./types";
 import type { ComposerState } from "./use-composer";
-import { NETWORK_LABEL } from "./types";
+import { lightboxMedia, NETWORK_LABEL } from "./types";
 
 type Props = { s: ComposerState; channels: ComposerChannel[]; workspaceId: string; onPickMedia: () => void };
 
@@ -127,16 +128,21 @@ function setSharedFirstComment(s: ComposerState, value: string) {
 }
 
 function MediaStrip({ s, onPickMedia }: { s: ComposerState; onPickMedia: () => void }) {
+  const { open, lightbox } = useMediaLightbox(lightboxMedia(s.chosenAssets));
   return (
     <div className="mt-2 grid grid-cols-3 gap-3 sm:grid-cols-4">
-      {s.chosenAssets.map((a) => (
+      {s.chosenAssets.map((a, i) => (
         <div key={a.id} className="relative aspect-square overflow-hidden rounded-lg border border-base-300 bg-base-200">
-          {a.thumbUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={a.thumbUrl} alt={a.altText ?? ""} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs uppercase text-secondary/70">{a.kind}</div>}
+          <button type="button" onClick={() => open(i)} className="block h-full w-full cursor-zoom-in" aria-label={`View ${a.fileName} larger`}>
+            {a.thumbUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={a.thumbUrl} alt={a.altText ?? ""} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs uppercase text-secondary/70">{a.kind}</div>}
+            {a.kind === "video" && <PlayBadge />}
+          </button>
           <button type="button" onClick={() => s.setAssetIds((ids) => ids.filter((x) => x !== a.id))} className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white" aria-label={`Remove ${a.fileName}`}>×</button>
-          {a.kind === "image" && !a.altText && <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white">no alt text</span>}
+          {a.kind === "image" && !a.altText && <span className="pointer-events-none absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white">no alt text</span>}
         </div>
       ))}
       <button type="button" onClick={onPickMedia} className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg bg-primary text-sm font-medium text-white hover:bg-primary/90"><span className="text-2xl leading-none">+</span>Add media</button>
+      {lightbox}
     </div>
   );
 }

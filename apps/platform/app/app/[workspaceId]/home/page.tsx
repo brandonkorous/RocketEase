@@ -13,6 +13,7 @@ import { hasCapability, requireWorkspace } from "@/lib/session";
 import { formatInZone } from "@/lib/time";
 import { workspacePath } from "@/lib/nav";
 import { conversationSummary } from "@/lib/engagement/summary";
+import { overdueRequestsFor } from "@/lib/approvals/due";
 import { listRecommendations } from "@/lib/recommendations/store";
 import { RecommendationsPulse } from "@/components/recommendations/panel";
 import { Checklist, loadChecklist } from "./checklist";
@@ -24,7 +25,7 @@ export default async function HomePage({ params }: { params: Promise<{ workspace
   const { workspace, session } = await requireWorkspace(workspaceId);
   const tz = workspace.timezone;
 
-  const [channels, checklist, failed, upcoming, recentPublished, [{ n: scheduledCount }], convs, recs] = await Promise.all([
+  const [channels, checklist, failed, upcoming, recentPublished, [{ n: scheduledCount }], convs, recs, overdue] = await Promise.all([
     db.select().from(channel).where(and(eq(channel.workspaceId, workspaceId), ne(channel.status, "disconnected"))),
     loadChecklist(workspaceId),
     db.select({ item: contentItem }).from(contentItem).where(and(eq(contentItem.workspaceId, workspaceId), isNull(contentItem.deletedAt), inArray(contentItem.status, ["failed", "partially_published"]))).orderBy(desc(contentItem.updatedAt)).limit(5),
@@ -33,13 +34,14 @@ export default async function HomePage({ params }: { params: Promise<{ workspace
     db.select({ n: count() }).from(contentItem).where(and(eq(contentItem.workspaceId, workspaceId), isNull(contentItem.deletedAt), eq(contentItem.status, "scheduled"))),
     conversationSummary(workspaceId, session.user.id, tz),
     listRecommendations(workspaceId, { statuses: ["open"], limit: 3 }),
+    overdueRequestsFor(workspaceId, { userId: session.user.id, role: workspace.role, grants: workspace.grants }),
   ]);
   const disconnected = channels.filter((c) => c.status === "action_required" || c.status === "revoked");
   const hasPosts = Number(scheduledCount) > 0 || recentPublished.length > 0;
   const firstName = session.user.name.split(" ")[0];
   const canCreate = hasCapability(workspace, "content.create");
   const allDone = checklist.allDone;
-  const attention = failed.length + disconnected.length;
+  const attention = failed.length + disconnected.length + overdue.length;
 
   return (
     <div className="mx-auto w-full max-w-360 px-6 py-5 lg:px-8">
@@ -62,6 +64,8 @@ export default async function HomePage({ params }: { params: Promise<{ workspace
           <ul className="mt-2 flex flex-col gap-1.5 text-sm">
             {disconnected.map((c) => (<li key={c.id}><Link href={workspacePath(workspaceId, "accounts")} className="hover:underline"><NetMark network={c.network} size={14} /> <strong>{c.name}</strong> needs to be reconnected{c.health.message ? ` — ${c.health.message}` : ""}.</Link></li>))}
             {failed.map(({ item }) => (<li key={item.id}><Link href={workspacePath(workspaceId, `posts/${item.id}`)} className="hover:underline"><strong>{item.title}</strong> {item.status === "partially_published" ? "published to some destinations only" : "failed to publish"}. Open to retry.</Link></li>))}
+            {overdue.slice(0, 5).map((r) => (<li key={r.id}><Link href={workspacePath(workspaceId, `approvals?request=${r.id}`)} className="hover:underline"><strong>{r.title}</strong> is overdue for review — due {formatInZone(r.dueAt, tz, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. Open to review.</Link></li>))}
+            {overdue.length > 5 && <li><Link href={workspacePath(workspaceId, "approvals?tab=overdue")} className="hover:underline">{overdue.length - 5} more overdue in Approvals.</Link></li>}
           </ul>
         </section>
       )}

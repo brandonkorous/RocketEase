@@ -20,6 +20,11 @@ export async function scheduleRecycling(boss: PgBoss) {
   await boss.schedule("recycle.tick", "5 * * * *", {}, { singletonKey: "recycle.tick" });
 }
 
+/** Approval reminders: every 5 minutes, so a reminder lands within 5 minutes of the due time. */
+export async function scheduleApprovalReminders(boss: PgBoss) {
+  await boss.schedule("approval.remind", "*/5 * * * *", {}, { singletonKey: "approval.remind" });
+}
+
 export async function scheduleAutomationSweep(boss: PgBoss) {
   await boss.schedule("automation.evaluate", "0 5 * * *", { trigger: "campaign.budget_threshold" as const, refId: "" }, { singletonKey: "automation.budget-sweep" });
 }

@@ -139,13 +139,15 @@ and scanned. `scheduledAt` records intent — it is applied when the post is sub
 The human gate.
 
 ```json
-{ "scheduledAt": "2026-09-01T09:00:00Z", "assigneeUserId": "u_…", "note": "Copy approved by legal." }
+{ "scheduledAt": "2026-09-01T09:00:00Z", "assigneeUserId": "u_…", "note": "Copy approved by legal.", "dueAt": "2026-08-30T17:00:00Z" }
 ```
 
 - **Approval path** (a policy matches, or the item is already in review): opens an approval request
   against a frozen version, notifies the approvers, and remembers `scheduledAt` so approval also
-  schedules it. Needs `content.edit`.
-  → `{ "status": "pending_approval", "requestId": "ar_…", "policy": "Client sign-off", "scheduleOnApprove": "…" }`
+  schedules it. `dueAt` is the reviewer's deadline; omitted, the policy window applies (24 h without
+  a policy). A deadline that is not ahead of now is a `409`. Once it passes with no decision, the
+  reviewers get one reminder and the request shows as overdue. Needs `content.edit`.
+  → `{ "status": "pending_approval", "requestId": "ar_…", "policy": "Client sign-off", "dueAt": "…", "scheduleOnApprove": "…" }`
 - **Schedule path** (no policy applies and `scheduledAt` is given): schedules exactly as the UI
   would — version snapshot, one publish job per variant, reconcile-before-retry semantics. Needs
   `content.publish`.

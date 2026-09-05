@@ -72,6 +72,8 @@ export const approvalRequest = pgTable(
     separationOfDuty: boolean("separation_of_duty").notNull().default(true),
     state: requestState("state").notNull().default("pending"),
     dueAt: timestamp("due_at", { withTimezone: true }),
+    /** When the one overdue reminder went out; reset when the due time is moved into the future. */
+    remindedAt: timestamp("reminded_at", { withTimezone: true }),
     /** Schedule to apply automatically once approved ("YYYY-MM-DDTHH:mm" local, or "now"). */
     scheduleOnApprove: text("schedule_on_approve"),
     note: text("note"),

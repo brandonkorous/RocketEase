@@ -8,6 +8,7 @@ import { Wordmark } from "@rocketease/ui/brand";
 import { listUserWorkspaces, requireUser } from "@/lib/session";
 import { workspacePath } from "@/lib/nav";
 import { conversationSummary } from "@/lib/engagement/summary";
+import { overdueRequestsFor } from "@/lib/approvals/due";
 import { orgSecurity } from "@/lib/sso/queries";
 import { db } from "@/db";
 import { channel } from "@/db/schema/connections";
@@ -25,8 +26,9 @@ export default async function AgencyPage({ searchParams }: { searchParams: Promi
   if (workspaces.length === 0) redirect("/onboarding");
 
   const attention = new Map(await Promise.all(workspaces.map(async (w) => {
-    const [convs, [{ n: channels }]] = await Promise.all([conversationSummary(w.id, session.user.id, w.timezone, 0), db.select({ n: count() }).from(channel).where(and(eq(channel.workspaceId, w.id), ne(channel.status, "disconnected")))]);
-    return [w.id, { convs, channels: Number(channels) }] as const;
+    const me = { userId: session.user.id, role: w.role, grants: w.grants };
+    const [convs, [{ n: channels }], overdue] = await Promise.all([conversationSummary(w.id, session.user.id, w.timezone, 0), db.select({ n: count() }).from(channel).where(and(eq(channel.workspaceId, w.id), ne(channel.status, "disconnected"))), overdueRequestsFor(w.id, me)]);
+    return [w.id, { convs, channels: Number(channels), overdue: overdue.length }] as const;
   })));
   const security = await orgSecurity(workspaces.map((w) => w.organizationId));
   const byOrg = new Map<string, typeof workspaces>();
@@ -68,6 +70,7 @@ export default async function AgencyPage({ searchParams }: { searchParams: Promi
                   <th>Timezone</th>
                   <th>Connections</th>
                   <th>Conversations</th>
+                  <th>Approvals</th>
                   <th className="text-right">Open</th>
                 </tr>
               </thead>
@@ -81,6 +84,7 @@ export default async function AgencyPage({ searchParams }: { searchParams: Promi
                     <td>{w.timezone}</td>
                     <td className={attention.get(w.id)?.channels ? "" : "text-secondary/70"}>{attention.get(w.id)?.channels ? `${attention.get(w.id)!.channels} connected` : "No channels yet"}</td>
                     <td>{attention.get(w.id)?.convs.unresolved ? <Link href={workspacePath(w.id, "inbox")} className="hover:underline">{attention.get(w.id)!.convs.unresolved} unresolved{attention.get(w.id)!.convs.assignedToMe ? ` · ${attention.get(w.id)!.convs.assignedToMe} yours` : ""}</Link> : <span className="text-secondary/70">—</span>}</td>
+                    <td>{attention.get(w.id)?.overdue ? <Link href={workspacePath(w.id, "approvals?tab=overdue")} className="hover:underline">{attention.get(w.id)!.overdue} overdue</Link> : <span className="text-secondary/70">—</span>}</td>
                     <td className="text-right">
                       <Link href={workspacePath(w.id)} className={buttonClasses({ color: "neutral", variant: "outline", size: "sm" })}>
                         Enter

@@ -9,7 +9,8 @@ export type VariantState = { format: string; textOverride: string | null; assetI
 export type ComposerItem = { id: string; title: string; status: string; approvalState: string; sharedText: string; sharedAssetIds: string[]; link: string | null; scheduledAtLocal: string | null; channelIds: string[]; variants: Record<string, VariantState>; syntheticFlag: SyntheticFlag; syntheticNote: string };
 export type Override = { textOverride: string | null; firstComment: string; linkOverride: string | null };
 export type Method = "now" | "schedule" | "draft" | "review";
-export type Approval = { required: boolean; policyName?: string; state: string };
+/** `dueHours` is the policy window a request falls back to when the requester sets no due time. */
+export type Approval = { required: boolean; policyName?: string; state: string; dueHours?: number };
 export type Reviewer = { userId: string; name: string; role: string };
 export type Issue = ValidationIssue & { channelId: string };
 
@@ -17,4 +18,4 @@ export type Issue = ValidationIssue & { channelId: string };
 export const lightboxMedia = (assets: ComposerAsset[]): LightboxMedia[] =>
   assets.map((a) => ({ id: a.id, kind: a.kind, src: a.previewUrl ?? a.thumbUrl, alt: a.altText, caption: a.fileName }));
 
-export const NETWORK_LABEL: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn", tiktok: "TikTok", x: "X (Twitter)", youtube: "YouTube", pinterest: "Pinterest", google_business: "Google Business Profile", mock: "Demo network" };
+export const NETWORK_LABEL: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn", tiktok: "TikTok", x: "X (Twitter)", youtube: "YouTube", pinterest: "Pinterest", google_business: "Google Business Profile", threads: "Threads", bluesky: "Bluesky", mock: "Demo network" };

@@ -10,6 +10,7 @@ import { user } from "@/db/schema/auth";
 import { contentItem, contentVersion, postVariant } from "@/db/schema/content";
 import { channel } from "@/db/schema/connections";
 import { canDecide } from "@/lib/approvals";
+import { isOverdue } from "@/lib/approvals/rules";
 import { pendingAutomationApprovals } from "@/lib/automations/queries";
 import { hasCapability, requireWorkspace } from "@/lib/session";
 import { presignGet } from "@/lib/storage";
@@ -68,9 +69,10 @@ export default async function ApprovalsPage({ params, searchParams }: { params: 
         channels: vs.map((v) => ({ id: v.ch.id, name: v.ch.name, network: v.ch.network })),
         thumbUrl: await thumbFor(item.sharedAssetIds[0]),
         requester: requester ?? "Unknown", requesterId: r.requestedByUserId, assignee: assignee ? { userId: assignee.userId, name: assignee.name, role: assignee.role, image: assignee.image } : null,
-        dueAt: r.dueAt?.toISOString() ?? null, dueLabel: r.dueAt ? formatInZone(r.dueAt, tz, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : null, overdue: Boolean(r.dueAt && r.dueAt < new Date() && r.state === "pending"),
+        dueAt: r.dueAt?.toISOString() ?? null, dueLabel: r.dueAt ? formatInZone(r.dueAt, tz, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : null, overdue: isOverdue(r),
         createdAt: formatInZone(r.createdAt, tz, { dateStyle: "medium", timeStyle: "short" }), note: r.note, scheduleOnApprove: r.scheduleOnApprove, versionId: r.versionId, stale: Boolean(item.currentVersionId && item.currentVersionId !== r.versionId),
         canDecide: gate.ok, decideReason: gate.reason ?? null, canCancel: r.state === "pending" && (r.requestedByUserId === me.userId || ["owner", "admin"].includes(me.role)),
+        canSetDue: r.state === "pending" && (gate.ok || r.requestedByUserId === me.userId),
       };
     }),
   );
@@ -105,9 +107,9 @@ export default async function ApprovalsPage({ params, searchParams }: { params: 
     };
   }
 
-  const counts = { all: rows.length, pending: rows.filter((r) => r.state === "pending").length, changes: rows.filter((r) => r.state === "changes_requested" || r.state === "rejected").length, approved: rows.filter((r) => r.state === "approved").length, scheduled: rows.filter((r) => r.state === "approved" && ["scheduled", "published"].includes(r.itemStatus)).length };
+  const counts = { all: rows.length, pending: rows.filter((r) => r.state === "pending").length, overdue: rows.filter((r) => r.overdue).length, changes: rows.filter((r) => r.state === "changes_requested" || r.state === "rejected").length, approved: rows.filter((r) => r.state === "approved").length, scheduled: rows.filter((r) => r.state === "approved" && ["scheduled", "published"].includes(r.itemStatus)).length };
   const tab = sp.tab ?? "pending";
-  const filtered = rows.filter((r) => (tab === "all" ? true : tab === "pending" ? r.state === "pending" : tab === "changes" ? r.state === "changes_requested" || r.state === "rejected" : tab === "approved" ? r.state === "approved" : tab === "scheduled" ? r.state === "approved" && ["scheduled", "published"].includes(r.itemStatus) : true) && (!sp.assignee || r.assignee?.userId === sp.assignee) && (!sp.channel || r.channels.some((c) => c.id === sp.channel)));
+  const filtered = rows.filter((r) => (tab === "all" ? true : tab === "pending" ? r.state === "pending" : tab === "overdue" ? r.overdue : tab === "changes" ? r.state === "changes_requested" || r.state === "rejected" : tab === "approved" ? r.state === "approved" : tab === "scheduled" ? r.state === "approved" && ["scheduled", "published"].includes(r.itemStatus) : true) && (!sp.assignee || r.assignee?.userId === sp.assignee) && (!sp.channel || r.channels.some((c) => c.id === sp.channel)));
 
   const data: ApprovalsData = {
     workspaceId, timezone: tz, tab, counts, rows: filtered, detail, reviewers, channels: [...new Map(variants.map((v) => [v.ch.id, { id: v.ch.id, name: v.ch.name, network: v.ch.network }])).values()],

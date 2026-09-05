@@ -5,6 +5,8 @@ export type ApprovalRow = {
   id: string; itemId: string; title: string; text: string; state: string; itemStatus: string; channels: { id: string; name: string; network: string }[]; thumbUrl: string | null;
   requester: string; requesterId: string | null; assignee: Reviewer | null; dueAt: string | null; dueLabel: string | null; overdue: boolean; createdAt: string; note: string | null; scheduleOnApprove: string | null; versionId: string; stale: boolean;
   canDecide: boolean; decideReason: string | null; canCancel: boolean;
+  /** Reviewers and the requester may move a pending request's due time. */
+  canSetDue: boolean;
 };
 export type Snapshot = { text: string; link: string | null; firstComment: string | null; schedule: string | null; media: { id: string; kind: string; url: string | null; fullUrl: string | null; alt: string }[] };
 export type VersionRow = { id: string; number: number; reason: string; by: string | null; at: string; current: boolean };
@@ -16,7 +18,7 @@ export const FIELD_LABEL: Record<string, string> = { text: "Post text", link: "L
 export const anchorKey = (a: Anchor) => (a.assetId ? `asset:${a.assetId}` : a.field ? `field:${a.field}` : "post");
 export type ApprovalDetailData = ApprovalRow & { snapshot: Snapshot | null; versions: VersionRow[]; timeline: TimelineRow[]; comments: CommentRow[] };
 export type ApprovalsData = {
-  workspaceId: string; timezone: string; tab: string; counts: { all: number; pending: number; changes: number; approved: number; scheduled: number }; rows: ApprovalRow[];
+  workspaceId: string; timezone: string; tab: string; counts: { all: number; pending: number; overdue: number; changes: number; approved: number; scheduled: number }; rows: ApprovalRow[];
   detail: ApprovalDetailData | null; reviewers: Reviewer[]; channels: { id: string; name: string; network: string }[]; filters: { assignee: string; channel: string; sort: string }; canComment: boolean; isClientApprover: boolean;
   /** Automation runs parked behind an approval gate (M7). */
   automations: AutomationApprovalRow[];

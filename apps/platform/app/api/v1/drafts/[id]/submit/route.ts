@@ -15,6 +15,8 @@ const bodySchema = z.object({
   /** Ask a specific person to review; otherwise the policy's approver roles are notified. */
   assigneeUserId: z.string().optional(),
   note: z.string().max(1000).optional(),
+  /** When the review is due; otherwise the policy window (default 24 h from now). Must be ahead of now. */
+  dueAt: isoDate.optional(),
 });
 
 /**
@@ -31,7 +33,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     const parsed = bodySchema.safeParse(await apiBody(req).catch(() => ({})));
     if (!parsed.success) throw invalid(parsed.error.issues[0]?.message ?? "Invalid submission.");
-    const { scheduledAt, assigneeUserId, note } = parsed.data;
+    const { scheduledAt, assigneeUserId, note, dueAt } = parsed.data;
 
     const item = await db.query.contentItem.findFirst({ where: (c, { and, eq, isNull }) => and(eq(c.id, id), eq(c.workspaceId, ctx.workspaceId), isNull(c.deletedAt)) });
     if (!item) throw notFound("Draft not found.");
@@ -51,15 +53,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     requireScope(ctx, "content.edit");
     if (item.approvalState === "pending") throw conflict("This post is already waiting for approval.");
-    const actor = { userId: ctx.actorUserId, userName: ctx.keyName, organizationId: ctx.organizationId, workspaceId: ctx.workspaceId, role: ctx.role };
+    const actor = { userId: ctx.actorUserId, userName: ctx.keyName, organizationId: ctx.organizationId, workspaceId: ctx.workspaceId, role: ctx.role, timezone: ctx.timezone };
     // scheduleOnApprove is a workspace-local time: decideRequest re-reads it in the workspace timezone.
-    const r = await submitForApprovalCore(actor, { itemId: item.id, assigneeUserId, note, scheduleOnApprove: at ? utcToZonedInput(at, ctx.timezone) : null }, "api:submit");
+    const r = await submitForApprovalCore(actor, { itemId: item.id, assigneeUserId, note, scheduleOnApprove: at ? utcToZonedInput(at, ctx.timezone) : null, dueAt: dueAt ? new Date(dueAt) : null }, "api:submit");
     if (r.error) throw conflict(r.error);
     return apiJson({
       status: "pending_approval",
       itemId: item.id,
       requestId: r.requestId,
       policy: r.policyName,
+      dueAt: r.dueAt?.toISOString() ?? null,
       scheduleOnApprove: at?.toISOString() ?? null,
       note: "A person decides. Nothing is sent to a network until they approve.",
     });

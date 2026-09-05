@@ -15,7 +15,7 @@ import { enqueueAdsSyncs } from "@/lib/campaigns/schedule";
 import { enqueueTrackingSyncs } from "@/lib/tracking/schedule";
 import { enqueueMediaPolls } from "@/lib/media/schedule";
 import { enqueueDueReports } from "./handlers/report-run";
-import { scheduleNightly, scheduleAutomationSweep, scheduleRecycling } from "./ticks";
+import { scheduleApprovalReminders, scheduleAutomationSweep, scheduleNightly, scheduleRecycling } from "./ticks";
 
 /** A ticker that never lets a rejection escape, and never holds the process open. */
 function every(ms: number, firstAfter: number, name: string, fn: () => Promise<unknown>) {
@@ -54,4 +54,5 @@ export async function startGeneralSchedules(boss: PgBoss): Promise<void> {
   await scheduleNightly(boss);
   await scheduleAutomationSweep(boss);
   await scheduleRecycling(boss);
+  await scheduleApprovalReminders(boss);
 }

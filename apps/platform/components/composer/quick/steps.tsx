@@ -99,7 +99,11 @@ export function ScheduleStep({ s, channels, approval, reviewers, timezone, canPu
         </div>
         {needsReview && <p className="text-xs text-secondary/70">Policy &ldquo;{approval.policyName}&rdquo; requires review before scheduling.</p>}
         {s.method === "review" && (
-          <select className="select select-sm w-full" value={s.reviewer} onChange={(e) => s.setReviewer(e.target.value)} aria-label="Reviewer"><option value="">Any approver</option>{reviewers.map((r) => (<option key={r.userId} value={r.userId}>{r.name} · {r.role.replace("_", " ")}</option>))}</select>
+          <div className="flex flex-col gap-2">
+            <select className="select select-sm w-full" value={s.reviewer} onChange={(e) => s.setReviewer(e.target.value)} aria-label="Reviewer"><option value="">Any approver</option>{reviewers.map((r) => (<option key={r.userId} value={r.userId}>{r.name} · {r.role.replace("_", " ")}</option>))}</select>
+            <Input type="datetime-local" size="sm" value={s.reviewDue} onChange={(e) => s.setReviewDue(e.target.value)} aria-label="Review due" />
+            <p className="text-xs text-secondary/70">Review due. Leave empty for the policy window: {approval.dueHours ?? 24} hours from now.</p>
+          </div>
         )}
       </Section>
     </>

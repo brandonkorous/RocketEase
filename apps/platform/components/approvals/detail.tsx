@@ -8,6 +8,7 @@ import { useActionFeedback } from "@/lib/use-action-feedback";
 import { workspacePath } from "@/lib/nav";
 import { NetMark } from "../net-mark";
 import { Comments } from "./comments";
+import { DueDateCard, OverdueBadge } from "./due";
 import { Details, Preview, Timeline, Versions } from "./preview";
 import { STATE, type Anchor, type ApprovalDetailData, type ApprovalsData } from "./types";
 
@@ -23,7 +24,7 @@ export function ApprovalDetail({ d, data }: { d: ApprovalDetailData; data: Appro
     <div className="p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2"><h2 className="truncate text-lg font-bold">{d.title}</h2><Badge size="xs" variant="soft" color={st.color}>{st.label}</Badge>{d.stale && <Badge size="xs" variant="soft" color="warning">Newer version exists</Badge>}</div>
+          <div className="flex flex-wrap items-center gap-2"><h2 className="truncate text-lg font-bold">{d.title}</h2><Badge size="xs" variant="soft" color={st.color}>{st.label}</Badge>{d.overdue && <OverdueBadge />}{d.stale && <Badge size="xs" variant="soft" color="warning">Newer version exists</Badge>}</div>
           <p className="mt-0.5 flex items-center gap-2 text-xs text-secondary">{d.channels.map((c) => (<span key={c.id} className="flex items-center gap-1"><NetMark network={c.network} size={12} />{c.name}</span>))}</p>
         </div>
         <Link href={workspacePath(data.workspaceId, `posts/${d.itemId}`)} className="text-sm font-medium hover:underline">Open post ↗</Link>
@@ -41,6 +42,7 @@ export function ApprovalDetail({ d, data }: { d: ApprovalDetailData; data: Appro
         <aside className="flex flex-col gap-3">
           <ReviewActions d={d} workspaceId={data.workspaceId} />
           <Assignee d={d} data={data} />
+          <DueDateCard d={d} data={data} />
           <Comments d={d} data={data} anchor={anchor} onAnchor={onAnchor} />
         </aside>
       </div>

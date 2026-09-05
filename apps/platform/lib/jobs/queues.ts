@@ -46,6 +46,8 @@ export type JobPayloads = {
   "recycle.tick": { workspaceId?: string; ruleId?: string };
   /** Nightly warning before a rights or authorisation clock lapses under a scheduled/promoted post. */
   "rights.expiring": Record<string, never>;
+  /** Every 5 minutes: the one reminder for each approval request that has just gone past due. */
+  "approval.remind": Record<string, never>;
   /** Nightly + period-end: report AI credits above the included allowance to the Stripe meter. */
   "billing.report_usage": Record<string, never>;
   /** Submit one generation to a model vendor. A SPEND mutation — never retried blindly. */
@@ -120,6 +122,8 @@ export const QUEUES: Record<JobName, QueuePolicy> = {
   // One run per (rule, occurrence) is enforced in the database, so a retry is always safe.
   "recycle.tick": { policy: "singleton", retryLimit: 2, retryDelay: 120, retryBackoff: true, expireInSeconds: 1800 },
   "rights.expiring": { policy: "singleton", retryLimit: 1, retryDelay: 300, expireInSeconds: 1800 },
+  // Each request is claimed (reminded_at) before its notice goes out, so a retry cannot remind twice.
+  "approval.remind": { policy: "singleton", retryLimit: 1, retryDelay: 60, expireInSeconds: 300 },
   // Reporting is idempotent (billing_usage_report holds the running total), so a retry cannot double-charge.
   "billing.report_usage": { policy: "singleton", retryLimit: 2, retryDelay: 300, retryBackoff: true, expireInSeconds: 1800 },
   // A spend mutation: the handler decides after reconciliation, exactly like

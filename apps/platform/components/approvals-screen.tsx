@@ -7,6 +7,7 @@ import { bulkDecide } from "@/lib/actions/approvals";
 import { useActionFeedback } from "@/lib/use-action-feedback";
 import { ApprovalDetail } from "./approvals/detail";
 import { AutomationQueue } from "./approvals/automation-queue";
+import { OverdueBadge } from "./approvals/due";
 import { STATE, type ApprovalRow, type ApprovalsData, type Nav } from "./approvals/types";
 import { NetMark } from "./net-mark";
 
@@ -18,7 +19,8 @@ export function ApprovalsScreen({ data }: { data: ApprovalsData }) {
   const { run, pending } = useActionFeedback();
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const nav: Nav = (patch) => { const next = new URLSearchParams(params.toString()); for (const [k, v] of Object.entries(patch)) v ? next.set(k, v) : next.delete(k); router.push(`?${next.toString()}`); };
-  const tabs = [["all", "All", data.counts.all], ["pending", "Needs review", data.counts.pending], ["changes", "Changes requested", data.counts.changes], ["approved", "Approved", data.counts.approved], ["scheduled", "Scheduled", data.counts.scheduled]] as const;
+  // Overdue = still waiting for a decision and past its due time (lib/approvals/rules.ts).
+  const tabs = [["all", "All", data.counts.all], ["pending", "Needs review", data.counts.pending], ["overdue", "Overdue", data.counts.overdue], ["changes", "Changes requested", data.counts.changes], ["approved", "Approved", data.counts.approved], ["scheduled", "Scheduled", data.counts.scheduled]] as const;
 
   return (
     <div className="mx-auto w-full max-w-360 px-6 py-5 lg:px-8">
@@ -45,7 +47,7 @@ export function ApprovalsScreen({ data }: { data: ApprovalsData }) {
             </div>
           )}
           <ul className="divide-y divide-base-300">
-            {data.rows.length === 0 && <li className="p-8 text-center text-sm text-secondary/70">{data.tab === "pending" ? "Nothing waiting for review." : "No requests here."}</li>}
+            {data.rows.length === 0 && <li className="p-8 text-center text-sm text-secondary/70">{data.tab === "pending" ? "Nothing waiting for review." : data.tab === "overdue" ? "Nothing is overdue." : "No requests here."}</li>}
             {data.rows.map((r) => (<QueueRow key={r.id} r={r} active={data.detail?.id === r.id} checked={checked.has(r.id)} onCheck={(on) => { const n = new Set(checked); on ? n.add(r.id) : n.delete(r.id); setChecked(n); }} onOpen={() => nav({ request: r.id })} />))}
           </ul>
         </section>
@@ -67,11 +69,11 @@ function QueueRow({ r, active, checked, onCheck, onOpen }: { r: ApprovalRow; act
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">{r.channels.slice(0, 3).map((c) => (<NetMark key={c.id} network={c.network} size={14} />))}<span className="truncate text-sm font-semibold">{r.title}</span></span>
           <span className="block truncate text-xs text-secondary">{r.channels.map((c) => c.name).join(" · ") || "No channels"}</span>
-          <span className={`block text-xs ${r.overdue ? "font-medium text-error" : "text-secondary/70"}`}>{r.dueLabel ? `Due ${r.dueLabel}${r.overdue ? " · overdue" : ""}` : r.createdAt}</span>
+          <span className={`block text-xs ${r.overdue ? "font-medium text-error" : "text-secondary/70"}`}>{r.dueLabel ? `Due ${r.dueLabel}` : r.createdAt}</span>
         </span>
       </button>
       <span className="flex shrink-0 flex-col items-end gap-1.5">
-        <Badge size="xs" variant="soft" color={st.color}>{st.label}</Badge>
+        {r.overdue ? <OverdueBadge /> : <Badge size="xs" variant="soft" color={st.color}>{st.label}</Badge>}
         {r.assignee ? <span className="flex items-center gap-1 text-xs text-secondary"><Avatar size="xs" color="neutral" alt="" src={r.assignee.image ?? undefined}>{r.assignee.name.slice(0, 2).toUpperCase()}</Avatar>{r.assignee.name.split(" ")[0]}</span> : <span className="text-xs text-secondary/70">Unassigned</span>}
       </span>
     </li>

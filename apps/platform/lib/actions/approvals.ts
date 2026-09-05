@@ -8,6 +8,7 @@ import { workspaceMembership, type WorkspaceRole } from "@/db/schema/app";
 import { approvalDecision, approvalRequest, comment } from "@/db/schema/approvals";
 import { contentItem, contentVersion, postVariant, type VersionSnapshot } from "@/db/schema/content";
 import { canDecide, matchPolicy, submitForApprovalCore } from "@/lib/approvals";
+import { dueAtFor } from "@/lib/approvals/rules";
 import { audit } from "@/lib/audit";
 import { track } from "@/lib/telemetry";
 import { AuthorizationError } from "@/lib/authz";
@@ -16,6 +17,7 @@ import { emit } from "@/lib/jobs/outbox";
 import { notify } from "@/lib/notifications";
 import { requireCapability, requireWorkspace } from "@/lib/session";
 import { workspacePath } from "@/lib/nav";
+import { formatInZone, zonedToUtc } from "@/lib/time";
 import { scheduleItem } from "./content";
 
 export type ActionState = { error?: string; ok?: string };
@@ -32,29 +34,53 @@ const guard = async <T>(fn: () => Promise<T>): Promise<T | ActionState> => {
 /* ------------------------------ Requests ------------------------------ */
 
 /** Whether scheduling this item requires approval right now (used by the composer and scheduleItem). */
-export async function approvalRequirement(workspaceId: string, itemId: string): Promise<{ required: boolean; policyName?: string; state: string }> {
+export async function approvalRequirement(workspaceId: string, itemId: string): Promise<{ required: boolean; policyName?: string; state: string; dueHours: number }> {
   const ctx = await requireWorkspace(workspaceId);
   const item = await db.query.contentItem.findFirst({ where: (c, { and, eq }) => and(eq(c.id, itemId), eq(c.workspaceId, workspaceId)) });
-  if (!item) return { required: false, state: "not_required" };
-  if (item.approvalState === "approved") return { required: false, state: "approved" };
+  if (!item) return { required: false, state: "not_required", dueHours: 24 };
+  if (item.approvalState === "approved") return { required: false, state: "approved", dueHours: 24 };
   const policy = await matchPolicy({ workspaceId, itemId, authorRole: ctx.workspace.role, campaignId: item.campaignId });
-  return { required: Boolean(policy), policyName: policy?.name, state: item.approvalState };
+  return { required: Boolean(policy), policyName: policy?.name, state: item.approvalState, dueHours: policy?.dueHours ?? 24 };
 }
 
-const requestSchema = z.object({ workspaceId: z.string(), itemId: z.string(), assigneeUserId: z.string().optional().nullable(), note: z.string().max(1000).optional(), scheduleOnApprove: z.string().optional() });
+/** `dueAt` is "YYYY-MM-DDTHH:mm" in the workspace timezone, like `scheduleOnApprove`; empty means the policy window. */
+const requestSchema = z.object({ workspaceId: z.string(), itemId: z.string(), assigneeUserId: z.string().optional().nullable(), note: z.string().max(1000).optional(), scheduleOnApprove: z.string().optional(), dueAt: z.string().optional() });
 
 /** Freeze a version and open a request. Supersedes any pending request for the item. */
 export async function requestApproval(input: z.infer<typeof requestSchema>): Promise<ActionState & { requestId?: string }> {
   const parsed = requestSchema.safeParse(input);
   if (!parsed.success) return fail("Invalid request");
-  const { workspaceId, itemId, assigneeUserId, note, scheduleOnApprove } = parsed.data;
+  const { workspaceId, itemId, assigneeUserId, note, scheduleOnApprove, dueAt } = parsed.data;
   return guard(async () => {
     const ctx = await requireCapability(workspaceId, "content.edit");
-    const actor = { userId: ctx.session.user.id, userName: ctx.session.user.name, organizationId: ctx.workspace.organizationId, workspaceId, role: ctx.workspace.role };
-    const r = await submitForApprovalCore(actor, { itemId, assigneeUserId, note, scheduleOnApprove }, "action:requestApproval");
+    const timezone = ctx.workspace.timezone;
+    const actor = { userId: ctx.session.user.id, userName: ctx.session.user.name, organizationId: ctx.workspace.organizationId, workspaceId, role: ctx.workspace.role, timezone };
+    const r = await submitForApprovalCore(actor, { itemId, assigneeUserId, note, scheduleOnApprove, dueAt: dueAt ? zonedToUtc(dueAt, timezone) : null }, "action:requestApproval");
     if (r.error) return fail(r.error);
     revalidatePath(workspacePath(workspaceId, "approvals"));
-    return { ok: "Sent for review.", requestId: r.requestId };
+    return { ok: `Sent for review. Due ${formatInZone(r.dueAt!, timezone)}.`, requestId: r.requestId };
+  });
+}
+
+const dueSchema = z.object({ workspaceId: z.string(), requestId: z.string(), dueAt: z.string() });
+
+/** Move a pending request's deadline. Reviewers and the requester may; a new deadline re-arms the one reminder. */
+export async function setRequestDue(input: z.infer<typeof dueSchema>): Promise<ActionState> {
+  const parsed = dueSchema.safeParse(input);
+  if (!parsed.success) return fail("Invalid due time");
+  const { workspaceId, requestId } = parsed.data;
+  return guard(async () => {
+    const ctx = await requireWorkspace(workspaceId);
+    const req = await db.query.approvalRequest.findFirst({ where: (r, { and, eq }) => and(eq(r.id, requestId), eq(r.workspaceId, workspaceId)) });
+    if (!req || req.state !== "pending") return fail("Request is not pending.");
+    const me = { userId: ctx.session.user.id, role: ctx.workspace.role, grants: ctx.workspace.grants };
+    if (!canDecide(me, req).ok && req.requestedByUserId !== me.userId) return fail("Only a reviewer or the requester can change the due time.");
+    const due = dueAtFor({ requested: zonedToUtc(parsed.data.dueAt, ctx.workspace.timezone) });
+    if ("error" in due) return fail(due.error);
+    await db.update(approvalRequest).set({ dueAt: due.dueAt, remindedAt: null, updatedAt: new Date() }).where(eq(approvalRequest.id, req.id));
+    await audit({ action: "approval.due_changed", actorUserId: me.userId, organizationId: req.organizationId, workspaceId, targetType: "approval_request", targetId: req.id, summary: { before: { dueAt: req.dueAt?.toISOString() ?? null }, after: { dueAt: due.dueAt.toISOString() } } });
+    revalidatePath(`/app/${workspaceId}`, "layout");
+    return { ok: `Due ${formatInZone(due.dueAt, ctx.workspace.timezone)}.` };
   });
 }
 

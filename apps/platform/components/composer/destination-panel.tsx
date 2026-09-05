@@ -36,7 +36,7 @@ export function DestinationPanel({ s, channels, approval, reviewers, timezone }:
           {approval.state === "approved" && <p className="text-xs text-success">Approved. Schedule when ready; editing will require a new review.</p>}
         </div>
       </div>
-      {s.method === "review" && <ReviewDetails s={s} reviewers={reviewers} />}
+      {s.method === "review" && <ReviewDetails s={s} reviewers={reviewers} approval={approval} />}
       {s.method === "schedule" && <ScheduleDetails s={s} timezone={timezone} />}
       <CostPreview s={s} channels={channels} />
       <UtmSection s={s} />
@@ -54,12 +54,14 @@ function DateTime({ s }: { s: ComposerState }) {
   );
 }
 
-function ReviewDetails({ s, reviewers }: { s: ComposerState; reviewers: Reviewer[] }) {
+function ReviewDetails({ s, reviewers, approval }: { s: ComposerState; reviewers: Reviewer[]; approval: Approval }) {
   return (
     <div className="p-4">
       <h2 className="text-sm font-semibold">Review details</h2>
       <select className="select select-sm mt-3 w-full" value={s.reviewer} onChange={(e) => s.setReviewer(e.target.value)} aria-label="Reviewer"><option value="">Any approver</option>{reviewers.map((r) => (<option key={r.userId} value={r.userId}>{r.name} · {r.role.replace("_", " ")}</option>))}</select>
       <Textarea rows={2} value={s.reviewNote} onChange={(e) => s.setReviewNote(e.target.value)} placeholder="Note for the reviewer (optional)" className="mt-2 w-full text-sm" />
+      <label className="mt-2 block text-xs text-secondary/70">Review due<Input type="datetime-local" size="sm" className="mt-1 w-full" value={s.reviewDue} onChange={(e) => s.setReviewDue(e.target.value)} aria-label="Review due" /></label>
+      <p className="mt-1 text-xs text-secondary/70">Leave empty for the policy window: {approval.dueHours ?? 24} hours from now.</p>
       <p className="mt-2 text-xs text-secondary/70">If approved, it will be scheduled for:</p>
       <div className="mt-1"><DateTime s={s} /></div>
     </div>

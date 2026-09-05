@@ -1,14 +1,16 @@
 import Link from "next/link";
 import type { ContentItem } from "@/db/schema/content";
+import { isOverdue } from "@/lib/approvals/rules";
 import { formatInZone } from "@/lib/time";
 import { workspacePath } from "@/lib/nav";
 
 /** Approval state banner — persistent/blocking, so an Alert-style block, not a toast. */
 export function ApprovalBanner({ workspaceId, item, dueAt, requestId, tz }: { workspaceId: string; item: ContentItem; dueAt: Date | null; requestId: string | null; tz: string }) {
   if (item.approvalState === "pending") {
+    const overdue = isOverdue({ state: "pending", dueAt });
     return (
-      <div className="mt-6 rounded-box border border-info/40 bg-info/10 px-5 py-3 text-sm">
-        <strong>Waiting for approval.</strong> {dueAt ? `Due ${formatInZone(dueAt, tz)}.` : ""} <Link href={workspacePath(workspaceId, `approvals?request=${requestId ?? ""}`)} className="font-medium underline underline-offset-2">Open in Approvals</Link>
+      <div className={`mt-6 rounded-box border px-5 py-3 text-sm ${overdue ? "border-error/40 bg-error/10" : "border-info/40 bg-info/10"}`}>
+        <strong>{overdue ? "Overdue for approval." : "Waiting for approval."}</strong> {dueAt ? `Due ${formatInZone(dueAt, tz)}.` : ""} <Link href={workspacePath(workspaceId, `approvals?request=${requestId ?? ""}`)} className="font-medium underline underline-offset-2">Open in Approvals</Link>
       </div>
     );
   }

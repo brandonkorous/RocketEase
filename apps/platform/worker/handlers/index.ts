@@ -21,6 +21,7 @@ import { automationApply } from "./automation-apply";
 import { trackingSync } from "./tracking-sync";
 import { recycleTick } from "./recycle-tick";
 import { rightsExpiring } from "./rights-expiring";
+import { approvalRemind } from "./approval-remind";
 import { billingReportUsage } from "./billing-report-usage";
 import { providerDeletion } from "./provider-deletion";
 import { mediaGenerate } from "./media-generate";
@@ -61,6 +62,7 @@ export const handlers: { [N in Exclude<JobName, "outbox.relay">]: Handler<N> } =
   "automation.apply": automationApply,
   "tracking.sync": trackingSync,
   "rights.expiring": rightsExpiring,
+  "approval.remind": approvalRemind,
   "recycle.tick": recycleTick,
   "billing.report_usage": billingReportUsage,
 };

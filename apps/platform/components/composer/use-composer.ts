@@ -73,6 +73,8 @@ export function useComposer(args: { workspaceId: string; timezone: string; item:
   const [time, setTime] = useState(item.scheduledAtLocal?.slice(11, 16) ?? dw.time);
   const [reviewer, setReviewer] = useState("");
   const [reviewNote, setReviewNote] = useState("");
+  // "YYYY-MM-DDTHH:mm" in the workspace timezone; empty means the policy window decides.
+  const [reviewDue, setReviewDue] = useState("");
   const [syntheticFlag, setSyntheticFlag] = useState(item.syntheticFlag);
   const [syntheticNote, setSyntheticNote] = useState(item.syntheticNote);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -124,7 +126,7 @@ export function useComposer(args: { workspaceId: string; timezone: string; item:
       const detail = workspacePath(workspaceId, `posts/${item.id}`);
       if (m === "draft") return router.push(detail);
       const r = m === "review"
-        ? await requestApproval({ workspaceId, itemId: item.id, assigneeUserId: reviewer || null, note: reviewNote || undefined, scheduleOnApprove: `${date}T${time}` })
+        ? await requestApproval({ workspaceId, itemId: item.id, assigneeUserId: reviewer || null, note: reviewNote || undefined, scheduleOnApprove: `${date}T${time}`, dueAt: reviewDue || undefined })
         : await scheduleItem({ workspaceId, itemId: item.id, when: m === "now" ? "now" : `${date}T${time}` });
       if (r.error) setSubmitError(r.error);
       else router.push(("redirect" in r && r.redirect) || detail);
@@ -135,7 +137,7 @@ export function useComposer(args: { workspaceId: string; timezone: string; item:
 
   return {
     title, setTitle, text, setText, assetIds, setAssetIds, link, setLink, utm, setUtm, selected, toggleChannel, customize, setCustomize, overrides, setOverrides,
-    validation, save, method, setMethod, date, setDate, time, setTime, reviewer, setReviewer, reviewNote, setReviewNote, submitError, pending, submit,
+    validation, save, method, setMethod, date, setDate, time, setTime, reviewer, setReviewer, reviewNote, setReviewNote, reviewDue, setReviewDue, submitError, pending, submit,
     syntheticFlag, setSyntheticFlag, syntheticNote, setSyntheticNote,
     effectiveLink, selectedChannels, chosenAssets, issues, router, utmFromDefaults: initialLink.fromDefaults && !utmEdited,
   };

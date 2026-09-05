@@ -1,0 +1,1 @@
+ALTER TABLE "approval_request" ADD COLUMN "reminded_at" timestamp with time zone;

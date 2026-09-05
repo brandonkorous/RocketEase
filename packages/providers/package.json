@@ -13,6 +13,8 @@
     "./pinterest": "./src/pinterest/index.ts",
     "./x": "./src/x/index.ts",
     "./google-business": "./src/google-business/index.ts",
+    "./threads": "./src/threads/index.ts",
+    "./bluesky": "./src/bluesky/index.ts",
     "./client": "./src/client.ts"
   },
   "scripts": {

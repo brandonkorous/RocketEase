@@ -1,9 +1,10 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
-import type { ProviderKey } from "@rocketease/providers";
+import type { Credential, ProviderKey } from "@rocketease/providers";
 import { db } from "@/db";
 import { appUrl } from "@/lib/app-url";
-import { oauthState } from "@/db/schema/connections";
+import { oauthState, providerConnection } from "@/db/schema/connections";
+import { sealCredential } from "@/lib/providers";
 
 export const callbackUrl = (provider: ProviderKey) => `${appUrl()}/api/connect/${provider}/callback`;
 
@@ -34,6 +35,53 @@ export async function createOAuthState(input: {
     .values({ ...input, nonce, expiresAt: new Date(Date.now() + 10 * 60_000) })
     .returning({ id: oauthState.id });
   return `${row.id}.${nonce}`;
+}
+
+export type PersistConnectionInput = {
+  provider: ProviderKey;
+  cred: Credential;
+  organizationId: string;
+  workspaceId: string;
+  userId: string;
+  reconnectConnectionId?: string;
+};
+export type PersistConnectionResult = { connectionId: string } | { error: "reconnect_mismatch" | "reconnect_identity" };
+
+/**
+ * Store a fresh credential as a new connection in `selecting` state, or
+ * re-arm an existing one. A reconnect keeps internal references only when the
+ * network identity matches; the envelope is sealed with the row id as AAD, so
+ * a new row is written first and sealed second.
+ */
+export async function persistConnection(input: PersistConnectionInput): Promise<PersistConnectionResult> {
+  const { provider, cred, organizationId, workspaceId, userId, reconnectConnectionId } = input;
+  const expiresAt = cred.expiresAt ? new Date(cred.expiresAt) : null;
+  if (reconnectConnectionId) {
+    const existing = await db.query.providerConnection.findFirst({ where: (c, { eq }) => eq(c.id, reconnectConnectionId) });
+    if (!existing || existing.workspaceId !== workspaceId) return { error: "reconnect_mismatch" };
+    if (existing.providerUserId !== cred.providerUserId) return { error: "reconnect_identity" };
+    await db
+      .update(providerConnection)
+      .set({ secret: sealCredential(existing.id, cred), scopes: cred.scopes, expiresAt, status: "selecting", lastError: null, lastRefreshedAt: new Date(), updatedAt: new Date() })
+      .where(eq(providerConnection.id, existing.id));
+    return { connectionId: existing.id };
+  }
+  const [row] = await db
+    .insert(providerConnection)
+    .values({
+      organizationId,
+      workspaceId,
+      provider,
+      providerUserId: cred.providerUserId,
+      providerUserName: cred.providerUserName,
+      secret: { v: 1, keyId: "pending", iv: "", tag: "", ct: "" },
+      scopes: cred.scopes,
+      expiresAt,
+      createdByUserId: userId,
+    })
+    .returning({ id: providerConnection.id });
+  await db.update(providerConnection).set({ secret: sealCredential(row.id, cred) }).where(eq(providerConnection.id, row.id));
+  return { connectionId: row.id };
 }
 
 /** Validate + consume the state. Returns null when invalid/expired/used or bound to another user. */

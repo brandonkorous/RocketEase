@@ -3,7 +3,7 @@ import { seriesBreakMarkers, splitAtBreaks, type BreakMarker } from "@/lib/analy
 import type { DisplayMetric } from "@/lib/analytics/metrics";
 
 /** Brand colors are allowed only for network marks; charts use them to identify networks. */
-export const NETWORK_COLOR: Record<string, string> = { instagram: "#e1306c", facebook: "#1877f2", linkedin: "#0a66c2", tiktok: "#111111", x: "#111111", youtube: "#ff0000", pinterest: "#bd081c", google_business: "#4285f4", mock: "#1d4ed8" };
+export const NETWORK_COLOR: Record<string, string> = { instagram: "#e1306c", facebook: "#1877f2", linkedin: "#0a66c2", tiktok: "#111111", x: "#111111", youtube: "#ff0000", pinterest: "#bd081c", google_business: "#4285f4", threads: "#111111", bluesky: "#1185fe", mock: "#1d4ed8" };
 const color = (n: string) => NETWORK_COLOR[n] ?? "#525252";
 const short = (v: number) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(v >= 10_000 ? 0 : 1)}K` : String(Math.round(v)));
 const dayLabel = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });

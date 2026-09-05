@@ -1,13 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { eq } from "drizzle-orm";
 import { ProviderError } from "@rocketease/providers";
-import { db } from "@/db";
 import { absoluteUrl } from "@/lib/app-url";
-import { providerConnection } from "@/db/schema/connections";
 import { audit } from "@/lib/audit";
-import { callbackUrl, codeVerifierFor, consumeOAuthState } from "@/lib/connections";
+import { callbackUrl, codeVerifierFor, consumeOAuthState, persistConnection } from "@/lib/connections";
 import { log } from "@/lib/log";
-import { getAdapter, isProviderKey, sealCredential } from "@/lib/providers";
+import { getAdapter, isProviderKey } from "@/lib/providers";
 import { requireUser } from "@/lib/session";
 import { workspacePath } from "@/lib/nav";
 
@@ -40,36 +37,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     const adapter = getAdapter(provider);
     const cred = await adapter.exchangeCode(code, callbackUrl(provider), codeVerifierFor(state));
 
-    let connectionId: string;
-    if (st.reconnectConnectionId) {
-      // Reauthorization preserves internal references when identity matches.
-      const existing = await db.query.providerConnection.findFirst({ where: (c, { eq }) => eq(c.id, st.reconnectConnectionId!) });
-      if (!existing || existing.workspaceId !== st.workspaceId) return back("reconnect_mismatch");
-      if (existing.providerUserId !== cred.providerUserId) return back("reconnect_identity");
-      connectionId = existing.id;
-      await db
-        .update(providerConnection)
-        .set({ secret: sealCredential(connectionId, cred), scopes: cred.scopes, expiresAt: cred.expiresAt ? new Date(cred.expiresAt) : null, status: "selecting", lastError: null, lastRefreshedAt: new Date(), updatedAt: new Date() })
-        .where(eq(providerConnection.id, connectionId));
-    } else {
-      const [row] = await db
-        .insert(providerConnection)
-        .values({
-          organizationId: st.organizationId,
-          workspaceId: st.workspaceId,
-          provider,
-          providerUserId: cred.providerUserId,
-          providerUserName: cred.providerUserName,
-          secret: { v: 1, keyId: "pending", iv: "", tag: "", ct: "" },
-          scopes: cred.scopes,
-          expiresAt: cred.expiresAt ? new Date(cred.expiresAt) : null,
-          createdByUserId: session.user.id,
-        })
-        .returning({ id: providerConnection.id });
-      connectionId = row.id;
-      // Seal with the real id as AAD now that we have it.
-      await db.update(providerConnection).set({ secret: sealCredential(connectionId, cred) }).where(eq(providerConnection.id, connectionId));
-    }
+    const saved = await persistConnection({ provider, cred, organizationId: st.organizationId, workspaceId: st.workspaceId, userId: session.user.id, reconnectConnectionId: st.reconnectConnectionId ?? undefined });
+    if ("error" in saved) return back(saved.error);
+    const { connectionId } = saved;
 
     await audit({ action: "connection.authorized", actorUserId: session.user.id, organizationId: st.organizationId, workspaceId: st.workspaceId, targetType: "provider_connection", targetId: connectionId, summary: { after: { provider, scopes: cred.scopes } } });
     const nextQs = st.redirectTo && st.redirectTo !== workspacePath(st.workspaceId, "accounts") ? `?next=${encodeURIComponent(st.redirectTo)}` : "";

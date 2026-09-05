@@ -27,6 +27,8 @@ const KIND_LABEL: Record<string, string> = {
   linkedin_organization: "LinkedIn Page",
   linkedin_member: "LinkedIn profile",
   tiktok_account: "TikTok account",
+  threads_profile: "Threads profile",
+  bluesky_account: "Bluesky account",
   mock_profile: "Demo profile",
 };
 

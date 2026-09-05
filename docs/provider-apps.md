@@ -31,8 +31,10 @@ verifies. Callback `https://app.rocketease.com/api/webhooks/meta`, verify token 
 Fields the adapter maps live in `packages/providers/src/meta/` — subscribe those, not the full list.
 That is the last configuration step before Meta App Review, which gates Facebook and Instagram entirely.
 
-Then, in rough order: TikTok Sandbox → record the demo video (B2) and write the scope explanation (B3);
-Shopify for conversion tracking; Bluesky adapter. Waiting on reviewers: LinkedIn CMA, Pinterest.
+Then, in rough order: copy the Threads app secret into `THREADS_APP_ID` / `THREADS_APP_SECRET` and connect a
+profile (the adapter exists now); connect a Bluesky account with an app password; TikTok Sandbox → record the
+demo video (B2) and write the scope explanation (B3); Shopify for conversion tracking. Waiting on reviewers:
+LinkedIn CMA, Pinterest.
 
 ## Entities
 
@@ -49,14 +51,14 @@ Shopify for conversion tracking; Bluesky adapter. Waiting on reviewers: LinkedIn
 | Platform | App / project | Credentials in `.env` | State |
 |---|---|---|---|
 | Meta (Facebook, Instagram, Messenger) | RocketEase — App ID `1488577546410666` | ✅ `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN` | Configured, **Unpublished**. All 15 adapter scopes `Ready for testing` (fixed 2026-08-30). Dev-mode connect works for app-role users. Webhooks not yet subscribed. |
-| Threads | separate App ID `1558790839312850` | ❌ none | Use case enabled on the Meta app, **no adapter exists**. |
+| Threads | separate App ID `1558790839312850` | ❌ `THREADS_APP_ID`, `THREADS_APP_SECRET` not yet copied | Use case enabled on the Meta app. **Adapter built 2026-09-05** (`packages/providers/src/threads`). Copy the Threads app secret, add redirect URI `https://app.rocketease.com/api/connect/threads/callback` plus the uninstall/delete callback URLs (`…/api/connect/threads/deauthorize`, `…/api/connect/threads/data-deletion`), then connect. |
 | LinkedIn (member + identity) | RocketEase — client `86fk181ipt6rb5` (app `263549053`) | ✅ `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | Company-verified. *Sign In with OpenID Connect* provisioned. |
 | LinkedIn (organization) | RocketEase Community Management — client `86jcpr1hj2u7hi` (app `263545132`) | — (throwaway app) | **Development Tier form submitted 2026-08-29.** Awaiting Microsoft Vetting Services. |
 | TikTok | RocketEase — app `7679511401195653138`, client key `aw0hmw00gt9blqwz` | ✅ `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET` | **Draft.** Domain verified. Blocked on a demo video. |
 | YouTube / Google Business / GA4 | Google Cloud project `rocketease` (`920126186446`), OAuth client `rocketease-providers` | ✅ `YOUTUBE_*`, `GOOGLE_BUSINESS_*`, `GA4_*` (one client serves all three) | APIs enabled. Consent screen in **Testing**. |
 | Pinterest | WizeWorks RocketEase | ❌ none until approved | Connect App form submitted. |
 | X | — | ❌ | **Deferred**: `tweet.write` needs a paid tier (~$100/mo). Not worth it before traction. |
-| Bluesky | — | ❌ | No developer console exists. Needs an adapter plus a hosted `client_metadata.json`. |
+| Bluesky | — | `PROVIDERS_ENABLE_BLUESKY=1` (no secret) | **Adapter built 2026-09-05** (`packages/providers/src/bluesky`). No developer console: a person signs in with an app password from bsky.app → Settings → Privacy and security → App passwords. OAuth (hosted `client_metadata.json`, DPoP) deferred. |
 | Shopify (tracking) | — | ❌ `SHOPIFY_CLIENT_ID/SECRET` | Not started. |
 
 ## What is configured, per platform
@@ -138,7 +140,9 @@ B1 is cleared and the endpoint answers. Then configure webhooks and submit for r
   until those are granted separately; check `capsFor()` degrades rather than throwing.
 - **LinkedIn `r_member_social` is closed** — LinkedIn is not accepting requests. Not in
   `DEFAULT_SCOPES`, so nothing to change; do not add it.
-- **Threads** has an app ID but no adapter and no env var.
+- **Threads** scopes the adapter asks for: `threads_basic`, `threads_content_publish`, `threads_read_replies`,
+  `threads_manage_replies`, `threads_manage_insights`. Enable each under the Threads use case before the first
+  connect; webhooks (`replies`, `mentions`) additionally need Advanced Access and a verified business.
 
 ## Console gotchas worth remembering
 

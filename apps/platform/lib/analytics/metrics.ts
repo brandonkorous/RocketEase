@@ -9,7 +9,7 @@ import type { CanonicalMetric } from "@rocketease/providers";
 export const DEFINITIONS_VERSION = "2026.08.3";
 
 export type DisplayMetric = CanonicalMetric | "roas" | "revenue" | "sessions" | "engagement_rate" | "ctr" | "cpm" | "cpc" | "ctr_paid" | "cpa";
-export type ProviderKey = "mock" | "meta" | "linkedin" | "tiktok" | "youtube" | "pinterest" | "x" | "google_business" | "ga4" | "shopify" | "webhook";
+export type ProviderKey = "mock" | "meta" | "linkedin" | "tiktok" | "youtube" | "pinterest" | "x" | "google_business" | "threads" | "bluesky" | "ga4" | "shopify" | "webhook";
 
 /**
  * A dated break in what a metric counts, for one provider. Series must never be

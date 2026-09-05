@@ -44,6 +44,8 @@ configMapGenerator:
       - MAIL_FROM=RocketEase <hello@rocketease.com>
       - LOG_LEVEL=info
       - STORAGE_DRIVER=azure
+      # Bluesky signs in with app passwords, so there is no secret to hold; this flag is the whole switch.
+      - PROVIDERS_ENABLE_BLUESKY=1
       - AZURE_STORAGE_CONTAINER=media
       # RocketEase's own operators, who reach /staff and grant betas. NOT a
       # credential, and deliberately here rather than in Key Vault: granting

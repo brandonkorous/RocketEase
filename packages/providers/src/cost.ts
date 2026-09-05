@@ -15,9 +15,12 @@
  *             Posting audit (developers.tiktok.com content-posting-api)
  *   Instagram 50 published posts/24h (Meta content_publishing_limit) and
  *             ~200 API calls/hour per account (storrito.com/elfsight.com)
- *   Threads   250 posts/24h (postproxy.dev/blog/how-to-post-to-threads-via-api).
- *             Recorded here for when a Threads channel kind exists; there is
- *             none today, so it is not in the table.
+ *   Threads   250 API-published posts per profile in a 24-hour moving window,
+ *             1,000 replies (developers.facebook.com/docs/threads/overview,
+ *             read 2026-09-05). Free.
+ *   Bluesky   free; writes are metered in points (a create is 3) against
+ *             5,000/hour and 35,000/day per account (docs.bsky.app rate
+ *             limits) — a budget, not a posts-per-day cap, so no dailyCap.
  *   Facebook, LinkedIn, Pinterest — no per-post charge and no published-post
  *             cap we can source. They deliberately return {}.
  */
@@ -53,6 +56,8 @@ export const PROVIDER_COST_NOTES: Record<ProviderKey, string> = {
   linkedin: "LinkedIn charges nothing per post and publishes no per-post limit we can source.",
   pinterest: "Pinterest API v5 is free; there is no per-post charge and no published-post limit we can source.",
   google_business: "The Business Profile API is free. Nothing is published to a location from here, so there is no publish cost; the review quota is 300 requests a minute once Google approves the project.",
+  threads: "The Threads API is free. A profile may publish 250 posts and 1,000 replies through the API in any 24-hour window.",
+  bluesky: "Bluesky is free. Writes are metered in points (a post costs 3) against 5,000 an hour and 35,000 a day per account; there is no per-post charge.",
   mock: "The demo network is local only. Nothing is billed and nothing is capped.",
 };
 
@@ -63,6 +68,7 @@ const YOUTUBE_UPLOAD_UNITS = 1_600;
 const YOUTUBE_UPLOADS_PER_DAY = 6;
 const TIKTOK_UNAUDITED_POSTS = 5;
 const INSTAGRAM_POSTS_PER_24H = 50;
+const THREADS_POSTS_PER_24H = 250;
 
 /**
  * Cost of publishing this variant to one channel. `{}` means "we know of no
@@ -84,8 +90,12 @@ export function estimatePublishCost(provider: ProviderKey, kind: ChannelKind, va
       return {
         dailyCap: { count: INSTAGRAM_POSTS_PER_24H, window: "24h", note: "Instagram allows 50 published posts per 24 hours per account." },
       };
+    case "threads_profile":
+      return {
+        dailyCap: { count: THREADS_POSTS_PER_24H, window: "24h", note: "Threads allows 250 API-published posts per profile in a 24-hour moving window." },
+      };
     default:
-      // facebook_page, linkedin_*, pinterest_*, mock_profile: nothing sourced.
+      // facebook_page, linkedin_*, pinterest_*, bluesky_account, mock_profile: nothing sourced as a per-post cap.
       return {};
   }
 }

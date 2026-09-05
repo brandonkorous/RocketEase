@@ -183,6 +183,13 @@
       "when": 1788628880912,
       "tag": "0025_bent_chimera",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1788633912998,
+      "tag": "0026_jittery_stature",
+      "breakpoints": true
     }
   ]
 }

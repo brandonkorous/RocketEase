@@ -13,6 +13,8 @@ export const NETWORK_LABEL: Record<string, string> = {
   youtube: "YouTube",
   pinterest: "Pinterest",
   google_business: "Google Business Profile",
+  threads: "Threads",
+  bluesky: "Bluesky",
   mock: "Demo network",
 };
 

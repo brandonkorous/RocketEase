@@ -18,6 +18,8 @@ import { SCOPES as YOUTUBE, capsFor as youtubeCaps } from "./youtube/client";
 import { SCOPES as PINTEREST, accountCaps, boardCaps } from "./pinterest/client";
 import { SCOPES as X, capsFor as xCaps } from "./x/client";
 import { capsFor as gbpCaps, SCOPES as GBP } from "./google-business/client";
+import { capsFor as threadsCaps, SCOPES as THREADS } from "./threads/client";
+import { CAPS as BLUESKY_CAPS } from "./bluesky/client";
 import { CAPS as MOCK_CAPS } from "./mock";
 
 const cred = (scopes: string[]): Credential => ({ accessToken: "", scopes, providerUserId: "" });
@@ -28,6 +30,7 @@ const SCOPE_SETS = {
   pinterestAll: [...PINTEREST.boards, ...PINTEREST.pins, ...PINTEREST.account],
   xAll: [...X.base, ...X.media, ...X.dmRead, ...X.dmWrite],
   xDefault: [...X.base, ...X.media],
+  threadsAll: [...THREADS.base, ...THREADS.publish, ...THREADS.readReplies, ...THREADS.manageReplies, ...THREADS.insights],
 };
 
 type Draft = Omit<CatalogEntry, "conditional"> & { withDefaultScopes?: Capabilities };
@@ -69,6 +72,8 @@ export const CAPABILITY_CATALOG: CatalogEntry[] = [
     withDefaultScopes: xCaps(cred(SCOPE_SETS.xDefault)),
   }),
   build({ provider: "google_business", network: "google_business", kind: "gbp_location", label: "Google Business Profile location", capabilities: gbpCaps(cred(GBP.manage)) }),
+  build({ provider: "threads", network: "threads", kind: "threads_profile", label: "Threads profile", capabilities: threadsCaps(cred(SCOPE_SETS.threadsAll)) }),
+  build({ provider: "bluesky", network: "bluesky", kind: "bluesky_account", label: "Bluesky account", capabilities: BLUESKY_CAPS() }),
   build({ provider: "mock", network: "mock", kind: "mock_profile", label: "Demo profile", capabilities: MOCK_CAPS, dev: true }),
 ];
 

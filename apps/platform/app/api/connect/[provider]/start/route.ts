@@ -12,6 +12,8 @@ export const dynamic = "force-dynamic";
 /**
  * Step 2 of the connection flow: signed state tied to user/org/workspace,
  * then redirect to the provider's consent screen. Only channels.manage.
+ * A network that signs in with credentials (Bluesky) has no consent screen;
+ * it gets our own sign-in form instead, and no OAuth state is minted.
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ provider: string }> }) {
   const { provider } = await params;
@@ -23,6 +25,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
 
   try {
     const ctx = await requireCapability(workspaceId, "channels.manage");
+    if (getAdapter(provider).signIn) {
+      const q = new URLSearchParams();
+      if (reconnect) q.set("reconnect", reconnect);
+      if (safeNext) q.set("next", safeNext);
+      const qs = q.toString();
+      return NextResponse.redirect(absoluteUrl(`${workspacePath(workspaceId, `accounts/connect/${provider}`)}${qs ? `?${qs}` : ""}`));
+    }
     const state = await createOAuthState({
       provider,
       userId: ctx.session.user.id,

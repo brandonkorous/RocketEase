@@ -2,7 +2,7 @@
 
 ## Initial provider strategy
 
-Prioritize Instagram/Facebook through Meta, LinkedIn, and TikTok, subject to current API access and review. Add YouTube, Pinterest, X, Google Analytics, commerce/CRM, storage, and collaboration systems after user demand and provider feasibility are validated. Provider capabilities and commercial terms change; confirm them during implementation and release planning.
+Prioritize Instagram/Facebook through Meta, LinkedIn, and TikTok, subject to current API access and review. Add YouTube, Pinterest, X, Google Analytics, commerce/CRM, storage, and collaboration systems after user demand and provider feasibility are validated. Threads and Bluesky were added 2026-09-05 (M14.1) because both APIs are free and need no review; Bluesky signs in with an app password rather than OAuth, which the connection flow supports through a credentials form. Provider capabilities and commercial terms change; confirm them during implementation and release planning.
 
 ## Capability model
 

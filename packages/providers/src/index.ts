@@ -39,6 +39,8 @@ export { createYouTubeProvider } from "./youtube";
 export { createPinterestProvider } from "./pinterest";
 export { createXProvider } from "./x";
 export { createGoogleBusinessProvider } from "./google-business";
+export { createThreadsProvider } from "./threads";
+export { createBlueskyProvider } from "./bluesky";
 
 import type { ProviderAdapter, ProviderConfig, ProviderKey } from "./types";
 import { mockProvider } from "./mock";
@@ -49,6 +51,8 @@ import { createYouTubeProvider } from "./youtube";
 import { createPinterestProvider } from "./pinterest";
 import { createXProvider } from "./x";
 import { createGoogleBusinessProvider } from "./google-business";
+import { createThreadsProvider } from "./threads";
+import { createBlueskyProvider } from "./bluesky";
 
 export type ProviderRegistryConfig = Partial<Record<Exclude<ProviderKey, "mock">, ProviderConfig>> & { enableMock?: boolean };
 
@@ -66,5 +70,8 @@ export function createProviderRegistry(cfg: ProviderRegistryConfig): Map<Provide
   if (cfg.pinterest?.clientId) m.set("pinterest", createPinterestProvider(cfg.pinterest));
   if (cfg.x?.clientId) m.set("x", createXProvider(cfg.x));
   if (cfg.google_business?.clientId) m.set("google_business", createGoogleBusinessProvider(cfg.google_business));
+  if (cfg.threads?.clientId) m.set("threads", createThreadsProvider(cfg.threads));
+  // Bluesky has no app credentials (app passwords); its presence in the config is the switch.
+  if (cfg.bluesky) m.set("bluesky", createBlueskyProvider(cfg.bluesky));
   return m;
 }

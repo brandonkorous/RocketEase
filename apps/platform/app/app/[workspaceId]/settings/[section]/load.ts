@@ -1,3 +1,4 @@
+import type { StoredPrefs } from "@/lib/notifications/catalog";
 import "server-only";
 import { headers } from "next/headers";
 import { and, eq, inArray } from "drizzle-orm";
@@ -37,7 +38,7 @@ export type SectionData = {
   sources: TrackingSourcesProps["sources"];
   sourceKinds: TrackingSourcesProps["enabled"];
   goals: GoalKey[];
-  prefs: Record<string, boolean>;
+  prefs: StoredPrefs;
   automations: AutomationsData;
   sso: SsoSectionData;
   apiKeys: ApiKeysData;

@@ -6,7 +6,7 @@ import { Button, Dock, DockItem, DockLabel, Drawer, DrawerContent, DrawerTitle }
 import { MenuIcon } from "@rocketease/ui/icons";
 import { MANAGE_NAV, MOBILE_NAV, PRIMARY_NAV, workspacePath } from "@/lib/nav";
 import { useSignOut } from "./account-menu";
-import { NAV_ICONS } from "./icons";
+import { BellIcon, NAV_ICONS } from "./icons";
 
 type Props = { workspaceId: string; isActive: (segment: string) => boolean; open: boolean; setOpen: (v: boolean) => void; switcher: React.ReactNode };
 
@@ -42,6 +42,9 @@ export function MoreDrawer({ workspaceId, open, setOpen }: Pick<Props, "workspac
       <DrawerContent side="bottom">
         <DrawerTitle>More</DrawerTitle>
         <nav className="mt-3 grid grid-cols-2 gap-2" aria-label="More">
+          <Link href={workspacePath(workspaceId, "notifications")} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-field border border-base-300 px-3 py-3 text-sm font-medium">
+            <span className="[&>svg]:h-4.5 [&>svg]:w-4.5"><BellIcon /></span>Notifications
+          </Link>
           {items.map((n) => (
             <Link key={n.key} href={workspacePath(workspaceId, n.segment)} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-field border border-base-300 px-3 py-3 text-sm font-medium">
               <span className="[&>svg]:h-4.5 [&>svg]:w-4.5">{NAV_ICONS[n.key]}</span>{n.label}

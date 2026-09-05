@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { channel, providerConnection, type Channel, type ProviderConnection } from "@/db/schema/connections";
 import { decryptJson, encryptJson } from "./crypto";
 import { log } from "./log";
+import { notifyChannelHealth } from "./notifications/health";
 
 const g = globalThis as unknown as { __misProviders?: Map<ProviderKey, ProviderAdapter> };
 
@@ -23,6 +24,9 @@ export function providers(): Map<ProviderKey, ProviderAdapter> {
       pinterest: process.env.PINTEREST_APP_ID ? { clientId: process.env.PINTEREST_APP_ID, clientSecret: process.env.PINTEREST_APP_SECRET ?? "" } : undefined,
       x: process.env.X_CLIENT_ID ? { clientId: process.env.X_CLIENT_ID, clientSecret: process.env.X_CLIENT_SECRET ?? "" } : undefined,
       google_business: process.env.GOOGLE_BUSINESS_CLIENT_ID ? { clientId: process.env.GOOGLE_BUSINESS_CLIENT_ID, clientSecret: process.env.GOOGLE_BUSINESS_CLIENT_SECRET ?? "" } : undefined,
+      threads: process.env.THREADS_APP_ID ? { clientId: process.env.THREADS_APP_ID, clientSecret: process.env.THREADS_APP_SECRET ?? "" } : undefined,
+      // App passwords, not OAuth: nothing to configure but the switch (and, optionally, a self-hosted PDS).
+      bluesky: process.env.PROVIDERS_ENABLE_BLUESKY === "1" ? { clientId: "bluesky", clientSecret: "", extra: { service: process.env.BLUESKY_SERVICE ?? "https://bsky.social" } } : undefined,
     });
   }
   return g.__misProviders;
@@ -57,8 +61,10 @@ export async function loadCredential(conn: ProviderConnection): Promise<Credenti
         .where(eq(providerConnection.id, conn.id));
     } catch (err) {
       if (err instanceof ProviderError && err.category === "permission") {
+        const affected = await db.select({ name: channel.name, network: channel.network, handle: channel.handle, workspaceId: channel.workspaceId, organizationId: channel.organizationId, status: channel.status }).from(channel).where(eq(channel.connectionId, conn.id));
         await db.update(providerConnection).set({ status: "expired", lastError: err.message, updatedAt: new Date() }).where(eq(providerConnection.id, conn.id));
         await db.update(channel).set({ status: "action_required", health: { tokenOk: false, permissionsOk: false, message: err.message, lastCheckedAt: new Date().toISOString() } }).where(eq(channel.connectionId, conn.id));
+        for (const c of affected) await notifyChannelHealth(c, c.status, "action_required", err.message).catch((e) => log.warn("health notice failed", { connectionId: conn.id, err: e }));
       }
       log.warn("credential refresh failed", { connectionId: conn.id, provider: conn.provider, err });
       throw err;

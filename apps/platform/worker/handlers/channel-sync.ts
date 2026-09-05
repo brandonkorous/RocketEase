@@ -3,6 +3,7 @@ import { ProviderError } from "@rocketease/providers";
 import { db } from "@/db";
 import { channel } from "@/db/schema/connections";
 import type { JobPayloads } from "@/lib/jobs/queues";
+import { notifyChannelHealth } from "@/lib/notifications/health";
 import { getAdapter, loadCredential, sealChannelToken } from "@/lib/providers";
 import type { HandlerContext } from "./index";
 
@@ -40,6 +41,7 @@ export async function channelSync(data: JobPayloads["channel.sync"], ctx: Handle
       })
       .where(eq(channel.id, ch.id));
     l.info("channel synced", { status, missingScopes: probe.missingScopes });
+    if (await notifyChannelHealth(ch, ch.status, status, message)) l.info("connection health notice sent", { from: ch.status, to: status });
   } catch (err) {
     const pe = err instanceof ProviderError ? err : null;
     const status = pe?.category === "permission" ? "action_required" : pe?.category === "deleted" ? "revoked" : "degraded";
@@ -52,6 +54,7 @@ export async function channelSync(data: JobPayloads["channel.sync"], ctx: Handle
       })
       .where(eq(channel.id, ch.id));
     l.warn("channel sync failed", { status, err });
+    if (await notifyChannelHealth(ch, ch.status, status, pe?.message)) l.info("connection health notice sent", { from: ch.status, to: status });
     if (pe && !pe.retryable) return; // permanent: don't burn retries
     throw err;
   }

@@ -37,23 +37,6 @@ export function readRecycling(settings: Record<string, unknown>): RecyclingSetti
   return { autoSchedule: r.autoSchedule === true };
 }
 
-/** Every kind `notify()` emits, with its default email behaviour (onboarding.md reserves email for failures, approvals, security). */
-export const NOTIFICATION_KINDS = [
-  { kind: "publish.failed", label: "Publishing failures", desc: "A post failed or only partly published.", email: true },
-  { kind: "approval.requested", label: "Approval requests", desc: "Someone asked you to review a post.", email: true },
-  { kind: "approval.decided", label: "Approval decisions", desc: "A post you submitted was approved or sent back.", email: true },
-  { kind: "comment.added", label: "Comments", desc: "A teammate commented on a post you are part of.", email: false },
-  { kind: "inbox.assigned", label: "Inbox assignments", desc: "A conversation was assigned to you.", email: false },
-  { kind: "inbox.reply_failed", label: "Reply failures", desc: "A reply you sent could not be delivered.", email: false },
-  { kind: "report.ready", label: "Reports ready", desc: "A report you requested finished generating.", email: false },
-  { kind: "rights.expiring", label: "Rights expiring", desc: "A licence or authorisation runs out under a scheduled or promoted post.", email: true },
-] as const;
-export const NOTIFICATION_KIND_KEYS = NOTIFICATION_KINDS.map((k) => k.kind) as [string, ...string[]];
-
-/** Effective email opt-in for a kind: the member's choice, else the kind's default, else the caller's flag. */
-export function emailWanted(prefs: Record<string, boolean>, kind: string, fallback: boolean) {
-  if (kind in prefs) return prefs[kind];
-  return NOTIFICATION_KINDS.find((k) => k.kind === kind)?.email ?? fallback;
-}
+/* Notification kinds and preferences live in lib/notifications/catalog.ts. */
 
 export const INDUSTRIES = ["Agency", "Health & Fitness", "Retail & E-commerce", "Food & Beverage", "Beauty & Fashion", "Technology & SaaS", "Media & Entertainment", "Education", "Finance", "Travel & Hospitality", "Nonprofit", "Other"] as const;

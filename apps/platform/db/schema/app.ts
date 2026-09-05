@@ -70,8 +70,11 @@ export const workspaceMembership = pgTable(
     role: workspaceRole("role").notNull().default("viewer"),
     /** Explicit per-capability grants for "If granted" cells in the role matrix. */
     grants: jsonb("grants").$type<string[]>().notNull().default([]),
-    /** Per-user email opt-in by notification kind; a missing key uses the kind's default. */
-    notificationPreferences: jsonb("notification_preferences").$type<Record<string, boolean>>().notNull().default({}),
+    /**
+     * Per-member notification choices keyed by preference (lib/notifications/catalog.ts): in-app and
+     * email per event. A bare boolean is the pre-M14.2 shape, an email opt-in keyed by kind.
+     */
+    notificationPreferences: jsonb("notification_preferences").$type<Record<string, boolean | { inApp?: boolean; email?: boolean }>>().notNull().default({}),
     pinned: boolean("pinned").notNull().default(false),
     lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
     /** Set when SCIM deprovisions the user; access is denied while it is non-null. */
@@ -161,7 +164,7 @@ export const notification = pgTable(
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: now("created_at"),
   },
-  (t) => [index("notification_user_unread_idx").on(t.userId, t.workspaceId, t.readAt)],
+  (t) => [index("notification_user_unread_idx").on(t.userId, t.workspaceId, t.readAt), index("notification_user_created_idx").on(t.userId, t.workspaceId, t.createdAt)],
 );
 
 /**

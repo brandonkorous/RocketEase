@@ -14,5 +14,5 @@ export async function markNotificationRead(id: string) {
 export async function markAllRead(workspaceId: string) {
   const session = await requireUser();
   await db.update(notification).set({ readAt: new Date() }).where(and(eq(notification.workspaceId, workspaceId), eq(notification.userId, session.user.id), isNull(notification.readAt)));
-  revalidatePath(`/app/${workspaceId}/notifications`);
+  revalidatePath(`/app/${workspaceId}`, "layout");
 }

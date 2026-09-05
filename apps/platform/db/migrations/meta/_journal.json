@@ -190,6 +190,13 @@
       "when": 1788633912998,
       "tag": "0026_jittery_stature",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1788636197353,
+      "tag": "0027_slippery_outlaw_kid",
+      "breakpoints": true
     }
   ]
 }

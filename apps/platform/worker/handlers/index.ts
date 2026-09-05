@@ -2,6 +2,7 @@ import type { JobName, JobPayloads } from "@/lib/jobs/queues";
 import type { Logger } from "@/lib/log";
 import { sendMailJob } from "./mail";
 import { channelSync } from "./channel-sync";
+import { assetFrames } from "./asset-frames";
 import { assetProcess } from "./asset-process";
 import { publishExecute } from "./publish";
 import { inboxSync } from "./inbox-sync";
@@ -42,6 +43,7 @@ export const handlers: { [N in Exclude<JobName, "outbox.relay">]: Handler<N> } =
   "insights.ingest": insightsIngest,
   "report.run": reportRunJob,
   "asset.process": assetProcess,
+  "asset.frames": assetFrames,
   "media.generate": mediaGenerate,
   "media.poll": mediaPoll,
   "media.render": mediaRender,

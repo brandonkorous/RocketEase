@@ -16,8 +16,9 @@ async function initPublish(token: string, req: PublishRequest): Promise<string> 
   // is_aigc: Content Posting API self-declaration; TikTok then draws its own "AI-generated" tag.
   const postInfo = { title: req.text.slice(0, 2200), privacy_level: s.privacy ?? "PUBLIC_TO_EVERYONE", disable_comment: Boolean(s.disableComment), disable_duet: Boolean(s.disableDuet), disable_stitch: Boolean(s.disableStitch), ...(req.disclosure?.synthetic ? { is_aigc: true } : {}) };
   const video = req.media.find((m) => m.mimeType.startsWith("video/"));
+  const cover = req.cover ? { video_cover_timestamp_ms: Math.max(0, Math.round(req.cover.offsetMs)) } : {};
   const r = video
-    ? await tt<{ data?: { publish_id?: string } }>("/post/publish/video/init/", token, { post_info: postInfo, source_info: { source: "PULL_FROM_URL", video_url: video.url } })
+    ? await tt<{ data?: { publish_id?: string } }>("/post/publish/video/init/", token, { post_info: { ...postInfo, ...cover }, source_info: { source: "PULL_FROM_URL", video_url: video.url } })
     : await tt<{ data?: { publish_id?: string } }>("/post/publish/content/init/", token, { post_info: { ...postInfo, description: req.text }, source_info: { source: "PULL_FROM_URL", photo_images: req.media.map((m) => m.url), photo_cover_index: 0 }, post_mode: "DIRECT_POST", media_type: "PHOTO" });
   const id = r.data?.publish_id;
   if (!id) throw new ProviderError("TikTok returned no publish id", { category: "unknown", ambiguous: true });

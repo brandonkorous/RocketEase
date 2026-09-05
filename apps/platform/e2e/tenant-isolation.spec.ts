@@ -6,7 +6,7 @@ import { loadState, pageAs } from "./helpers";
  * User B probes user A's workspace routes and must be redirected to their own
  * workspace with none of A's data in the response.
  */
-const ROUTES = ["home", "inbox", "analytics", "settings/general", "calendar", "content", "team", "reports"];
+const ROUTES = ["home", "inbox", "analytics", "settings/general", "calendar", "grid", "content", "team", "reports"];
 
 test.describe("tenant isolation", () => {
   for (const route of ROUTES) {

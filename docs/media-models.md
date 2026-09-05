@@ -348,6 +348,11 @@ the M8.4 rights-and-authorisation-clock model already in the product.
    audit logging already exist for YouTube/GA4, and enterprise data terms matter for agency clients.
    Verify Vertex enablement and quota on that project first; the Business Profile APIs shipped at
    quota 0, so "enabled" is not "usable."
+   **Landed 2026-09-01**: `packages/media/src/fal` — Kling 2.5 Turbo Pro (I2V + T2V, $0.07/s
+   verified on the model pages) and FLUX.2 [pro] images, forced by Azure's verified sora-2
+   retirement (2026-10-15; `azure-sora-2` carries `retiredAt`). fal's queue contract returns
+   per-request status/response URLs; they persist in `media_job.remote_meta` because the docs say
+   use-never-construct. Vertex/Veo remains open.
 2. **Higgsfield** — competitor, vendor, or neither. It has an official REST API and SDKs, and
    Marketing Studio (URL → formatted ad, on Seedance 2.0) is the closest thing to what we would
    build. Cheapest path to a working ad pipeline; also the thing we would be reselling.

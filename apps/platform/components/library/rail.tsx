@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { Button, Input } from "@wizeworks/silicaui-react";
+import Link from "next/link";
 import { createFolder } from "@/lib/actions/folders";
 import { useActionFeedback } from "@/lib/use-action-feedback";
+import { workspacePath } from "@/lib/nav";
 import { GeneratePanel } from "./generate-panel";
-import { GenerateVideoPanel } from "./generate-video-panel";
 import { GenerationStatus } from "./generation-status";
 import { LibIcon } from "./icons";
 import type { LibraryData } from "./types";
@@ -43,8 +44,22 @@ export function CollectionsRail({ data, nav }: { data: LibraryData; nav: Nav }) 
       {data.imageGeneration.enabled && canEdit && (
         <GeneratePanel workspaceId={data.workspaceId} estimate={data.imageGeneration.estimate} />
       )}
+      {/*
+        Deliberately NOT a quick video button (user decision, 2026-09-01):
+        video is the expensive thing, and a one-click spend with no plan is a
+        cost trap for us and the client. Video is planned — takes, voice,
+        captions — in the plan editor, and generated with the total shown first.
+      */}
       {data.videoGeneration.enabled && canEdit && (
-        <GenerateVideoPanel workspaceId={data.workspaceId} estimate={data.videoGeneration.estimate} products={data.videoGeneration.products} />
+        <section className="mt-6" aria-labelledby="gen-video-hint">
+          <h2 id="gen-video-hint" className="text-sm font-semibold">Video</h2>
+          <p className="mt-1 text-xs text-secondary/70">
+            Video is planned, not quick-generated: pick a length, direct each take, see the full credit price before anything runs.
+          </p>
+          <Link href={workspacePath(data.workspaceId, "create")} className="mt-2 block text-xs text-info hover:underline">
+            Start from a draft in Create, then open Ad creative on the post.
+          </Link>
+        </section>
       )}
       <GenerationStatus rows={data.generations} />
     </aside>

@@ -10,7 +10,7 @@ export const PASSWORD = "e2e-password-1234";
 export const uniqueEmail = (tag: string) => `e2e+${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
 
 /** Workspace routes the specs touch; warmed once per user so no test pays the first compile. */
-export const WARM_ROUTES = ["home", "accounts", "inbox", "calendar", "content", "analytics", "approvals", "settings/general", "team", "reports"];
+export const WARM_ROUTES = ["home", "accounts", "inbox", "calendar", "grid", "content", "analytics", "approvals", "settings/general", "team", "reports"];
 
 export function loadState(): E2EState {
   return JSON.parse(readFileSync(path.join(STATE_DIR, "state.json"), "utf8")) as E2EState;

@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { postVariant, publishJob, type VariantError } from "@/db/schema/content";
 import { mediaForAssets, resolveVariant, validateVariant } from "@/lib/content";
 import { toDisclosureInput } from "@/lib/disclosure";
+import { coverForPublish } from "@/lib/grid/cover";
 import type { JobPayloads } from "@/lib/jobs/queues";
 import { getAdapter, loadCredential, toDescriptor } from "@/lib/providers";
 import type { HandlerContext } from "./index";
@@ -57,8 +58,10 @@ async function tryPublish(conn: Parameters<typeof loadCredential>[0], ch: Parame
   try {
     const cred = await loadCredential(conn);
     const { media } = await mediaForAssets(r.assetIds, { forPublish: true });
+    const cover = await coverForPublish(v.settings, r.assetIds);
+    l.info("publishing", { format: v.format, media: media.length, coverOffsetMs: cover?.offsetMs ?? null });
     try {
-      const result = await adapter.publish(cred, descriptor, { idempotencyKey: v.idempotencyKey, format: v.format, text: r.text, media, link: r.link, firstComment: r.firstComment, settings: v.settings, disclosure: toDisclosureInput(item.syntheticMedia) });
+      const result = await adapter.publish(cred, descriptor, { idempotencyKey: v.idempotencyKey, format: v.format, text: r.text, media, cover, link: r.link, firstComment: r.firstComment, settings: v.settings, disclosure: toDisclosureInput(item.syntheticMedia) });
       return { result, failure: null, retryable: false };
     } catch (e) {
       if (!(e instanceof ProviderError && e.ambiguous)) throw e;

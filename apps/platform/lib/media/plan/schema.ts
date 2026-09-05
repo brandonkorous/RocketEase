@@ -91,6 +91,13 @@ const renderSchema = z.object({
   renderedAt: z.string(),
 });
 
+const acceptanceSchema = z.object({
+  placement: z.enum(PLACEMENTS),
+  fingerprint: z.string().min(1).max(128),
+  acceptedAt: z.string(),
+  acceptedByUserId: z.string().min(1).max(64),
+});
+
 export const adPlanSchema = z.object({
   version: z.number().int().default(PLAN_VERSION),
   objective: z.enum(GOALS),
@@ -101,6 +108,9 @@ export const adPlanSchema = z.object({
   overlays: z.array(overlaySchema).max(12).default([]),
   variants: z.array(variantAxisSchema).max(4).default([]),
   renders: z.array(renderSchema).max(200).default([]),
+  // Defaulted, so every plan written before M12.6 reads back as unaccepted —
+  // which is true: nobody accepted anything through a gate that didn't exist.
+  acceptances: z.array(acceptanceSchema).max(20).default([]),
   audio: audioSchema.optional(),
   captions: captionPlanSchema.optional(),
 });

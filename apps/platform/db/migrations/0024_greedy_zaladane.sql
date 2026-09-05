@@ -1,0 +1,1 @@
+ALTER TABLE "media_job" ADD COLUMN "remote_meta" jsonb;

@@ -20,6 +20,7 @@ import { user } from "@/db/schema/auth";
 import { contentVersion, postVariant, publishJob } from "@/db/schema/content";
 import { channel } from "@/db/schema/connections";
 import { postPerformance } from "@/lib/analytics/post-performance";
+import { hasFeature } from "@/lib/features";
 import { recommendationsForItem } from "@/lib/recommendations/store";
 import { hasCapability, requireWorkspace } from "@/lib/session";
 import { formatInZone, utcToZonedInput } from "@/lib/time";
@@ -53,6 +54,8 @@ export default async function PostPage({ params }: { params: Promise<{ workspace
   const st = statusOf(item.status);
   const canPublish = hasCapability(ctx.workspace, "content.publish") || ctx.workspace.role === "creator";
   const editable = !["publishing", "published", "partially_published"].includes(item.status);
+  // Beta-gated, and ABSENT (not locked) outside the beta — media-generation.md §9a.
+  const adCreative = await hasFeature(ctx.workspace.organizationId, "media.generation");
 
   return (
     <AppPage>
@@ -65,6 +68,7 @@ export default async function PostPage({ params }: { params: Promise<{ workspace
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="soft" color={st.color}>{st.label}</Badge>
               {editable && hasCapability(ctx.workspace, "content.edit") && (<Link href={workspacePath(workspaceId, `create?item=${item.id}`)} className={buttonClasses({ variant: "outline", color: "neutral" })}>Edit</Link>)}
+              {adCreative && editable && hasCapability(ctx.workspace, "content.edit") && (<Link href={workspacePath(workspaceId, `create/plan/${item.id}`)} className={buttonClasses({ variant: "outline", color: "neutral" })}>Ad creative</Link>)}
               <PostActions
                 workspaceId={workspaceId} itemId={item.id} canPublish={canPublish}
                 hasFailed={variants.some((r) => r.v.status === "failed")} hasScheduled={variants.some((r) => r.v.status === "scheduled")}

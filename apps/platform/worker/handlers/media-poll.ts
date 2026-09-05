@@ -44,7 +44,13 @@ async function advance(row: MediaJob, ctx: HandlerContext) {
 
   let state: VendorState;
   try {
-    state = await adapter.poll({ adapter: row.adapter, modelKey: row.modelKey, remoteJobId: row.remoteJobId!, idempotencyKey: row.idempotencyKey });
+    state = await adapter.poll({
+      adapter: row.adapter,
+      modelKey: row.modelKey,
+      remoteJobId: row.remoteJobId!,
+      idempotencyKey: row.idempotencyKey,
+      meta: row.remoteMeta ?? undefined,
+    });
   } catch (err) {
     l.warn("media poll failed; leaving the job running to retry", { err });
     return; // Never fail a job on a poll error — the vendor may still be working.

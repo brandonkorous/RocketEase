@@ -106,6 +106,11 @@ configMapGenerator:
       # It must be SET even though it is tiny: a per-job ceiling with no rate
       # for the routed model refuses every job, which is exactly what stopped
       # the first voice-over (docs/bugs/B-013).
+      #
+      # The fal models (Kling, FLUX) are deliberately ABSENT: fal publishes
+      # real per-unit prices, so their registry descriptors carry a verified
+      # amountUsd and the estimator falls back to it. A rate here would be a
+      # second copy of the same number, free to drift from the reviewed one.
       - AI_MEDIA_RATES_JSON={"azure-gpt-image-2":0.05,"azure-sora-2":0.10,"azure-gpt-4o-mini-tts":0.000025}
 
       # What the CUSTOMER is charged, for media whose vendor reports no tokens.
@@ -122,7 +127,14 @@ configMapGenerator:
       # per second against $0.10), so a character at $0.000025 is 0.003 credits.
       # A 200-character voice-over is well under one credit — which is honest,
       # because speech genuinely is cheap next to a rendered second of video.
-      - AI_MEDIA_CREDIT_RATES_JSON={"azure-sora-2":12,"azure-gpt-4o-mini-tts":0.003}
+      #
+      # Kling (fal) keeps sora's 12 credits/second: the customer's price for a
+      # video second does not change because the route under it did, and our
+      # cost DROPS ($0.07/s vs $0.10/s), so the unresearched ratio gets less
+      # wrong rather than more. FLUX is 0.5 credits/image — the same
+      # credits-per-dollar an Azure image works out to (~0.26 credits against
+      # a measured $0.0154), applied to FLUX's published $0.03.
+      - AI_MEDIA_CREDIT_RATES_JSON={"azure-sora-2":12,"fal-kling-25-pro-t2v":12,"fal-kling-25-pro-i2v":12,"fal-flux-2-pro":0.5,"azure-gpt-4o-mini-tts":0.003}
       # $1.50 is set by VIDEO, not images. Sora 2 bills per second, so the
       # three durations it accepts cost roughly $0.40 / $0.80 / $1.20 — this
       # clears the longest with headroom and still refuses a job that has gone

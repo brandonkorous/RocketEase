@@ -52,6 +52,16 @@ describe("mock provider", () => {
     expect(found?.remoteId).toBeTruthy();
   });
 
+  it("records the cover frame it was sent, so the chosen frame is provably the published one", async () => {
+    const cred = await connect();
+    const [ch] = await mockProvider.listChannels(cred);
+    const media = [{ url: "https://demo.invalid/clip.mp4", mimeType: "video/mp4", durationSeconds: 12 }];
+    await mockProvider.publish(cred, ch, { idempotencyKey: "cover-1", format: "video", text: "clip", media, cover: { offsetMs: 4200 } });
+    await mockProvider.publish(cred, ch, { idempotencyKey: "cover-2", format: "video", text: "clip", media });
+    const byKey = Object.fromEntries(mockControl.posts().map((p) => [p.idempotencyKey, p.coverOffsetMs]));
+    expect(byKey).toEqual({ "cover-1": 4200, "cover-2": null });
+  });
+
   it("maps revoked tokens to permission errors", async () => {
     const cred = await connect();
     await mockProvider.revoke(cred);

@@ -56,7 +56,9 @@ async function createContainer(cfg: ProviderConfig, t: string, igId: string, req
   }
   if (video) {
     const mediaType = req.format === "story" ? "STORIES" : "REELS";
-    const id = (await graph<{ id: string }>(`/${igId}/media`, cfg, t, { method: "POST", params: { media_type: mediaType, video_url: video.url, caption: req.format === "story" ? undefined : req.text, ...ai } })).id;
+    // thumb_offset: the frame (ms) Instagram uses as the Reel's cover. Stories have no cover.
+    const cover = mediaType === "REELS" && req.cover ? { thumb_offset: String(Math.max(0, Math.round(req.cover.offsetMs))) } : {};
+    const id = (await graph<{ id: string }>(`/${igId}/media`, cfg, t, { method: "POST", params: { media_type: mediaType, video_url: video.url, caption: req.format === "story" ? undefined : req.text, ...cover, ...ai } })).id;
     await waitForContainer(cfg, t, id);
     return id;
   }

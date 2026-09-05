@@ -54,6 +54,13 @@ export const mediaJob = pgTable(
     state: text("state").$type<MediaJobState>().notNull().default("queued"),
     /** The vendor's own id, for reconciliation before any re-spend. */
     remoteJobId: text("remote_job_id"),
+    /**
+     * Vendor round-trip data the poller needs in another process: fal's
+     * per-request status/response URLs (their docs say use these, never
+     * construct them) and the billed quantity fal never echoes back.
+     * Never a credential.
+     */
+    remoteMeta: jsonb("remote_meta").$type<Record<string, unknown>>(),
     /** Delivery URLs expire (Sora: 24h, measured); the poller races this. */
     outputExpiresAt: timestamp("output_expires_at", { withTimezone: true }),
 

@@ -8,6 +8,7 @@ export const CAPABILITY_PATHS = [
   "limits.links",
   "limits.altText",
   "disclosure",
+  "cover",
   "inbox.comments",
   "inbox.mentions",
   "inbox.messages",
@@ -45,6 +46,7 @@ const REASON_KEYS: Record<CapabilityPath, string[]> = {
   "limits.links": ["links"],
   "limits.altText": ["altText"],
   disclosure: ["disclosure"],
+  cover: ["cover"],
   "inbox.comments": ["comments"],
   "inbox.mentions": ["mentions"],
   "inbox.messages": ["messages"],
@@ -66,6 +68,7 @@ export function capabilitySupported(caps: Capabilities, path: CapabilityPath): b
     case "limits.firstComment": return caps.limits.firstComment === true;
     case "limits.altText": return caps.limits.altText === true;
     case "disclosure": return (caps.disclosure ?? "caption") !== "none";
+    case "cover": return (caps.cover ?? "none") !== "none";
     case "limits.links": return caps.limits.links !== undefined && caps.limits.links !== "none";
     case "inbox.comments": return caps.inbox.comments;
     case "inbox.mentions": return caps.inbox.mentions;

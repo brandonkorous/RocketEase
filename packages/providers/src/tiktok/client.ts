@@ -47,6 +47,8 @@ export function capsFor(cred: Credential): Capabilities {
     ads: { import: false, manage: false },
     ingestion: { webhooks: true, polling: true },
     disclosure: "api",
+    // post_info.video_cover_timestamp_ms on the Content Posting API.
+    cover: "offset",
     reasons,
     checkedAt: now(),
   };

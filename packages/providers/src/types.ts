@@ -68,6 +68,8 @@ export type Capabilities = {
   /** How synthetic media is disclosed here: a real API field, a caption line, or not at all.
    *  Optional so capabilities stored before this field still parse; absent reads as "caption". */
   disclosure?: DisclosureSupport;
+  /** How a video's cover frame can be chosen at publish time. Absent reads as "none". */
+  cover?: CoverSupport;
   /** Explain-ability: why something is off, and when we last checked. */
   reasons?: Partial<Record<string, string>>;
   checkedAt: string;
@@ -119,6 +121,21 @@ export type MediaInput = {
   altText?: string;
 };
 
+/**
+ * "offset": the network picks the frame at a time offset we send (Instagram Reels,
+ * TikTok). "image": it takes an uploaded picture. "none": covers are not settable
+ * through the API, and the adapter's `reasons.cover` says why.
+ */
+export type CoverSupport = "offset" | "image" | "none";
+
+/** The cover frame the author chose for a video. Adapters send what their API takes. */
+export type PublishCover = {
+  /** Milliseconds into the video. */
+  offsetMs: number;
+  /** A signed URL of that frame as a picture, for networks that take an image. */
+  imageUrl?: string;
+};
+
 export type PublishRequest = {
   /** Stable key; the same key must never create a second remote object. */
   idempotencyKey: string;
@@ -127,6 +144,8 @@ export type PublishRequest = {
   media: MediaInput[];
   link?: string;
   firstComment?: string;
+  /** Chosen cover frame for the video, when the author picked one. */
+  cover?: PublishCover;
   /** Provider-specific knobs, validated by the adapter. */
   settings?: Record<string, unknown>;
   /** AI disclosure the author declared; adapters map it to a field or a caption line. */

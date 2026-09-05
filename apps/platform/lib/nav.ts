@@ -6,6 +6,7 @@
 export type NavKey =
   | "home"
   | "calendar"
+  | "grid"
   | "create"
   | "inbox"
   | "campaigns"
@@ -20,6 +21,7 @@ export type NavKey =
 export const PRIMARY_NAV: { key: NavKey; label: string; segment: string }[] = [
   { key: "home", label: "Home", segment: "home" },
   { key: "calendar", label: "Calendar", segment: "calendar" },
+  { key: "grid", label: "Grid", segment: "grid" },
   { key: "create", label: "Create", segment: "create" },
   { key: "inbox", label: "Inbox", segment: "inbox" },
   { key: "campaigns", label: "Campaigns", segment: "campaigns" },

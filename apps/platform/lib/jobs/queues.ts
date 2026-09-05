@@ -60,6 +60,8 @@ export type JobPayloads = {
   "media.render": MediaRenderPayload;
   /** Speech to text for one asset → a caption_track with word timings. */
   "media.transcribe": { assetId: string; language?: string; force?: boolean };
+  /** Candidate cover frames for a video (Grid's cover picker), spaced across the clip. */
+  "asset.frames": { assetId: string; count?: number };
 };
 
 export type MediaRenderPayload =
@@ -98,6 +100,8 @@ export const QUEUES: Record<JobName, QueuePolicy> = {
   "report.run": { ...STANDARD, retryLimit: 2, expireInSeconds: 1800 },
   // ffmpeg runs here now (probe + poster frame), so this belongs to the media worker.
   "asset.process": { ...STANDARD, retryLimit: 3, expireInSeconds: 900, role: "media" },
+  // Unique on (asset, offset), so a retry writes nothing twice.
+  "asset.frames": { ...STANDARD, retryLimit: 2, expireInSeconds: 600, role: "media" },
   "inbox.sync": { policy: "singleton", retryLimit: 2, retryDelay: 30, retryBackoff: true, expireInSeconds: 600 },
   // Replies reconcile before any retry; the handler decides whether a retry is safe.
   "inbox.reply": { policy: "stately", retryLimit: 4, retryDelay: 20, retryBackoff: true, expireInSeconds: 300 },

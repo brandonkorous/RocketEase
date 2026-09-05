@@ -31,7 +31,9 @@ export type LibraryData = {
   /** Generating an image here needs no concept and no text model — see generate-panel.tsx. */
   imageGeneration: { enabled: boolean; estimate: string | null };
   /** Separate from images: a different model, a different vendor bill, and it may be off on its own. */
-  videoGeneration: { enabled: boolean; estimate: string | null; products: { id: string; label: string }[] };
+  /** Only whether video CAN generate here — the rail shows a pointer to the
+      plan editor, never a quick spend button (user decision, 2026-09-01). */
+  videoGeneration: { enabled: boolean };
   /** In-flight and recently-failed jobs. Empty is the normal case. */
   generations: GenerationRow[];
 };

@@ -48,6 +48,8 @@ export const IG_CAPS = (): Capabilities => ({
   ads: { import: true, manage: false },
   ingestion: { webhooks: true, polling: true },
   disclosure: "api",
+  // Reels containers take `thumb_offset` (ms). Feed images and Stories have no cover.
+  cover: "offset",
   reasons: {
     links: "Instagram captions don't render clickable links.",
     disclosure: "Instagram media creation accepts is_ai_generated, so the network draws its own “AI info” label.",
@@ -67,7 +69,9 @@ export const FB_CAPS = (): Capabilities => ({
   ads: { import: true, manage: true },
   ingestion: { webhooks: true, polling: true },
   disclosure: "caption",
+  cover: "none",
   reasons: {
+    cover: "Facebook Page videos take a cover through Meta Business Suite; this adapter doesn't send one yet.",
     reviews: "Facebook Page recommendations aren't imported yet.",
     disclosure: "Facebook Page publishing exposes no AI-content parameter (is_ai_generated is Instagram-only), so the label goes in the post text.",
   },

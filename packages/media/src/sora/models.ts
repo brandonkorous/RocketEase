@@ -87,5 +87,14 @@ export const SORA_MODELS: ModelDescriptor[] = [
       sourceUrl: SOURCE,
     },
     checkedAt: CHECKED_AT,
+    /*
+     * Azure retires sora-2 (2025-12-08) on this date with no listed
+     * replacement, and OpenAI shuts the whole Videos API on 2026-09-24
+     * (both read off the vendors' own retirement pages, 2026-09-01 —
+     * docs/research/generation-competitors-2026.md §0). isRetired() treats a
+     * future date as "still live", so routing drops this row by itself on the
+     * day, and Kling (fal) is already ahead of it in catalog order.
+     */
+    retiredAt: "2026-10-15",
   },
 ];

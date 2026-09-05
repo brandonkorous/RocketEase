@@ -50,6 +50,7 @@ export function capsFor(cred: Credential): Capabilities {
     links: "Description links are plain text; YouTube renders them but they carry no attachment metadata.",
     webhooks: "YouTube's only push channel (PubSubHubbub on the uploads feed) reports new uploads, not comments; the inbox is polled.",
     quota: "The Data API allows 10,000 units a day by default and an upload costs about 1,600, so roughly six uploads a day until Google grants an increase.",
+    cover: "Custom thumbnails go through thumbnails.set, which only works on a channel with a verified phone number — a state the API does not expose. Not sent yet; YouTube picks its own frame.",
   };
   if (!has(SCOPES.comments)) {
     reasons.comments = "Reading comments needs the youtube.force-ssl scope.";
@@ -77,6 +78,7 @@ export function capsFor(cred: Credential): Capabilities {
     ads: { import: false, manage: false },
     ingestion: { webhooks: false, polling: true },
     disclosure: "api",
+    cover: "none",
     reasons,
     checkedAt: now(),
   };

@@ -58,10 +58,16 @@ export async function probeBuffer(bytes: Buffer, fileName = "input"): Promise<Pr
 export const POSTER_AT_FRACTION = 0.1;
 
 export async function posterFrame(bytes: Buffer, durationSeconds: number | null, fileName = "input"): Promise<Buffer | null> {
+  const at = durationSeconds && durationSeconds > 0 ? Math.min(durationSeconds * POSTER_AT_FRACTION, Math.max(durationSeconds - 0.1, 0)) : 0;
+  return frameAt(bytes, at, fileName);
+}
+
+/** One still at `atSeconds`, as PNG. Null without ffmpeg or on failure — never a blank picture. */
+export async function frameAt(bytes: Buffer, atSeconds: number, fileName = "input"): Promise<Buffer | null> {
   const tools = await toolsAvailable();
   if (!tools.ffmpeg) return null;
 
-  const at = durationSeconds && durationSeconds > 0 ? Math.min(durationSeconds * POSTER_AT_FRACTION, Math.max(durationSeconds - 0.1, 0)) : 0;
+  const at = Math.max(0, atSeconds);
   const dir = await scratch();
   const input = join(dir, fileName.replace(/[^\w.-]/g, "_") || "input");
   const output = join(dir, "poster.png");

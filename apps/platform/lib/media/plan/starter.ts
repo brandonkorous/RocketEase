@@ -63,5 +63,6 @@ export function starterPlan(input: StarterInput): AdPlan {
     overlays,
     variants: [],
     renders: [],
+    acceptances: [],
   };
 }

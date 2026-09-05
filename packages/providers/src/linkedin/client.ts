@@ -31,7 +31,9 @@ export const ORG_CAPS = (): Capabilities => ({
   ads: { import: false, manage: false },
   ingestion: { webhooks: false, polling: true },
   disclosure: "caption",
+  cover: "none",
   reasons: {
+    cover: "LinkedIn's Videos API takes a thumbnail as a separate upload this adapter does not send yet; LinkedIn picks its own frame.",
     messages: "LinkedIn does not expose Page or member messaging to third-party apps.",
     disclosure: "LinkedIn's AI label is a member-facing control with no Posts API field; the label goes in the post text.",
     reviews: "LinkedIn Pages have no reviews.",

@@ -12,6 +12,7 @@ export const CAPABILITY_COLUMNS: { path: CapabilityPath; label: string; group: s
   { path: "limits.firstComment", label: "First comment", group: "Publishing" },
   { path: "limits.altText", label: "Alt text", group: "Publishing" },
   { path: "disclosure", label: "AI disclosure", group: "Publishing" },
+  { path: "cover", label: "Cover frame", group: "Publishing" },
   { path: "inbox.comments", label: "Comments", group: "Inbox" },
   { path: "inbox.mentions", label: "Mentions", group: "Inbox" },
   { path: "inbox.messages", label: "Messages", group: "Inbox" },
@@ -42,6 +43,7 @@ const CHANNEL_PATHS: CapabilityPath[] = [
   "limits.firstComment",
   "limits.altText",
   "disclosure",
+  "cover",
   "ads.manage",
   "ingestion.webhooks",
 ];

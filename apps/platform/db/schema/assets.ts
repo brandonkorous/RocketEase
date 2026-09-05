@@ -167,7 +167,31 @@ export const assetRendition = pgTable(
   (t) => [uniqueIndex("asset_rendition_asset_kind_idx").on(t.assetId, t.kind)],
 );
 
+/**
+ * Candidate cover frames for a video, pulled on request (`asset.frames`), one row
+ * per offset. The CHOSEN frame lives on the post variant, not here: the same clip
+ * can carry a different cover on each channel.
+ */
+export const assetFrame = pgTable(
+  "asset_frame",
+  {
+    id: id(),
+    organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id").notNull().references(() => workspace.id, { onDelete: "cascade" }),
+    assetId: text("asset_id").notNull().references(() => asset.id, { onDelete: "cascade" }),
+    offsetMs: integer("offset_ms").notNull(),
+    storageKey: text("storage_key").notNull(),
+    mimeType: text("mime_type").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    bytes: integer("bytes"),
+    createdAt: now("created_at"),
+  },
+  (t) => [uniqueIndex("asset_frame_asset_offset_idx").on(t.assetId, t.offsetMs), index("asset_frame_ws_idx").on(t.workspaceId)],
+);
+
 export type Asset = typeof asset.$inferSelect;
 export type AssetRendition = typeof assetRendition.$inferSelect;
+export type AssetFrame = typeof assetFrame.$inferSelect;
 export type Folder = typeof folder.$inferSelect;
 export type Tag = typeof tag.$inferSelect;

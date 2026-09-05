@@ -66,6 +66,8 @@ export function boardCaps(cred: Credential): Capabilities {
     ads: { import: false, manage: false },
     ingestion: { webhooks: false, polling: true },
     disclosure: "caption",
+    // Video pins take cover_image_url; a chosen frame is sent as that picture.
+    cover: "image",
     reasons,
     checkedAt: now(),
   };

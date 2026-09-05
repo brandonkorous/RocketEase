@@ -273,6 +273,10 @@ jobs:
             # reports itself unconfigured and no video control renders at all —
             # which looks like a missing feature, not a missing secret.
             AZURE_OPENAI_VIDEO_DEPLOYMENT AZURE_OPENAI_VIDEO_API_VERSION
+            # fal.ai — the default video route since sora-2's 2026-10-15
+            # retirement was announced: Kling 2.5 Turbo Pro sits ahead of
+            # azure-sora in the catalog wherever this key is present.
+            FAL_KEY
             # A FOURTH data plane, shared by /audio/speech and
             # /audio/transcriptions. Voice-over is offered only when the speech
             # pair is present, and captions only when the transcribe deployment

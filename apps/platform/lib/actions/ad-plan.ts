@@ -19,7 +19,9 @@ import { contentItem } from "@/db/schema/content";
 import { audit } from "@/lib/audit";
 import { hasFeature } from "@/lib/features";
 import { emit } from "@/lib/jobs/outbox";
-import { PLACEMENTS } from "@/lib/media/canvas/specs";
+import { CANVAS_SPECS, PLACEMENTS, type Placement } from "@/lib/media/canvas/specs";
+import { renderKey, renderStatuses } from "@/lib/media/compose/fingerprint";
+import { unacceptedFor, withAcceptances } from "@/lib/media/plan/acceptance";
 import { adPlanSchema } from "@/lib/media/plan/schema";
 import { expandVariants } from "@/lib/media/plan/variants";
 import { blocking } from "@/lib/media/preflight";
@@ -91,9 +93,55 @@ export async function reviewAdPlan(input: z.input<typeof idSchema>): Promise<Pla
   return report;
 }
 
+type ItemRow = NonNullable<Awaited<ReturnType<typeof loadItem>>>;
+
+/**
+ * Queue renders for (placements × non-inert variants). `onlyStale` skips pairs
+ * whose render already matches the plan — accepting an untouched plan twice
+ * re-renders nothing. Inert variants are skipped rather than duplicated.
+ */
+async function queueRenders(
+  item: ItemRow,
+  review: PlanReview,
+  placements: Placement[],
+  opts: { variantId?: string; onlyStale?: boolean } = {},
+): Promise<number> {
+  const variants = expandVariants(review.plan).filter((v) => !v.inert && (!opts.variantId || v.id === opts.variantId));
+  const current = opts.onlyStale
+    ? new Set(
+        renderStatuses(review.plan, review.kit)
+          .filter((s) => s.state === "current")
+          .map((s) => renderKey(s.placement, s.variantId)),
+      )
+    : new Set<string>();
+
+  // Still or cut is decided by what the plan's shots ARE, not by a flag
+  // somebody has to remember to set.
+  const kind = review.isVideo ? "assembly" : "ad_plan";
+  let queued = 0;
+  await db.transaction(async (tx) => {
+    for (const variant of variants) {
+      for (const placement of placements) {
+        if (current.has(renderKey(placement, variant.id))) continue;
+        // The dedupe key keeps ONE render per (item, placement, variant) in
+        // flight. A completed job frees it, so re-rendering after an edit works.
+        await emit(tx, "media.render", { kind, contentItemId: item.id, placement, variantId: variant.id }, {
+          organizationId: item.organizationId,
+          workspaceId: item.workspaceId,
+          dedupeKey: `media.render:${item.id}:${placement}:${variant.id}`,
+        });
+        queued += 1;
+      }
+    }
+  });
+  return queued;
+}
+
 /**
  * Queue renders. With no placement/variant it renders everything the plan
- * currently describes; inert variants are skipped rather than duplicated.
+ * currently describes. M12.6: this is the FLATTEN, so it runs only for
+ * placements a person has accepted since the last edit — acceptance is the
+ * gate, and acceptAdPlan is the door.
  */
 export async function renderAdPlan(input: z.input<typeof renderSchema>): Promise<ActionState & { queued?: number }> {
   const parsed = renderSchema.safeParse(input);
@@ -112,29 +160,55 @@ export async function renderAdPlan(input: z.input<typeof renderSchema>): Promise
     if (blockers.length) return fail(blockers[0].message);
 
     const placements = parsed.data.placement ? [parsed.data.placement] : review.plan.placements;
-    const variants = expandVariants(review.plan).filter((v) => !v.inert && (!parsed.data.variantId || v.id === parsed.data.variantId));
-    if (!variants.length) return fail("There is nothing to render — every variant would be identical to the base.");
+    const unaccepted = unacceptedFor(review.plan, review.kit, placements);
+    if (unaccepted.length) {
+      return fail(`${CANVAS_SPECS[unaccepted[0]].label} hasn't been accepted since its last edit — review the preview and accept it first.`);
+    }
 
-    // Still or cut is decided by what the plan's shots ARE, not by a flag
-    // somebody has to remember to set.
-    const kind = review.isVideo ? "assembly" : "ad_plan";
-
-    await db.transaction(async (tx) => {
-      for (const variant of variants) {
-        for (const placement of placements) {
-          // The dedupe key keeps ONE render per (item, placement, variant) in
-          // flight. A completed job frees it, so re-rendering after an edit works.
-          await emit(tx, "media.render", { kind, contentItemId: item.id, placement, variantId: variant.id }, {
-            organizationId: item.organizationId,
-            workspaceId: item.workspaceId,
-            dedupeKey: `media.render:${item.id}:${placement}:${variant.id}`,
-          });
-        }
-      }
-    });
-
-    const queued = variants.length * placements.length;
+    const queued = await queueRenders(item, review, placements, { variantId: parsed.data.variantId });
+    if (!queued) return fail("There is nothing to render — every variant would be identical to the base.");
     const noun = review.isVideo ? "video" : "image";
     return { ok: `Rendering ${queued} ${noun}${queued === 1 ? "" : "s"}. They'll appear in the library when they're done.`, queued };
+  });
+}
+
+/**
+ * Accept — the human action that turns a previewed placement into files
+ * (M12.6 WP1/WP5). Records the acceptance at the plan's current fingerprint,
+ * audits it, and queues the flatten for anything not already current. A later
+ * edit stales the acceptance and the draft reopens.
+ */
+export async function acceptAdPlan(input: z.input<typeof renderSchema>): Promise<ActionState & { queued?: number }> {
+  const parsed = renderSchema.safeParse(input);
+  if (!parsed.success) return fail("Invalid request");
+  return guard(async () => {
+    const ctx = await gate(parsed.data.workspaceId, "content.create");
+    if (!ctx) return fail(NO_ACCESS);
+    const item = await loadItem(parsed.data.workspaceId, parsed.data.contentItemId);
+    if (!item) return fail("That draft no longer exists.");
+
+    const review = await reviewPlan(item);
+    if ("error" in review) return fail(review.error);
+    const blockers = blocking(review.issues);
+    if (blockers.length) return fail(blockers[0].message);
+
+    const placements = parsed.data.placement ? [parsed.data.placement] : review.plan.placements;
+    const accepted = withAcceptances(review.plan, review.kit, placements, ctx.session.user.id);
+    if ("error" in accepted) return fail(accepted.error);
+
+    await db.update(contentItem).set({ adPlan: accepted.plan, updatedAt: new Date() }).where(eq(contentItem.id, item.id));
+    await audit({
+      action: "content.update",
+      actorUserId: ctx.session.user.id,
+      organizationId: ctx.workspace.organizationId,
+      workspaceId: item.workspaceId,
+      targetType: "content_item",
+      targetId: item.id,
+      summary: { note: "ad plan accepted", after: { placements } },
+    });
+
+    const queued = await queueRenders(item, { ...review, plan: accepted.plan }, placements, { onlyStale: true });
+    if (queued === 0) return { ok: "Accepted. Every file already matches this plan — nothing needed re-rendering.", queued };
+    return { ok: `Accepted. Rendering ${queued} file${queued === 1 ? "" : "s"}. They'll appear in the library when they're done.`, queued };
   });
 }

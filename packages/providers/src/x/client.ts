@@ -47,6 +47,7 @@ export function capsFor(cred: Credential): Capabilities {
     ads: "The X Ads API is a separate product this adapter does not integrate.",
     disclosure: "The X API v2 tweet endpoint has no AI-content field; the label goes in the post text.",
     saves: "X does not report bookmarks for other people's interactions with your posts.",
+    cover: "The X API v2 has no cover or thumbnail field for video; X picks its own frame.",
   };
   if (!dm) reasons.messages = "Reading direct messages needs the dm.read scope, which the account did not grant.";
   if (!has(SCOPES.dmWrite)) reasons.reply = "Replying to direct messages needs the dm.write scope; replies to mentions only need tweet.write.";
@@ -70,6 +71,7 @@ export function capsFor(cred: Credential): Capabilities {
     ads: { import: false, manage: false },
     ingestion: { webhooks: false, polling: true },
     disclosure: "caption",
+    cover: "none",
     reasons,
     checkedAt: now(),
   };

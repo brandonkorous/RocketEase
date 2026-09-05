@@ -12,7 +12,7 @@ import { presignGet } from "@/lib/storage";
 import { hasCapability, requireWorkspace } from "@/lib/session";
 import { loadBrandKit } from "@/lib/brand/store";
 import { canGenerate } from "@/lib/media/jobs";
-import { imageUnitEstimate, videoUnitEstimate } from "@/lib/media/estimate";
+import { imageUnitEstimate } from "@/lib/media/estimate";
 import { recentGenerations } from "@/lib/media/recent";
 
 export const metadata: Metadata = { title: "Content" };
@@ -151,20 +151,9 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
     // Needs no concept and no text model: the action checks canGenerate, not
     // aiConfigured, so this surface is independent of AI drafting entirely.
     imageGeneration: { enabled: canGenerate("scene_still"), estimate: await imageUnitEstimate(workspaceId) },
-    videoGeneration: {
-      enabled: canGenerate("hero_shot"),
-      estimate: await videoUnitEstimate(workspaceId),
-      // Only ready images: a reference that has not finished processing has no
-      // bytes to send, and offering it would fail at the vendor.
-      products: (
-        await db
-          .select({ id: asset.id, title: asset.title, fileName: asset.fileName })
-          .from(asset)
-          .where(and(live, eq(asset.referenceKind, "product"), eq(asset.kind, "image"), eq(asset.uploadStatus, "ready")))
-          .orderBy(desc(asset.createdAt))
-          .limit(24)
-      ).map((r) => ({ id: r.id, label: r.title ?? r.fileName })),
-    },
+    // No quick video button: the rail points at the plan editor instead —
+    // one-click video spend was judged a cost trap (user decision, 2026-09-01).
+    videoGeneration: { enabled: canGenerate("hero_shot") },
     // A job that fails has to be visible somewhere, and this is where the
     // toast told the person to look (docs/bugs/B-007).
     generations: await recentGenerations(workspaceId),

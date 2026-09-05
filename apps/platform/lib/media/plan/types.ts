@@ -139,6 +139,20 @@ export type RenderRecord = {
   renderedAt: string;
 };
 
+/**
+ * A person's decision that this placement may be flattened (M12.6): a render
+ * is a preview until someone accepts it. Stamped with the base variant's
+ * fingerprint at the moment of acceptance, so a later edit makes it STALE by
+ * construction — the same mechanism that already tells a render it is out of
+ * date — and the draft reopens instead of quietly re-flattening changed work.
+ */
+export type AcceptanceRecord = {
+  placement: Placement;
+  fingerprint: string;
+  acceptedAt: string;
+  acceptedByUserId: string;
+};
+
 export type AdPlan = {
   version: number;
   objective: Goal;
@@ -151,6 +165,8 @@ export type AdPlan = {
   overlays: Overlay[];
   variants: VariantAxis[];
   renders: RenderRecord[];
+  /** Per placement. Empty on a fresh plan; a plan edit staleness-reopens them. */
+  acceptances: AcceptanceRecord[];
   /** Video only. Absent on a static plan, which is most of them. */
   audio?: AudioPlan;
   captions?: CaptionPlan;

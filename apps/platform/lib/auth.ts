@@ -48,6 +48,9 @@ export const auth = betterAuth({
   },
   session: {
     cookieCache: { enabled: true, maxAge: 5 * 60 },
+    // No freshness gate: in 1.7.2 only list-sessions demands it (revoke does
+    // not), so a >24h-old login 500s the security page while guarding nothing.
+    freshAge: 0,
   },
   // Google/Apple sign-in only when credentials exist; the buttons follow NEXT_PUBLIC_AUTH_SOCIAL.
   socialProviders: socialProviders(),

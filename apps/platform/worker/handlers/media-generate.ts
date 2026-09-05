@@ -41,18 +41,23 @@ export async function mediaGenerate(data: JobPayloads["media.generate"], ctx: Ha
     // may simply have lost the answer. Starting again would bill twice.
     const existing = await adapter.reconcile(row.idempotencyKey);
     let remoteJobId: string;
+    let remoteMeta: Record<string, unknown> | null;
     if (existing) {
       remoteJobId = existing.handle.remoteJobId;
+      remoteMeta = existing.handle.meta ?? null;
       l.warn("media job already existed at the vendor; not re-spending", { remoteJobId });
     } else {
       const hydrated = await hydrateReferences(row.spec as never, model, row.workspaceId);
       const handle = await adapter.start(model, hydrated, row.idempotencyKey);
       remoteJobId = handle.remoteJobId;
+      remoteMeta = handle.meta ?? null;
     }
 
+    // remoteMeta is persisted because the poll runs in another process: fal's
+    // per-request URLs and billed quantity exist only in the start() answer.
     await db
       .update(mediaJob)
-      .set({ state: "running", remoteJobId, startedAt: new Date(), updatedAt: new Date() })
+      .set({ state: "running", remoteJobId, remoteMeta, startedAt: new Date(), updatedAt: new Date() })
       .where(eq(mediaJob.id, row.id));
 
     await db.transaction(async (tx) => {

@@ -23,7 +23,7 @@ describe("worker roles", () => {
   });
 
   it("keeps the media worker's set small and deliberate", () => {
-    expect([...queuesForRole("media")].sort()).toEqual(["asset.process", "media.generate", "media.poll", "media.render", "media.transcribe"]);
+    expect([...queuesForRole("media")].sort()).toEqual(["asset.frames", "asset.process", "media.generate", "media.poll", "media.render", "media.transcribe"]);
   });
 });
 

@@ -18,6 +18,7 @@
  * direct vendor: same weights, but the tenant's own region and the Azure
  * agreement, so a deployment with both configured should prefer it.
  */
+import { FAL_MODELS } from "./fal/models";
 import { MOCK_MODELS } from "./mock/models";
 import { AZURE_OPENAI_MODELS, OPENAI_MODELS } from "./openai/models";
 import { SORA_MODELS } from "./sora/models";
@@ -25,8 +26,14 @@ import { SPEECH_MODELS } from "./speech/models";
 import { isRetired, type ModelDescriptor } from "./io";
 import type { JobKind } from "./types";
 
-/** Split to catalog/{video,image,audio}.ts once real models push this past 250 lines. */
-export const MODELS: ModelDescriptor[] = [...MOCK_MODELS, ...AZURE_OPENAI_MODELS, ...OPENAI_MODELS, ...SORA_MODELS, ...SPEECH_MODELS];
+/*
+ * Split to catalog/{video,image,audio}.ts once real models push this past 250 lines.
+ *
+ * fal sits AFTER the images (Azure stays the image default — decision
+ * 2026-09-01) and BEFORE sora (Kling is cheaper and better, and sora-2
+ * retires 2026-10-15), so one position serves both orderings.
+ */
+export const MODELS: ModelDescriptor[] = [...MOCK_MODELS, ...AZURE_OPENAI_MODELS, ...OPENAI_MODELS, ...FAL_MODELS, ...SORA_MODELS, ...SPEECH_MODELS];
 
 const BY_KEY = new Map(MODELS.map((m) => [m.key, m]));
 

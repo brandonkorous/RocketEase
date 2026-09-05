@@ -42,6 +42,7 @@ export const CAPS: Capabilities = {
   ads: { import: true, manage: true },
   ingestion: { webhooks: true, polling: true },
   disclosure: "caption",
+  cover: "offset",
   reasons: { disclosure: "The demo network has no AI-content field; the label goes in the post text." },
   checkedAt: now(),
 };
@@ -57,7 +58,7 @@ export type MockBehaviour = {
 
 type Store = {
   behaviour: MockBehaviour;
-  posts: Map<string, PublishResult & { channelId: string; idempotencyKey: string; text: string }>;
+  posts: Map<string, PublishResult & { channelId: string; idempotencyKey: string; text: string; coverOffsetMs: number | null }>;
   codes: Set<string>;
   revokedTokens: Set<string>;
 };
@@ -167,7 +168,8 @@ export const mockProvider: ProviderAdapter = {
 
     const remoteId = `mockpost_${Math.random().toString(36).slice(2)}`;
     const result = { remoteId, url: `https://demo.invalid/${channel.handle ?? channel.remoteId}/${remoteId}`, publishedAt: now(), disclosure };
-    store().posts.set(remoteId, { ...result, channelId: channel.remoteId, idempotencyKey: req.idempotencyKey, text: req.text });
+    // The cover is recorded so a test can prove the chosen frame is what got sent.
+    store().posts.set(remoteId, { ...result, channelId: channel.remoteId, idempotencyKey: req.idempotencyKey, text: req.text, coverOffsetMs: req.cover?.offsetMs ?? null });
 
     if (store().behaviour.ambiguousPublish) {
       // The post exists remotely, but the caller never learns that — exactly the case reconciliation must catch.

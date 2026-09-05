@@ -142,6 +142,16 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
   silent. `lib/media/rights-merge.ts` takes the narrowest of EVERY ingredient across four
   independent axes (scope, expiry, licence, per-network clearance) — inheriting from one "base"
   asset gets three of them wrong. Still-vs-cut is routed from what the shots ARE, not a flag.
+- **Grid** (M13, `docs/plans/m13-grid.md`): the profile page as the network renders it, per SURFACE
+  (`lib/grid/layouts.ts` — observed and dated, `verified: false`; no API exposes pinned state, so
+  order is by date and the page says so). **A move is a reschedule**: swapping tiles re-queues both
+  items through `enqueuePublish`, a draft dropped on a gap goes through `scheduleItemCore`, and live
+  tiles never move. **A gap has a definition** — a stretch longer than the channel's rhythm (median
+  spacing of the last 10 live posts, three needed) with nothing planned; no rhythm means no gaps,
+  never a zero. A cover frame is `post_variant.settings.cover`, read again at publish
+  (`lib/grid/cover.ts` → `PublishRequest.cover`); an adapter takes an offset, a picture, or declares
+  `cover: "none"` with a reason. Frames are pulled on request (`asset.frames`, media worker), never
+  on upload.
 - **Storage**: `lib/storage/` — one API, two drivers chosen by `STORAGE_DRIVER`: `s3.ts` (MinIO locally at :5090, console :5091) and `azure.ts` (Azure Blob in production; Azure has **no** S3-compatible API, so it is a real driver, not a re-pointed endpoint). Browser uploads go straight to storage via presigned PUT; `asset.process` makes renditions and runs the scan hook. Unscanned/expired-rights assets can't publish.
 - **Conversion tracking** (`lib/tracking`, `docs/tracking.md`): GA4 / Shopify / signed webhook sources write `conversion_fact` via `tracking.sync`. Site-reported and ad-reported conversions never double-count — a paid `utm_medium` belongs to the ad platform, everything else to the tracking source; ROAS is paid-medium revenue ÷ spend. `lib/tracking/availability.ts` owns every "why is this unavailable" string; never show a missing conversion metric as 0.
 - **Inbox**: `packages/providers` inbox contract (`fetchInbox`/`reply`/`findReply`/`inboxItemsFromWebhook`, `inbox-types.ts`). Ingestion is `lib/engagement/ingest.ts` (idempotent on channel+remoteId) fed by `inbox.sync` polling (worker tick every 2 min) and `POST /api/webhooks/[provider]` → `webhook_receipt` → `webhook.process`. Outbound replies are `message` rows in `queued` state delivered by `inbox.reply`; an ambiguous provider result is reconciled with `findReply` before any resend (ENG-003). The mock store lives in the worker process, so local "simulate incoming" goes through the webhook receipt path, never a direct in-process call.

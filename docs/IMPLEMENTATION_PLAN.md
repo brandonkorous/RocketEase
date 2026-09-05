@@ -25,8 +25,8 @@ Legend: ✅ done · 🔨 in progress · ⬜ not started · `REQ-ID` traces to re
 | 0.11 | Invitations (`workspace_invitation`) → `/invite/:token` accept → org member + workspace membership; Team page (invite, role change, remove) | TEN-001 | ✅ |
 | 0.12 | Security: TOTP 2FA + backup codes, login 2FA step, password change, session list/revoke. Reauth gate for high-risk actions lands with the first such action (M6.5) | NFR-001 | ✅ |
 | 0.13 | pg-boss queue registry (`lib/jobs/queues.ts`), transactional outbox + relay, worker (`worker/index.ts`, `Dockerfile.worker`) | NFR-003 | ✅ |
-| 0.14 | Observability: request IDs (middleware), structured JSON logs (`lib/log.ts`), `/api/health`. OpenTelemetry export deferred until the sparx collector endpoint is known | NFR-008 | 🔨 |
-| 0.15 | Vitest harness (authz matrix tested). Playwright e2e + DB-level tenant-isolation suite still to add | release gate | 🔨 |
+| 0.14 | Observability: request IDs (middleware), structured JSON logs (`lib/log.ts`), `/api/health`, OpenTelemetry export (`lib/otel.ts`) | NFR-008 | ✅ |
+| 0.15 | Vitest harness (authz matrix tested); Playwright e2e + tenant-isolation suite in `apps/platform/e2e`, wired into CI | release gate | ✅ |
 | 0.16 | CI (`.github/workflows/ci.yml`: typecheck, tests, migration drift check, build, images) + Kustomize manifests (`deploy/k8s`) | — | ✅ |
 
 **Gate:** tenant isolation tests pass; a sandbox post can be published end-to-end (needs M1.1–1.6 — so the roadmap's Phase 0 gate actually closes at the end of M1).
@@ -85,7 +85,7 @@ Notes
 | 3.1 | ✅ Approval policy model (`approval_policy`, matchPolicy, editor in Settings → Team and roles): by channel / campaign / author role / paid spend / risk label; separation-of-duty | COL-001 | 0.9, 2.1 |
 | 3.2 | ✅ `approval_request`, `approval_decision` (immutable events), superseded-on-edit | COL-002 | 2.1 |
 | 3.3 | ✅ Approvals queue UI (matches approvals.png; bulk approve skips stale/unauthorized): status/due/assignee filters, preview + diff, approve / request changes (comment required) / reject, bulk with stale-version skip | COL-002 | 3.2 |
-| 3.4 | 🔨 Comments (item/version) + assignment done; due dates on requests; field/asset-anchored comments pending (item/version/field/asset region), assignments, due dates, activity history | COL-003 | 2.1 |
+| 3.4 | 🔨 Comments (item/version/field/asset region), assignments and activity history done (anchored comments landed 2026-08-28). Still open: **due dates on approval requests** → M14.3 | COL-003 | 2.1 |
 | 3.5 | ✅ Composer integration: "Request approval", approval state in calendar/post detail | COL-001 | 3.2, 2.3 |
 | 3.6 | ✅ Client approver role (sees only assigned requests; decides only when assigned): object-level links, narrow view, no browsing | COL-004 (P1) | 3.3, 0.11 |
 | 3.7 | ✅ Team page (built in M0.11): members, invitations, role changes (audited), explicit grants | ADM-001 | 0.11 |
@@ -228,7 +228,9 @@ placement preflight, disclosure. Read before starting anything here:
 - **`docs/plans/m12.2-static-ad-creative.md`** — the execution plan for stage 12.2 (work packages, gates, findings)
 - **`docs/plans/m12.3-voice-captions.md`** — the execution plan for stage 12.3 (captions, consent, burn-in)
 - **`docs/plans/m12.4-video-assembly.md`** — the execution plan for stage 12.4 (assembly, audio mix, rights merge)
+- **`docs/plans/m12.6-layered-acceptance-editor.md`** — layered acceptance + the plan editor (planned)
 - `docs/research/ai-media-2026.md` — the evidence behind all three
+- `docs/research/generation-competitors-2026.md` — Runway/OpenArt/DaVinci/Creatify deep-dive; carries the verified Sora retirement dates and the cost-parity analysis
 
 **Build it, dogfood it, price it from measurement** (user decision, 2026-08-30). It ships behind a
 **beta grant** — us first, then early adopters — and runs on RocketEase's own marketing before it is
@@ -251,7 +253,8 @@ learn. **That is a live defect in video publishing today**, before a frame is ge
 | 12.4 | **Video assembly** — ✅ done 2026-08-30. Two-pass assembly (normalise every shot to one canvas/fps/pixel format/audio layout, THEN concat — mixed formats otherwise stop after the first clip); the same composited type as an overlay layer; burned-in captions from the voice-over; audio mix with ducking and −14 LUFS; **rights merged across all ingredients on four axes**; the picture decides the length and a truncated voice-over is reported; `renderAdPlan` routes still-vs-cut from what the shots ARE. 1026 tests | ✅ |
 | 12.4a | **First real adapter, and the last bypass closed** — ✅ done 2026-08-30. `packages/media/src/openai` implements `MediaAdapter` for Images and is registered in the catalog with pinned `vendorModelId`, unverified cost/terms recorded as null rather than guessed. The concept card's image button no longer calls a vendor directly: it routes, is checked against the spending ceiling it previously bypassed, and writes a `media_job` recording model + reason. `AI_IMAGE_MODEL` is gone — the model is a registry entry. Adapters declare `synchronous`; anything else is queued. Routing rejects an aspect a model does not render. 1077 tests repo-wide (+28 here) | ✅ |
 | 12.5a | **Content credentials — probe, record, disclose** — ✅ done 2026-08-30. `lib/media/c2pa.ts` detects a C2PA manifest in the BYTES (JUMBF superbox, container-independent), so `ModelDescriptor.provenance.c2pa` is a claim we check rather than a fact we assert; disagreements land in `media_job.mismatches` beside the duration ones. Derived assets probe their own output instead of assuming a strip. A credential our pipeline removed is surfaced at publish time — the disclosure duty EU AI Act Art. 50 has carried since 2 Aug 2026, and the thing TikTok and Meta auto-label from. Detection, never validation. +22 tests here; 1117 repo-wide at completion | ✅ |
-| 12.5b | Advanced motion & re-signing — reference-conditioned product motion (Seedance); multi-shot sequences (Kling); footage editing (Aleph); consent-gated performance transfer (Act-Two); music generation + `platform_clearance`. **Blocked**: each needs real vendor credentials before a descriptor can be written, music needs a licensed-data vendor decision, and C2PA re-signing needs a signing certificate set by hand in Key Vault | ☐ |
+| 12.5b | Advanced motion & re-signing — reference-conditioned product motion (Seedance); multi-shot sequences (Kling); footage editing (Aleph); consent-gated performance transfer (Act-Two); music generation + `platform_clearance`. **Blocked**: each needs real vendor credentials before a descriptor can be written, music needs a licensed-data vendor decision, and C2PA re-signing needs a signing certificate set by hand in Key Vault. **Resolved 2026-09-01**: the fal adapter landed (see 12.6's row) — Kling 2.5 Turbo Pro is the default video route wherever `FAL_KEY` is set, and `azure-sora-2` carries `retiredAt: 2026-10-15` so routing drops it by itself on Azure's verified retirement date | ☐ |
+| 12.6 | **Layered acceptance & the plan editor** — built 2026-09-01, pending live verification. `AdPlan.acceptances` (per placement, fingerprint-stamped — an edit reopens the draft); `renderAdPlan` (the flatten) refuses unaccepted placements; `acceptAdPlan` records + audits + queues only stale renders; shot regeneration is estimate-first in CREDITS (`previewShotGeneration`/`regenerateShot`/`adoptShotAsset` — adoption is a human action); plan editor at `create/plan/:contentItemId` (copy/shots/audio/captions/variants panels + layered browser preview running the renderer's own `resolveRenderSpec`/`layoutOverlays`, safe-zone guide, cue overlay, approximated mix — labeled approximate); "Ad creative" entry on post detail, beta-gated absent-not-locked. Also landed here: the **fal adapter** (Kling 2.5 Turbo Pro video I2V/T2V $0.07/s verified, FLUX.2 [pro] images; queue contract with persisted `remote_meta`; sora auto-retires 2026-10-15 via `retiredAt`); **orchestrated length** (pick 15/20/30s → `plan/duration.ts` splits into model-legal takes summing exactly to target → "Generate all missing takes" with the TOTAL credits shown first → 12.4 assembly joins them on accept; the preview plays takes sequentially); and the **removal of the quick library video tool** (one-click spend on the most expensive thing = cost trap; the rail points at the plan flow — user decision 2026-09-01). Next in-stage: WP7 take chaining (last-frame rendition → Kling I2V start image). Plan: `docs/plans/m12.6-layered-acceptance-editor.md` | ◐ |
 
 Dogfood corpus: seven live brands — `sparx.works`, `meetpiggles.com`, `jotacular.com`,
 `silicaui.com`, `wize.works`, `agconn.com`, `kanninja.com`. Private posting to a real network is
@@ -284,6 +287,82 @@ Open decisions: `docs/media-models.md` §11 (primary router — fal + a direct V
 recommended; Higgsfield as competitor-or-vendor; indemnity floor; seeds; consent-gated models in v1)
 and `docs/media-generation.md` §12 (render build-vs-buy; Canva interop; C2PA signing identity; where
 `AdPlan` lives; ceiling defaults).
+
+---
+
+## Milestone 13 — Grid (planned 2026-09-05)
+
+A preview of the **profile page as the network will render it** — live posts and planned posts in
+one grid, so a brand sees how the page will look before anything publishes. Competitors ship this as
+"Feed Planner" / "Visual Planner" / "Grid Planner" (Later, Planoly, Plann, Preview). Ours is **Grid**.
+
+**Decisions (user, 2026-09-05):**
+
+- **A standalone feature, not a Calendar tab.** Calendar stays clean and simple; Grid gets its own
+  route (`/app/:workspaceId/grid`), its own sidebar entry and its own designed empty state.
+- **Name is "Grid".** "Feed" collides with the social-timeline meaning; "Planner" is already excluded
+  by the Calendar naming rule.
+- **Not Instagram-only.** First: Instagram (Posts, Reels), TikTok (profile), YouTube (Videos,
+  Shorts). Later: Facebook (Page photos/Reels strip — a timeline, not a grid, so low value) and
+  Pinterest (boards). LinkedIn has no grid and is excluded.
+
+**Shape.** One feature, not six: each network surface is a small **profile layout** record — columns,
+tile shape, what sorts first (pinned, then newest), which content kinds appear (Instagram never shows
+Stories; a Reel appears in the Posts grid unless hidden) — sourced and dated like
+`lib/media/canvas/specs.ts`, because networks change them (Instagram moved profile tiles from 1:1 to
+3:4 in 2025). Live tiles come from the provider's content sync we already run; planned tiles are the
+channel's scheduled/draft/awaiting-approval items ordered by `scheduled_at`. **Live tiles are locked.**
+Dragging a planned tile swaps dates through the same reschedule action Calendar uses, so audit and
+approval rules hold. Status on a tile is icon + label, never colour alone.
+
+**Mockups (drafted and approved 2026-09-05):** `images/grid.png` (Instagram Posts grid with a
+selected planned tile, cover-frame picker and drafts tray), `images/grid-youtube.png` (wide tiles
+with titles, showing the layout spec varies per network), `images/grid-empty.png` (designed empty
+state). Editable canvas: https://claude.ai/code/artifact/a818f4ed-8267-4dd9-a1be-2b81c012636e
+
+| # | Item | Status |
+|---|---|---|
+| 13.1 | **Profile layout specs** — ✅ done 2026-09-05. `lib/grid/layouts.ts`: per surface (`instagram.posts`/`reels`, `tiktok.profile`, `youtube.videos`/`shorts`, `mock.profile`) columns, tile shape, formats shown, what never appears, and why pinned tiles are not modelled (no API exposes pinned state, so order is by date and the page says so). Every entry dated and sourced; observed layouts are `verified: false`. Tests pin the dating and that Stories and text never reach a grid | ✅ |
+| 13.2 | **Live tiles** — ✅ done. Published variants for the channel inside a 90-day window, read from what the publish worker already wrote; a chosen cover frame wins over the thumb; the page never calls a network | ✅ |
+| 13.3 | **Planned tiles & gaps** — ✅ done. Scheduled, draft, in-review and failed variants with a date merge newest-first with the live ones (`lib/grid/tiles.ts`). A **gap has a definition**: a stretch longer than the channel's rhythm with nothing planned, where the rhythm is the median spacing of the last 10 live posts (three needed, clamped to 1–7 days). No rhythm means no gaps — never a zero. Every number on the page carries its definition on hover; the rhythm line states it in words | ✅ |
+| 13.4 | **Drag to reorder** — ✅ done. Scheduled tile onto scheduled tile = `swapSchedule` (every destination of both items re-queued through `enqueuePublish`, two `content.reschedule` audit rows); scheduled tile onto a gap = `rescheduleItem`; a draft from the tray onto a gap = `scheduleDraftAt` through `scheduleItemCore`, so approval and billing gates hold. Live tiles are not draggable. Every drop confirms first. "Move…" (a datetime field) is the keyboard path | ✅ |
+| 13.5 | **Cover frame** — ✅ done. `asset_frame` (migration 0025) + the `asset.frames` media-worker job pull six stills spaced 5–95% through the clip on request, never on upload. The choice is `post_variant.settings.cover`, read again at publish (`lib/grid/cover.ts` → `PublishRequest.cover`), so the grid shows the frame the network will get. Adapters send what their API takes: Instagram Reels `thumb_offset`, TikTok `video_cover_timestamp_ms`, Pinterest `cover_image_url`, the mock records it; YouTube, Facebook, LinkedIn and X declare `cover: "none"` with a reason the panel shows. `Capabilities.cover` is a new capability path with a "Cover frame" column on `/capabilities` | ✅ |
+| 13.6 | **Page** — ✅ done. `/app/:workspaceId/grid` (sidebar after Calendar, mobile under More): one profile at a time, per-surface tabs, stats + layout facts + rhythm line, phone-width preview for 3-column grids, selected-tile panel with the cover picker, drafts tray, designed empty state. **Verified live 2026-09-05 against the mock provider** (fresh tenant, real connect flow, seeded history): 4 live / 2 planned / 2 gaps / 8 days ahead rendered newest-first; swapping two scheduled tiles exchanged their dates; a live tile carried no `draggable`; a draft dropped on a gap was scheduled; six frames were pulled, one chosen, and the tile picture changed; "Move…" put the clip 90 s out and the publish worker logged `coverOffsetMs: 4720` for it — the chosen frame is what the mock publish received. 982 platform tests, 193 provider tests | ✅ |
+| 13.7 | Later — Facebook Page photos/Reels strip; Pinterest boards; YouTube custom thumbnails (`thumbnails.set` needs a verified channel the API cannot report); promote the live check to a Playwright spec (today it is a script under the ignored `e2e/.state/grid-live/`) | ☐ |
+
+**Gate:** against the mock provider, a channel with published and scheduled posts renders in the
+network's tile order; dragging a scheduled tile changes its date and the change shows on Calendar;
+a live tile cannot be moved; a cover frame chosen here is the one the (mock) publish sends.
+**Met 2026-09-05** — see 13.6. Plan and record: `docs/plans/m13-grid.md`.
+
+---
+
+## Milestone 14 — Close the gaps (planned 2026-09-05)
+
+**Decision (user, 2026-09-05): do ALL of these**, in this order. The list is every loose end left in
+M0–M13 plus every research idea (`docs/research/`) and competitor table-stake not yet in the plan.
+Each row ships on its own; the order puts cheap-and-visible first, big-and-slow last. Same rules as
+every milestone: mockup in `images/` before a new screen, definitions on every number, never a zero
+for an unknown, a person presses send.
+
+| # | Item | Status |
+|---|---|---|
+| 14.1 | **Threads + Bluesky adapters** — `packages/providers/src/threads` (Meta container→publish, 250 posts/24h, Tech Provider Verification noted) and `src/bluesky` (AT Protocol, app password / OAuth, `createRecord` with image/video blobs, 300-grapheme limit, facets for links/mentions). Both free, no audit, so they can be dogfooded live at once. Capability catalog entries with every "no" explained; `/capabilities` page; Grid layouts only if either renders a profile grid (Threads does not; Bluesky does not) | ⬜ |
+| 14.2 | **Notifications center** — finish 2.9: in-app list at `/notifications` (table + writes exist), read/unread, deep links, per-user preference model (publish failures, approvals, mentions, connection health; in-app vs email per event) | ⬜ |
+| 14.3 | **Approval due dates** — finish 3.4: `due_at` on approval requests, overdue badge on Approvals + sidebar count, reminder mail, "overdue" in the Home attention queue | ⬜ |
+| 14.4 | **Brand hub leftovers** (M10) — brand-kit export for clients (PDF/HTML like the report renderer), copy a brand from another workspace, and a pre-publish lint that BLOCKS on banned words/claims in the composer's publish check (today the rules only reach the model) | ⬜ |
+| 14.5 | **Link-in-bio page** — one public page per workspace at a RocketEase host (`/l/:slug`, custom domain later): ordered links, latest-posts strip from published variants, per-link click counts written to the tracking layer (`conversion_fact`-adjacent, never invented), brand kit for look. Mockup first | ⬜ |
+| 14.6 | **Comment moderation rules** — hide/flag/auto-reply-draft by rule (keyword, link, language, repeat offender) inside the inbox; every action is a `message`/audit row; hides call the provider's hide API where one exists and record "why not" where it does not | ⬜ |
+| 14.7 | **DM rules engine** — model Meta's messaging windows and caps (24 h window, qualifying action, ~200 automated DMs/hr, 2026 one-automated-message rule); before a reply queues, say whether it can send and why not; surfaces on inbox reply and automations | ⬜ |
+| 14.8 | **Google Business Profile posts** — the GBP adapter publishes `localPosts` (standard/offer/event) to a location; today it is reviews-only. Formats + limits from the Business Profile API; quota-0 gate already documented | ⬜ |
+| 14.9 | **Canva / Adobe Express import** — resolve the M12 §12 open decision first (Canva Connect API vs Express embed); then "Import from Canva" into the library with rights = owned, provenance chain recorded | ⬜ |
+| 14.10 | **Per-client billing** — agencies bill each client workspace: client rate (M8.11) becomes an invoice line via Stripe Connect or Stripe Invoicing on the agency's own account; RocketEase never touches the money; statements in the agency overview | ⬜ |
+| 14.11 | **Listening + ad-library intelligence** — keyword/brand listening on networks whose APIs allow it (Bluesky firehose, Threads keyword search, YouTube/Reddit search) and the EU DSA ad repositories (Meta Ad Library API, TikTok Commercial Content Library) as a competitor paid-creative feed; definitions and coverage gaps stated per network | ⬜ |
+| 14.12 | **Self-hosted agency tier** — licence-owned install: single-org mode, licence key check, offline-safe feature gating, Helm chart from `deploy/k8s`, update channel. Last because it changes how flags, billing and staff work | ⬜ |
+
+Also still open, owned by the user not the code: M11 launch chores (price build args, DMCA agent
+registration, web redeploy for the legal name), provider credentials and app reviews
+(`docs/provider-apps.md`), and M12.5b/12.6 vendor keys + live check.
 
 ---
 
@@ -331,7 +410,12 @@ Four agent-run streams with disjoint file ownership; the lead integrates, genera
 3. **quality** — 5.7 data quality, 5.8 telemetry, publication reconcile + token refresh jobs, OTel, Playwright + tenant-isolation suite, CI.
 4. **providers** — LinkedIn/TikTok inbox+insights, Meta webhook mappings, token lifecycle, healthCheck, vitest suite, providers README.
 
-## Immediate next steps (in order) — refreshed 2026-08-28
+## Immediate next steps — refreshed 2026-09-05
+
+**The queue is Milestone 14, top to bottom** (user decision 2026-09-05: do all of it). Start at 14.1.
+Launch chores and app reviews below run in parallel and are not code.
+
+## Earlier next steps (2026-08-28), kept for the record
 
 M0–M6 are built and verified against the mock provider. What remains before a real launch:
 

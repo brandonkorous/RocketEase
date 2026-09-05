@@ -12,6 +12,10 @@ Attention queue, upcoming posts, assigned conversations, approvals, connection h
 
 Month/week/list, channel/campaign/status/assignee filters, timezone, post previews, drag/reschedule, bulk actions, and create entry. Empty calendar teaches the first post flow.
 
+### Grid
+
+The profile page as the network will render it: one channel at a time, live tiles (locked) and planned tiles (scheduled, draft, awaiting approval) in the network’s own tile shape and order, gaps shown as empty tiles, drag to swap planned dates, cover-frame choice for video. Per-surface tabs only where the network has more than one grid (Instagram Posts/Reels, YouTube Videos/Shorts). Status is icon + label. Empty grid teaches connecting a channel and planning the first post.
+
 ### Create and post detail
 
 Shared content, per-channel variants, media, accessibility fields, campaign, tracking, schedule, approvals, previews, validation, comments, and version/activity history. Mobile uses a linear focused flow.

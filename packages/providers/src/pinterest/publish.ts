@@ -41,8 +41,10 @@ export async function mediaSource(token: string, req: PublishRequest): Promise<R
   const images = req.media.filter((m) => m.mimeType.startsWith("image/"));
   const video = req.media.find((m) => m.mimeType.startsWith("video/"));
   if (video) {
-    if (!images.length) throw new ProviderError("A Pinterest video pin needs a cover image.", { category: "validation", providerCode: "cover_image_required" });
-    return { source_type: "video_id", media_id: await uploadVideo(token, video.url), cover_image_url: images[0].url };
+    // A chosen cover frame wins; otherwise the first image attached; Pinterest refuses a video pin with neither.
+    const coverUrl = req.cover?.imageUrl ?? images[0]?.url;
+    if (!coverUrl) throw new ProviderError("A Pinterest video pin needs a cover image.", { category: "validation", providerCode: "cover_image_required" });
+    return { source_type: "video_id", media_id: await uploadVideo(token, video.url), cover_image_url: coverUrl };
   }
   if (images.length >= LIMITS.carouselMin && req.format === "carousel") {
     return { source_type: "multiple_image_urls", index: 0, items: images.slice(0, LIMITS.carouselMax).map((m) => ({ url: m.url, title: titleFor(req), description: req.text.slice(0, LIMITS.description), link: req.link })) };

@@ -41,7 +41,7 @@ export function RulesForm({ workspaceId, initial, canEdit }: Props) {
         )}
       />
 
-      <LinesField id="br-claims" label="Claims that are not allowed" hint="One per line. e.g. no medical outcomes, no earnings claims, no “best in the UK”." value={v.claimRules} disabled={d} rows={4} onChange={(claimRules) => set({ claimRules })} />
+      <LinesField id="br-claims" label="Claims that are not allowed" hint='One per line. Put the exact words in quotes to block them at publish time, e.g. no "best in the UK". The rest of the line guides drafting and reviewers.' value={v.claimRules} disabled={d} rows={4} onChange={(claimRules) => set({ claimRules })} />
 
       <SelectField id="br-comp" label="Competitors" value={v.competitorPolicy} disabled={d} options={COMPETITOR} onChange={(competitorPolicy) => set({ competitorPolicy: competitorPolicy as Rules["competitorPolicy"] })} />
 

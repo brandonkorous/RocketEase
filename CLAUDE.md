@@ -61,7 +61,7 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
 - `middleware.ts` is only an optimistic cookie check — never treat it as authorization, and don't add a "logged-in → redirect away from /login" rule there (a stale cookie loops); auth pages do the real session check.
 - Route map and labels come from `lib/nav.ts`; keep the vocabulary rules (Calendar/Create/Connected accounts).
 - **Screens follow the mockups in `images/`** (user requirement). Open the matching PNG before building/restyling a screen; reproduce its layout and panels. Naming still follows navigation.md.
-- **Providers**: `packages/providers` is the adapter contract; `mock` (dev, `PROVIDERS_ENABLE_MOCK=1`) exercises the full connect → select → sync → publish → reconcile loop locally; `meta`/`linkedin`/`tiktok` are real API code, untested live until credentials exist. Tokens are AES-GCM envelopes bound to the row id (`lib/crypto.ts`, `lib/providers.ts`); never log or return them.
+- **Providers**: `packages/providers` is the adapter contract; `mock` (dev, `PROVIDERS_ENABLE_MOCK=1`) exercises the full connect → select → sync → publish → reconcile loop locally; `meta`/`linkedin`/`tiktok`/`threads`/`bluesky` and the rest are real API code, untested live until credentials exist. Tokens are AES-GCM envelopes bound to the row id (`lib/crypto.ts`, `lib/providers.ts`); never log or return them. A network with no OAuth (Bluesky app passwords) declares `credentialsForm` + `signIn`; the start route sends it to `/accounts/connect/:provider` and the action seals the credential through the same `persistConnection` the OAuth callback uses. Every sourced limit lives in the adapter's `LIMITS` with the doc it came from; a number nobody published is not declared.
 - **Jobs**: enqueue only via the transactional outbox (`emit(tx, name, payload)` in `lib/jobs/outbox.ts`); the worker relays. Queue names/payloads live in `lib/jobs/queues.ts`; handlers in `worker/handlers/`. Worker code must not import `server-only` or `next/headers` (use `lib/audit.ts`'s dynamic pattern).
 - **Publishing**: `post_variant` state is authoritative; `content_item.status` is a summary (`summarizeItem`). The publish worker revalidates everything first, treats ambiguous provider errors by **reconciling before any retry**, and only retries retryable categories with backoff. Never bypass `idempotencyKey`.
 - **Staff & betas**: `lib/staff/` is RocketEase's own operator surface at `/staff` (`requireStaff`, 404 for
@@ -157,6 +157,30 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
 - **Inbox**: `packages/providers` inbox contract (`fetchInbox`/`reply`/`findReply`/`inboxItemsFromWebhook`, `inbox-types.ts`). Ingestion is `lib/engagement/ingest.ts` (idempotent on channel+remoteId) fed by `inbox.sync` polling (worker tick every 2 min) and `POST /api/webhooks/[provider]` → `webhook_receipt` → `webhook.process`. Outbound replies are `message` rows in `queued` state delivered by `inbox.reply`; an ambiguous provider result is reconciled with `findReply` before any resend (ENG-003). The mock store lives in the worker process, so local "simulate incoming" goes through the webhook receipt path, never a direct in-process call.
 - Local URLs: web :5000, platform :5001, Postgres :5050, Mailpit UI :5026, MinIO :5090/:5091. `pnpm dev` starts all of it including the worker.
 - Silica gotchas beyond the web ones: `DropdownMenuLabel` must be inside `DropdownMenuGroup` (Base UI 1.7); portaled popups need `data-theme` + the `[data-base-ui-portal]` z-index rule in `globals.css` to render above the dark sidebar.
+- **Brand hub** (M10 + M14.4, `docs/plans/m14.4-brand-leftovers.md`): the kit lives on
+  `workspace.settings.brandKit`, always read through `lib/brand/read.ts`. **Only what a machine can
+  check without guessing blocks**: `lib/brand/lint.ts` refuses banned words verbatim and the phrases
+  in quotes inside a claim rule, whole-phrase and case-insensitive, from inside `validateVariant` —
+  so every path that publishes refuses the same post with the same words. The rest of the kit is
+  guidance for the model and the reviewer. The export is a DOCUMENT on the report shell (logos as
+  data URIs, “Not recorded yet” for gaps, PDF only through a real renderer). Copying a kit between
+  workspaces copies logo FILES into the target's own keys and never copies library asset ids — an
+  asset row belongs to one workspace.
+- **Approval due dates** (M14.3, `docs/plans/m14.3-approval-due-dates.md`): every request has a
+  `due_at` — the requester's own, else the policy window (24 h without a policy); a time not ahead of
+  now is refused. **Overdue has ONE definition** (`lib/approvals/rules.ts`: pending and past due) and
+  every surface reads it — the Overdue tab, the sidebar badge, Home, the post banner, the agency
+  overview. The badge counts requests you can decide or asked for, because navigation.md allows a
+  badge only for an actionable count. **One reminder per deadline**: the 5-minute sweep CLAIMS the
+  request (`reminded_at`) before notifying, so a retry cannot remind twice, and moving the deadline
+  forward re-arms it. The reminder shares the "Approval requests" preference: switching requests off
+  switches reminders off too.
+- **Notifications** (M14.2, `docs/plans/m14.2-notifications.md`): kinds are a CLOSED union in
+  `lib/notifications/catalog.ts` — `notify()` refuses anything else, so every kind has an icon, a
+  status chip (icon + label) and an action label before it can be emitted. Members choose per
+  preference and per channel (in-app, email); publish failures are locked to in-app. Every tab count
+  has a definition. `connection.health` fires on the TRANSITION into a broken state only
+  (`health-rules.ts`), never on every sync of a channel that is already broken.
 - **Feedback is toasts, not inline alerts.** `useActionFeedback()` (`lib/use-action-feedback.ts`) wraps a server action: error → red toast, ok → green toast, then `router.refresh()`. Server-derived one-shot messages use `<QueryToast>`. Keep `Alert` only for persistent/blocking states (e.g. a connection that must be fixed before continuing).
 - **No arbitrary Tailwind values** (`text-[11px]`, `max-w-[520px]`, `bg-[#hex]`, `rounded-[10px]`…). Use the built-in scale and Silica tokens (`text-xs`, `max-w-130`, `text-secondary`, `rounded-field/box`, `bg-error/10`). The only accepted exceptions: CSS grid templates (`grid-cols-[1fr_240px]`), platform brand colors inside `NetMark`/`PlatformIcon`, and hero type in `globals.css`.
 

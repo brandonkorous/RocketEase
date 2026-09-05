@@ -50,7 +50,7 @@ export function VoiceForm({ workspaceId, voice, rules, canEdit, aiEnabled }: Pro
         <Field id="bv-read" label="Reading level" hint="Optional. e.g. plain English, no industry terms." value={v.readingLevel} disabled={d} maxLength={120} onChange={(readingLevel) => set({ readingLevel })} />
         <Field id="bv-cta" label="How calls to action sound" value={v.ctaStyle} disabled={d} maxLength={200} placeholder="Invite, never pressure" onChange={(ctaStyle) => set({ ctaStyle })} />
       </div>
-      <LinesField id="bv-banned" label="Words to never use" hint="One per line. Drafting is told to avoid these outright." value={v.bannedWords} disabled={d} rows={3} placeholder="synergy&#10;game-changing" onChange={(bannedWords) => set({ bannedWords })} />
+      <LinesField id="bv-banned" label="Words to never use" hint="One per line. Drafting is told to avoid these, and a post that contains one cannot be scheduled until it is changed." value={v.bannedWords} disabled={d} rows={3} placeholder="synergy&#10;game-changing" onChange={(bannedWords) => set({ bannedWords })} />
       <AreaField
         id="bv-ex"
         label="Posts that already sound right"

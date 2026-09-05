@@ -69,7 +69,7 @@ Notes
 | 2.6 | ✅ Calendar (week/month/list, drag-reschedule with confirm, matches planner.png): month/week/list, filters (channel/campaign/status/assignee), drag-reschedule with confirmation, post preview cards | PUB-003 | 2.1 |
 | 2.7 | ✅ Post detail page: variants, validation, versions/activity, retry failed destinations | PUB-005 | 2.3 |
 | 2.8 | ✅ Home (matches overview mockup) with real attention queue: failed posts, disconnected channels, upcoming | — | 2.5 |
-| 2.9 | 🔨 Notifications: table + worker writes + email on publish failure done; in-app center UI pending: in-app center + email for publish failures; preference model | COL-003 | 0.10 |
+| 2.9 | ✅ Notifications: table + worker writes + email on publish failure; in-app center with filters, day groups and pages; per-member in-app/email preferences (finished in 14.2, 2026-09-05) | COL-003 | 0.10 |
 | 2.10 | ✅ Mobile quick compose (`create/quick`, 4-step linear flow on the composer hooks) | flows.md | 2.3 |
 | 2.11 | ✅ Onboarding goals step + Home checklist driven by real state: goals step, connect step, invite step, first-post step; checklist driven by domain events | ONB-001 | 1.4, 2.4, 0.11 |
 | 2.12 | ✅ Templates + reuse with lineage (`content_template`); bulk reschedule from the calendar list | PUB-006 (P1) | 2.6 |
@@ -85,7 +85,7 @@ Notes
 | 3.1 | ✅ Approval policy model (`approval_policy`, matchPolicy, editor in Settings → Team and roles): by channel / campaign / author role / paid spend / risk label; separation-of-duty | COL-001 | 0.9, 2.1 |
 | 3.2 | ✅ `approval_request`, `approval_decision` (immutable events), superseded-on-edit | COL-002 | 2.1 |
 | 3.3 | ✅ Approvals queue UI (matches approvals.png; bulk approve skips stale/unauthorized): status/due/assignee filters, preview + diff, approve / request changes (comment required) / reject, bulk with stale-version skip | COL-002 | 3.2 |
-| 3.4 | 🔨 Comments (item/version/field/asset region), assignments and activity history done (anchored comments landed 2026-08-28). Still open: **due dates on approval requests** → M14.3 | COL-003 | 2.1 |
+| 3.4 | ✅ Comments (item/version/field/asset region), assignments and activity history (anchored comments landed 2026-08-28); due dates on approval requests landed as M14.3 (2026-09-05) | COL-003 | 2.1 |
 | 3.5 | ✅ Composer integration: "Request approval", approval state in calendar/post detail | COL-001 | 3.2, 2.3 |
 | 3.6 | ✅ Client approver role (sees only assigned requests; decides only when assigned): object-level links, narrow view, no browsing | COL-004 (P1) | 3.3, 0.11 |
 | 3.7 | ✅ Team page (built in M0.11): members, invitations, role changes (audited), explicit grants | ADM-001 | 0.11 |
@@ -347,10 +347,10 @@ for an unknown, a person presses send.
 
 | # | Item | Status |
 |---|---|---|
-| 14.1 | **Threads + Bluesky adapters** — `packages/providers/src/threads` (Meta container→publish, 250 posts/24h, Tech Provider Verification noted) and `src/bluesky` (AT Protocol, app password / OAuth, `createRecord` with image/video blobs, 300-grapheme limit, facets for links/mentions). Both free, no audit, so they can be dogfooded live at once. Capability catalog entries with every "no" explained; `/capabilities` page; Grid layouts only if either renders a profile grid (Threads does not; Bluesky does not) | ⬜ |
-| 14.2 | **Notifications center** — finish 2.9: in-app list at `/notifications` (table + writes exist), read/unread, deep links, per-user preference model (publish failures, approvals, mentions, connection health; in-app vs email per event) | ⬜ |
-| 14.3 | **Approval due dates** — finish 3.4: `due_at` on approval requests, overdue badge on Approvals + sidebar count, reminder mail, "overdue" in the Home attention queue | ⬜ |
-| 14.4 | **Brand hub leftovers** (M10) — brand-kit export for clients (PDF/HTML like the report renderer), copy a brand from another workspace, and a pre-publish lint that BLOCKS on banned words/claims in the composer's publish check (today the rules only reach the model) | ⬜ |
+| 14.1 | **Threads + Bluesky adapters** — `packages/providers/src/threads` (container→publish, 250 posts/24h, replies inbox, insights, long-lived token refresh) and `src/bluesky` (app-password sign-in through the new `credentialsForm`/`signIn` contract, `createRecord` with image blobs and the video service, 300-grapheme limit, facets for links/mentions/tags, idempotent record keys). Catalog entries with every "no" explained; on `/capabilities`. No grid: neither renders one. See `docs/plans/m14.1-threads-bluesky.md` | ✅ 2026-09-05. Live: `/capabilities` lists both; Connect account offers Bluesky; the sign-in form refuses a main-password shape before any call and shows Bluesky’s own 401 for a wrong app password (keeps the handle, clears the secret). A real connect still needs the Threads app secret and one Bluesky app password |
+| 14.2 | **Notifications center** — finish 2.9: `/notifications` with filter tabs (All, Unread, Needs action, Approvals, Comments, System — each count defined), day groups, deep links with real action buttons, 20-row pages; Settings → Notifications as an In-app × Email matrix per preference with publish failures locked on; new `connection.health` kind fired on the transition into a broken state; Notifications in the mobile More drawer. Mockups `images/notifications.png`, `images/notification-preferences.png`. See `docs/plans/m14.2-notifications.md` | ✅ 2026-09-05, verified live (26 seeded rows, paging, preferences honoured by the emitter, health transition once) |
+| 14.3 | **Approval due dates** — finish 3.4: the requester sets a due time in the composer and the API (else the policy window, 24 h without a policy; a past time is refused); ONE definition of overdue (`lib/approvals/rules.ts`) behind the Overdue tab and badge on Approvals, the sidebar count (requests you can decide or asked for — navigation.md allows badges only for actionable counts), the Home attention queue, the post banner and the agency overview; one `approval.overdue` reminder (in-app + mail) per deadline from a 5-minute sweep that claims `reminded_at` first; "Change due time" on a pending request re-arms it. `docs/plans/m14.3-approval-due-dates.md` | ✅ 2026-09-05 |
+| 14.4 | **Brand hub leftovers** (M10) — pre-publish lint that BLOCKS in `validateVariant` (banned words verbatim, plus the quoted phrases in claim rules; whole-phrase, case-insensitive, text + first comment), so the composer, scheduling, approvals, the API and the worker refuse the same post; brand-kit export at `/brand/export` as one self-contained HTML document on the report shell (PDF through the same renderer, 503 with a plain sentence when none is configured); copy from another workspace per section (logo files copied into the target's own keys, library assets never), audited. `docs/plans/m14.4-brand-leftovers.md` | ✅ 2026-09-05 |
 | 14.5 | **Link-in-bio page** — one public page per workspace at a RocketEase host (`/l/:slug`, custom domain later): ordered links, latest-posts strip from published variants, per-link click counts written to the tracking layer (`conversion_fact`-adjacent, never invented), brand kit for look. Mockup first | ⬜ |
 | 14.6 | **Comment moderation rules** — hide/flag/auto-reply-draft by rule (keyword, link, language, repeat offender) inside the inbox; every action is a `message`/audit row; hides call the provider's hide API where one exists and record "why not" where it does not | ⬜ |
 | 14.7 | **DM rules engine** — model Meta's messaging windows and caps (24 h window, qualifying action, ~200 automated DMs/hr, 2026 one-automated-message rule); before a reply queues, say whether it can send and why not; surfaces on inbox reply and automations | ⬜ |
@@ -412,7 +412,7 @@ Four agent-run streams with disjoint file ownership; the lead integrates, genera
 
 ## Immediate next steps — refreshed 2026-09-05
 
-**The queue is Milestone 14, top to bottom** (user decision 2026-09-05: do all of it). Start at 14.1.
+**The queue is Milestone 14, top to bottom** (user decision 2026-09-05: do all of it). 14.1–14.4 done 2026-09-05; next is 14.5 (link-in-bio — mockup first).
 Launch chores and app reviews below run in parallel and are not code.
 
 ## Earlier next steps (2026-08-28), kept for the record

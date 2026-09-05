@@ -9,6 +9,8 @@ import { channel } from "@/db/schema/connections";
 import { contentItem, postVariant, type ContentItem, type PostVariant, type VariantValidation } from "@/db/schema/content";
 import { workspace } from "@/db/schema/app";
 import { wasNotScanned } from "./assets/scan-note";
+import { brandLintIssues } from "./brand/lint";
+import { readBrandKit } from "./brand/read";
 import { disclosureGap, readRequireAiDisclosure, toDisclosureInput, undeclaredSyntheticGap } from "./disclosure";
 import { credentialIssue, deliveredCredential } from "./media/credential";
 import { getAdapter, toDescriptor } from "./providers";
@@ -17,7 +19,7 @@ import { rightsProblemsForPublish } from "./rights/rules";
 import { presignGet } from "./storage";
 import { isEnabled } from "./flags";
 
-export const RULESET_VERSION = "2026-08-28.1";
+export const RULESET_VERSION = "2026-09-05.1";
 
 /** Effective text/media/link for a variant after inheritance. */
 export function resolveVariant(item: ContentItem, v: PostVariant) {
@@ -101,12 +103,13 @@ export async function validateVariant(item: ContentItem, v: PostVariant): Promis
     if (!isEnabled(`${ch.provider}.publish.${v.format}`)) issues.push({ severity: "error", code: "format_disabled", message: `${v.format} posts to ${ch.network} are temporarily disabled.`, field: "media" });
     const r = resolveVariant(item, v);
     const { media, problems, generated } = await mediaForAssets(r.assetIds);
+    const settings = await workspaceSettings(item.workspaceId);
     issues.push(...problems);
     issues.push(...(await publishRightsIssues(item.workspaceId, ch.id, r.assetIds, v.scheduledAt)));
     try {
       const adapter = getAdapter(ch.provider);
       issues.push(...adapter.validate(toDescriptor(ch), { format: v.format, text: r.text, media, link: r.link, firstComment: r.firstComment, settings: v.settings, disclosure: toDisclosureInput(item.syntheticMedia) }));
-      const required = await requireAiDisclosure(item.workspaceId);
+      const required = readRequireAiDisclosure(settings);
       const gap = disclosureGap(ch.capabilities, item.syntheticMedia, { required, channelName: ch.name });
       if (gap) issues.push({ ...gap, field: "settings" });
       const undeclared = undeclaredSyntheticGap(generated, item.syntheticMedia, { required });
@@ -114,6 +117,8 @@ export async function validateVariant(item: ContentItem, v: PostVariant): Promis
     } catch (e) {
       issues.push({ severity: "error", code: "provider_unavailable", message: e instanceof Error ? e.message : "Provider unavailable", field: "settings" });
     }
+    // The kit's banned words and quoted claim phrases block here, not only in the drafting prompt (M14.4).
+    issues.push(...brandLintIssues(readBrandKit(settings), { text: r.text, firstComment: r.firstComment }));
     if (v.scheduledAt && v.scheduledAt.getTime() < Date.now() - 60_000 && v.status === "draft")
       issues.push({ severity: "error", code: "schedule_in_past", message: "The scheduled time is in the past.", field: "schedule" });
   }
@@ -122,10 +127,10 @@ export async function validateVariant(item: ContentItem, v: PostVariant): Promis
   return validation;
 }
 
-/** workspace.settings.requireAiDisclosure, read once per validation pass. */
-async function requireAiDisclosure(workspaceId: string): Promise<boolean> {
+/** Workspace settings (AI-disclosure rule, brand kit), read once per validation pass. */
+async function workspaceSettings(workspaceId: string): Promise<Record<string, unknown>> {
   const [ws] = await db.select({ settings: workspace.settings }).from(workspace).where(eq(workspace.id, workspaceId));
-  return readRequireAiDisclosure(ws?.settings ?? {});
+  return ws?.settings ?? {};
 }
 
 /** Summarize variant states into the item's status (content-model.md "variant state is authoritative"). */

@@ -7,13 +7,13 @@ import type { BrandKit, Identity, Messaging, Rules, VoiceRules } from "./types";
 
 const bullets = (label: string, items: string[]) => (items.length ? `${label}: ${items.join("; ")}` : "");
 
-const EMOJI_RULE: Record<string, string> = {
+export const EMOJI_RULE: Record<string, string> = {
   none: "Use no emoji at all.",
   sparing: "At most one emoji per post, and only when it earns its place.",
   freely: "Emoji are welcome where they help.",
 };
-const SPELLING_RULE: Record<string, string> = { us: "Use US spelling.", uk: "Use British spelling." };
-const COMPETITOR_RULE: Record<string, string> = {
+export const SPELLING_RULE: Record<string, string> = { us: "Use US spelling.", uk: "Use British spelling." };
+export const COMPETITOR_RULE: Record<string, string> = {
   never: "Never refer to competitors, directly or by implication.",
   no_names: "You may contrast with alternatives, but never name a competitor.",
   allowed: "Competitors may be named when the brief does so.",

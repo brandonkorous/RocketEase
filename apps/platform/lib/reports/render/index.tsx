@@ -9,15 +9,9 @@ import type { ReportDocument, RollupDocument } from "../document";
 import { Appendix, InsightsSection, PaidSectionView, ServiceSection } from "./appendix";
 import { RollupBody } from "./rollup";
 import { ChannelMixSection, Cover, Scorecard, TopPosts, Trend } from "./sections";
-import { DocumentFooter, DocumentShell } from "./shell";
+import { DocumentFooter, DocumentShell, staticMarkup } from "./shell";
 
 const DOCTYPE = "<!doctype html>";
-
-/** Loaded at runtime (Node resolves it): Next refuses a static react-dom/server import inside the app graph, and these documents are files, not pages. */
-async function staticMarkup(el: React.ReactElement): Promise<string> {
-  const mod = (await import(/* webpackIgnore: true */ "react-dom/server")) as typeof import("react-dom/server");
-  return mod.renderToStaticMarkup(el);
-}
 
 export async function renderReportHtml(doc: ReportDocument): Promise<string> {
   const markup = await staticMarkup(

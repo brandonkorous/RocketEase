@@ -51,7 +51,14 @@ a{color:#0a0a0a}
 @media print{.page{padding:0}}
 `;
 
-export function DocumentShell({ title, children }: { title: string; children: React.ReactNode }) {
+/** Loaded at runtime (Node resolves it): Next refuses a static react-dom/server import inside the app graph, and these documents are files, not pages. */
+export async function staticMarkup(el: React.ReactElement): Promise<string> {
+  const mod = (await import(/* webpackIgnore: true */ "react-dom/server")) as typeof import("react-dom/server");
+  return mod.renderToStaticMarkup(el);
+}
+
+/** `extraCss` lets another document (the brand kit) add its own classes without forking the shell. */
+export function DocumentShell({ title, children, extraCss }: { title: string; children: React.ReactNode; extraCss?: string }) {
   return (
     <html lang="en">
       <head>
@@ -59,6 +66,7 @@ export function DocumentShell({ title, children }: { title: string; children: Re
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{title}</title>
         <style dangerouslySetInnerHTML={{ __html: CSS }} />
+        {extraCss && <style dangerouslySetInnerHTML={{ __html: extraCss }} />}
       </head>
       <body>
         <div className="page">{children}</div>

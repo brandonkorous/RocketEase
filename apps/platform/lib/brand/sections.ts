@@ -15,6 +15,11 @@ export const BRAND_SECTIONS: { slug: BrandSection; label: string; blurb: string 
   { slug: "channels", label: "Channel presence", blurb: "Handle, bio, and link-in-bio per network." },
 ];
 
-export const brandPath = (workspaceId: string, slug?: BrandSection) => `/app/${workspaceId}/brand${slug ? `/${slug}` : ""}`;
+/** Pages under Brand that are built FROM the kit rather than being part of it (M14.5). */
+export const BRAND_TOOLS: { slug: "links"; label: string; blurb: string }[] = [
+  { slug: "links", label: "Link in bio", blurb: "One public page for every bio: your links, your latest posts, your look — all from the kit." },
+];
+
+export const brandPath = (workspaceId: string, slug?: BrandSection | "links") => `/app/${workspaceId}/brand${slug ? `/${slug}` : ""}`;
 
 export const sectionLabel = (slug: BrandSection) => BRAND_SECTIONS.find((s) => s.slug === slug)?.label ?? slug;

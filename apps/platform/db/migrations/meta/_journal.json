@@ -204,6 +204,13 @@
       "when": 1788637935733,
       "tag": "0028_left_slayback",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1788657694238,
+      "tag": "0029_freezing_genesis",
+      "breakpoints": true
     }
   ]
 }

@@ -166,6 +166,13 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
   data URIs, “Not recorded yet” for gaps, PDF only through a real renderer). Copying a kit between
   workspaces copies logo FILES into the target's own keys and never copies library asset ids — an
   asset row belongs to one workspace.
+- **Link in bio** (M14.5, `docs/plans/m14.5-link-in-bio.md`): a Brand TOOL (`/brand/links`), not a
+  kit section and not a sidebar item, because the page is built from the kit. The public page `/l/:slug`
+  is session-free and a hidden or unknown address is ONE 404. **A click is a row** (`bio_link_click`),
+  written by the `/go` redirect before the 302 — never a counter, never deduplicated, never estimated;
+  "last 7 days" is rolling. Link addresses go through `normalizeUrl` (bare host → https, anything not
+  http(s) refused). Button colour is black or the kit's primary with text chosen by luminance; nothing
+  else on the page takes colour.
 - **Approval due dates** (M14.3, `docs/plans/m14.3-approval-due-dates.md`): every request has a
   `due_at` — the requester's own, else the policy window (24 h without a policy); a time not ahead of
   now is refused. **Overdue has ONE definition** (`lib/approvals/rules.ts`: pending and past due) and

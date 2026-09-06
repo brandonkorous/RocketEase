@@ -5,6 +5,7 @@ import { Avatar, Button } from "@wizeworks/silicaui-react";
 import type { ConversationDetailData, MessageRow } from "@/lib/engagement/detail";
 import { retryReply, sendDraftReply } from "@/lib/actions/inbox";
 import { useActionFeedback } from "@/lib/use-action-feedback";
+import { ModerateButtons, ModerationLine } from "./moderation";
 import { DELIVERY_LABEL } from "./types";
 
 function Attachment({ a }: { a: MessageRow["attachments"][number] }) {
@@ -30,7 +31,7 @@ function Rating({ value }: { value: number }) {
   );
 }
 
-function Bubble({ m, d, workspaceId }: { m: MessageRow; d: ConversationDetailData; workspaceId: string }) {
+function Bubble({ m, d, workspaceId, canHandle }: { m: MessageRow; d: ConversationDetailData; workspaceId: string; canHandle: boolean }) {
   const { run, pending } = useActionFeedback();
   const out = m.direction === "outbound";
   return (
@@ -38,8 +39,9 @@ function Bubble({ m, d, workspaceId }: { m: MessageRow; d: ConversationDetailDat
       <Avatar size="xs" color="neutral" alt="" src={out ? undefined : (d.contact.avatarUrl ?? undefined)}>{(out ? (m.by ?? "You") : d.contact.name).slice(0, 2).toUpperCase()}</Avatar>
       <div className={`max-w-5/6 rounded-box px-4 py-3 ${out ? "bg-base-200" : "border border-base-300"}`}>
         {m.rating != null && <Rating value={m.rating} />}
-        {m.body ? <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.body}</p> : m.rating != null && <p className="text-sm italic text-secondary/70">No comment left with this rating.</p>}
+        {m.body ? <p className={`whitespace-pre-wrap text-sm leading-relaxed ${m.moderation?.remote === "hidden" ? "text-secondary" : ""}`}>{m.body}</p> : m.rating != null && <p className="text-sm italic text-secondary/70">No comment left with this rating.</p>}
         {m.attachments.map((a) => (<Attachment key={a.url} a={a} />))}
+        {m.moderation && <ModerationLine m={m.moderation} messageId={m.id} workspaceId={workspaceId} canHandle={canHandle} />}
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs text-secondary/70">
           <span>{m.at}</span>
           {out && <span>· Sent by {m.by ?? "you"}</span>}
@@ -47,13 +49,14 @@ function Bubble({ m, d, workspaceId }: { m: MessageRow; d: ConversationDetailDat
           {out && m.state === "sent" && <span className="text-success" aria-label="Delivered">✓✓</span>}
           {out && m.state === "failed" && <Button size="xs" variant="ghost" color="neutral" loading={pending} onClick={() => run(() => retryReply(workspaceId, m.id))}>Retry</Button>}
           {out && m.state === "draft" && <Button size="xs" variant="outline" color="neutral" loading={pending} onClick={() => run(() => sendDraftReply(workspaceId, m.id))}>Send</Button>}
+          {!out && canHandle && !m.moderation && <ModerateButtons messageId={m.id} workspaceId={workspaceId} />}
         </div>
       </div>
     </li>
   );
 }
 
-export function MessageList({ d, workspaceId }: { d: ConversationDetailData; workspaceId: string }) {
+export function MessageList({ d, workspaceId, canHandle }: { d: ConversationDetailData; workspaceId: string; canHandle: boolean }) {
   let lastDay = "";
   return (
     <ol className="flex flex-col gap-3 px-4 py-4">
@@ -63,7 +66,7 @@ export function MessageList({ d, workspaceId }: { d: ConversationDetailData; wor
         return (
           <Fragment key={m.id}>
             {divider && <li className="my-1 flex items-center gap-3 text-xs text-secondary/70" aria-hidden="true"><span className="h-px flex-1 bg-base-300" />{divider}<span className="h-px flex-1 bg-base-300" /></li>}
-            <Bubble m={m} d={d} workspaceId={workspaceId} />
+            <Bubble m={m} d={d} workspaceId={workspaceId} canHandle={canHandle} />
           </Fragment>
         );
       })}

@@ -4,7 +4,7 @@
  * the top-level comment id. YouTube exposes no direct messages and no mention
  * feed to third-party apps, so those kinds never appear here.
  */
-import type { InboxItem, InboxPage, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
+import type { InboxItem, InboxPage, ModerationRequest, ModerationResult, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
 import type { ChannelDescriptor, Credential } from "../types";
 import { ProviderError } from "../types";
 import { now, videoUrl, yt } from "./client";
@@ -102,4 +102,16 @@ export async function findReply(cred: Credential, ch: ChannelDescriptor, lookup:
     (i) => i.direction === "outbound" && i.threadRemoteId === lookup.threadRemoteId && i.text === lookup.text && i.occurredAt >= lookup.sentAfter,
   );
   return hit ? { remoteId: hit.remoteId, sentAt: hit.occurredAt } : null;
+}
+
+/**
+ * YouTube has no hide. comments.setModerationStatus with heldForReview takes
+ * the comment out of public view (the owner sees it under "Held for review");
+ * published puts it back. Answers 204; the video's owner only (HIDE_SUPPORT).
+ */
+export async function hideItem(cred: Credential, ch: ChannelDescriptor, req: ModerationRequest): Promise<ModerationResult> {
+  if (req.kind !== "comment") throw new ProviderError("Only comments can be held for review.", { category: "validation", providerCode: "kind_unsupported" });
+  if (!ch.capabilities.inbox.reply) throw new ProviderError("This YouTube channel did not grant comment management (youtube.force-ssl).", { category: "permission", providerCode: "insufficientPermissions" });
+  await yt<unknown>(`/comments/setModerationStatus?id=${enc(req.remoteId)}&moderationStatus=${req.hide ? "heldForReview" : "published"}`, cred.accessToken, { method: "POST" });
+  return { remoteId: req.remoteId, hidden: req.hide, at: now() };
 }

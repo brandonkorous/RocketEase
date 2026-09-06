@@ -2,3 +2,4 @@ export { assignConversation, markConversationRead, setConversationPriority, setC
 export { addInternalNote, retryReply, sendDraftReply, sendReply } from "./inbox/reply";
 export { deleteSavedReply, saveSavedReply, setContactTags, updateContact } from "./inbox/contacts";
 export { simulateInbound, syncInboxNow } from "./inbox/dev";
+export { clearMessageModeration, flagMessage, hideMessage } from "./inbox/moderation";

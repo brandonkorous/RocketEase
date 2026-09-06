@@ -180,3 +180,12 @@ describe("inBusinessHours", () => {
     expect(inBusinessHours(new Date("2026-08-28T23:00:00Z"), "Asia/Tokyo")).toBe(false);
   });
 });
+
+describe("has_any", () => {
+  it("matches any of the listed words or phrases as whole words, in text and in tags", () => {
+    expect(testCondition({ field: "text", op: "has_any", value: "chargeback, refund" }, inbox).matched).toBe(true);
+    expect(testCondition({ field: "text", op: "has_any", value: "fund, order 1" }, inbox).matched).toBe(false);
+    expect(testCondition({ field: "contact_tags", op: "has_any", value: "press, VIP" }, inbox).matched).toBe(true);
+    expect(testCondition({ field: "text", op: "has_any", value: " , " }, inbox).matched).toBe(false);
+  });
+});

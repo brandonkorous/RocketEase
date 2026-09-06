@@ -123,7 +123,7 @@ describe("Pinterest insights parsing", () => {
 
 describe("Pinterest has no inbox and no webhooks", () => {
   it("declares every inbox capability false with a reason and omits the methods", () => {
-    expect(INBOX).toEqual({ comments: false, mentions: false, messages: false, reviews: false, reply: false });
+    expect(INBOX).toEqual({ comments: false, mentions: false, messages: false, reviews: false, reply: false, hide: false });
     expect(board.capabilities.reasons?.comments).toMatch(/no endpoint to read comments/);
     expect(board.capabilities.reasons?.reply).toMatch(/cannot post comments/);
     expect(pinterest.fetchInbox).toBeUndefined();

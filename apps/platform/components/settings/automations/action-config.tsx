@@ -60,6 +60,23 @@ function InboxConfig({ action, options, onChange }: Props) {
           </label>
         </span>
       );
+    case "inbox.hide":
+    case "inbox.flag":
+      return (
+        <span className="flex flex-wrap items-center gap-2">
+          <Input aria-label="Reason" size="sm" className="w-64" maxLength={120} value={action.reason ?? ""} placeholder="Shown next to the comment, e.g. Link spam" onChange={(e) => onChange({ ...action, reason: e.target.value })} />
+          {action.kind === "inbox.hide" && <span className="text-xs text-secondary/70">Where the network has no hide, the comment is flagged with the reason why.</span>}
+        </span>
+      );
+    case "inbox.draft_reply":
+      return (
+        <select aria-label="Saved reply" className="select select-sm w-52" value={action.savedReplyId} onChange={(e) => onChange({ ...action, savedReplyId: e.target.value })}>
+          <option value="">Choose a saved reply…</option>
+          {options.savedReplies.map((r) => (
+            <option key={r.id} value={r.id}>{r.title}</option>
+          ))}
+        </select>
+      );
     case "inbox.snooze":
       return (
         <span className="flex items-center gap-1.5 text-sm text-secondary">
@@ -130,6 +147,11 @@ export function blankAction(kind: RuleAction["kind"]): RuleAction {
       return { kind, savedReplyId: "", autoSend: false };
     case "inbox.snooze":
       return { kind, hours: 24 };
+    case "inbox.hide":
+    case "inbox.flag":
+      return { kind, reason: "" };
+    case "inbox.draft_reply":
+      return { kind, savedReplyId: "" };
     case "notify":
       return { kind, roles: ["manager"], userIds: [] };
     case "publish.request_approval":

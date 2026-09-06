@@ -10,6 +10,7 @@ import { workspaceMembership } from "@/db/schema/app";
 import type { ActionOutcome, RuleAction } from "@/db/schema/automations";
 import { contact, conversation, conversationEvent, message, type Priority } from "@/db/schema/engagement";
 import { emit } from "@/lib/jobs/outbox";
+import { applyModerationAction } from "./moderation";
 import type { ApplyContext } from "./types";
 
 const done = (kind: RuleAction["kind"], detail: string): ActionOutcome => ({ kind, status: "applied", detail });
@@ -118,6 +119,6 @@ export async function applyInboxAction(c: ApplyContext, a: RuleAction): Promise<
     case "inbox.snooze":
       return snooze(c, a.hours);
     default:
-      return skip(a.kind, "not an inbox action");
+      return applyModerationAction(c, a);
   }
 }

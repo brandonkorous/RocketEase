@@ -31,6 +31,9 @@ export const ACTION_LABEL: Record<ActionKind, string> = {
   "inbox.add_tag": "Add a contact tag",
   "inbox.saved_reply": "Send a saved reply",
   "inbox.snooze": "Snooze the conversation",
+  "inbox.hide": "Hide the comment",
+  "inbox.flag": "Flag it for a person",
+  "inbox.draft_reply": "Draft a saved reply for a person to send",
   notify: "Notify people",
   "publish.request_approval": "Ask for approval on the next version",
   "publish.retry": "Retry publishing with backoff",
@@ -40,7 +43,7 @@ export const ACTION_LABEL: Record<ActionKind, string> = {
 
 /** Which actions make sense for which trigger; the builder only offers these. */
 export const ACTIONS_FOR_TRIGGER: Record<TriggerKind, ActionKind[]> = {
-  "inbox.message_received": ["inbox.assign", "inbox.assign_round_robin", "inbox.set_priority", "inbox.add_tag", "inbox.saved_reply", "inbox.snooze", "notify"],
+  "inbox.message_received": ["inbox.hide", "inbox.flag", "inbox.draft_reply", "inbox.assign", "inbox.assign_round_robin", "inbox.set_priority", "inbox.add_tag", "inbox.saved_reply", "inbox.snooze", "notify"],
   "post.published": ["notify", "campaign.pause_promotion"],
   "post.failed": ["notify", "publish.retry", "publish.request_approval", "campaign.pause_promotion"],
   "approval.decided": ["notify", "publish.request_approval"],
@@ -83,6 +86,12 @@ export function describeAction(a: RuleAction, names: NameLookup = {}): string {
       return `Send saved reply "${names.savedReplies?.[a.savedReplyId] ?? "…"}"${a.autoSend ? "" : " after approval"}`;
     case "inbox.snooze":
       return `Snooze for ${a.hours} hour${a.hours === 1 ? "" : "s"}`;
+    case "inbox.hide":
+      return `Hide the comment${a.reason ? ` — ${a.reason}` : ""}`;
+    case "inbox.flag":
+      return `Flag it for a person${a.reason ? ` — ${a.reason}` : ""}`;
+    case "inbox.draft_reply":
+      return `Draft saved reply "${names.savedReplies?.[a.savedReplyId] ?? "…"}" for a person to send`;
     case "notify": {
       const targets = [...(a.userIds ?? []).map(who), ...(a.roles ?? []).map((r) => `${r.replace("_", " ")}s`)];
       return `Notify ${targets.length ? targets.join(", ") : "workspace managers"}`;

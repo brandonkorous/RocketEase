@@ -42,6 +42,8 @@ Use badges only for actionable counts: overdue approvals, unresolved assigned co
 /app/:workspaceId/content
 /app/:workspaceId/brand
 /app/:workspaceId/brand/:section
+/app/:workspaceId/brand/links        (link-in-bio editor — a Brand tool, built from the kit)
+/l/:slug                             (the public link-in-bio page; session-free, 404 when hidden)
 /app/:workspaceId/approvals
 /app/:workspaceId/accounts
 /app/:workspaceId/team

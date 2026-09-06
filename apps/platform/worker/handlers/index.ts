@@ -7,6 +7,7 @@ import { assetProcess } from "./asset-process";
 import { publishExecute } from "./publish";
 import { inboxSync } from "./inbox-sync";
 import { inboxReply } from "./inbox-reply";
+import { inboxModerate } from "./inbox-moderate";
 import { webhookProcess } from "./webhook-process";
 import { insightsIngest } from "./insights-ingest";
 import { reportRunJob } from "./report-run";
@@ -51,6 +52,7 @@ export const handlers: { [N in Exclude<JobName, "outbox.relay">]: Handler<N> } =
   "media.transcribe": mediaTranscribe,
   "inbox.sync": inboxSync,
   "inbox.reply": inboxReply,
+  "inbox.moderate": inboxModerate,
   "quality.check": qualityCheck,
   "publication.reconcile": publicationReconcile,
   "connection.refresh": connectionRefresh,

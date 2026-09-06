@@ -9,6 +9,7 @@
  * is the YouTube adapter's, with a Business Profile fallback message.
  */
 import type { Capabilities, Credential } from "../types";
+import { hideWhy } from "../moderation";
 import { httpJson } from "../http";
 import { mapYouTubeError, type GoogleError } from "../youtube/client";
 
@@ -41,6 +42,7 @@ const REASONS: Record<string, string> = {
   // If a publish path is ever added here, flip `disclosure` to "caption" with `formats`.
   webhooks: "Google publishes review notifications through a Pub/Sub topic that must be provisioned per project; this adapter polls instead.",
   quota: "Business Profile API access is granted per Google Cloud project through an application form. An unapproved project has a quota of 0 requests a minute and every call fails.",
+  hide: hideWhy("google_business")!,
   reviewEdits: "A review can be edited or deleted by its author. A changed review keeps its id, so the edit is not re-imported once the original has been ingested.",
 };
 
@@ -51,7 +53,7 @@ export function capsFor(_cred: Credential): Capabilities {
     scheduling: "none",
     disclosure: "none",
     limits: { imagesMax: 0, mentions: false, firstComment: false, links: "none", altText: false },
-    inbox: { comments: false, mentions: false, messages: false, reviews: true, reply: true },
+    inbox: { comments: false, mentions: false, messages: false, reviews: true, reply: true, hide: false },
     insights: { organic: false, audience: false },
     ads: { import: false, manage: false },
     ingestion: { webhooks: false, polling: true },

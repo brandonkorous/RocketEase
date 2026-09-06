@@ -173,6 +173,16 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
   "last 7 days" is rolling. Link addresses go through `normalizeUrl` (bare host → https, anything not
   http(s) refused). Button colour is black or the kit's primary with text chosen by luminance; nothing
   else on the page takes colour.
+- **Comment moderation** (M14.6, `docs/plans/m14.6-comment-moderation.md`): rules are the Settings ›
+  Automations engine, not a second one — moderation added facts (`has_link`, `link_hosts`, `language`,
+  `prior_moderations`), the `has_any` whole-word operator and three actions. **A hide is a request the
+  network may not be able to grant**: `HIDE_SUPPORT` (packages/providers) cites the document behind every
+  network that can and the reason for every one that cannot, `hideDecision` is the ONE place that answers
+  "can this comment be hidden?", and a hide the network cannot do is recorded as a flag with that reason —
+  nothing ever looks hidden that is not. The message row carries the state (`message.moderation`, the one
+  mutable part of a message), the network call is the `inbox.moderate` job (idempotent: setting hidden
+  twice is one state), and the Flagged tab reads `conversation.moderated_at`. A rule's draft reply is a
+  `draft` message a person sends; nothing a rule does speaks to a customer on its own.
 - **Approval due dates** (M14.3, `docs/plans/m14.3-approval-due-dates.md`): every request has a
   `due_at` — the requester's own, else the policy window (24 h without a policy); a time not ahead of
   now is refused. **Overdue has ONE definition** (`lib/approvals/rules.ts`: pending and past due) and

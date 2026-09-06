@@ -54,7 +54,10 @@ export function capsFor(cred: Credential): Capabilities {
   };
   if (!has(SCOPES.publish)) reasons.formats = "Publishing needs the threads_content_publish permission, which this login did not grant.";
   if (!has(SCOPES.readReplies)) reasons.comments = "Reading replies needs the threads_read_replies permission.";
-  if (!has(SCOPES.manageReplies)) reasons.reply = "Replying needs the threads_manage_replies permission.";
+  if (!has(SCOPES.manageReplies)) {
+    reasons.reply = "Replying needs the threads_manage_replies permission.";
+    reasons.hide = "Hiding a reply needs the threads_manage_replies permission.";
+  }
   if (!has(SCOPES.insights)) reasons.insights = "Insights need the threads_manage_insights permission.";
   else reasons.audience = "Follower demographics need at least 100 followers; smaller profiles get the follower count only.";
   return {
@@ -71,7 +74,7 @@ export function capsFor(cred: Credential): Capabilities {
       links: "inline",
       altText: true,
     },
-    inbox: { comments: has(SCOPES.readReplies), mentions: false, messages: false, reviews: false, reply: has(SCOPES.manageReplies) },
+    inbox: { comments: has(SCOPES.readReplies), mentions: false, messages: false, reviews: false, reply: has(SCOPES.manageReplies), hide: has(SCOPES.manageReplies) },
     insights: { organic: has(SCOPES.insights), audience: has(SCOPES.insights) },
     ads: { import: false, manage: false },
     ingestion: { webhooks: false, polling: true },

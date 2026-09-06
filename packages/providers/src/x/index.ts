@@ -17,10 +17,10 @@ import { probe } from "../health";
 import { validateAgainstCapabilities } from "../validate";
 import { basicAuth, capsFor, mapXError, OAUTH_AUTH, OAUTH_REVOKE, OAUTH_TOKEN, SCOPES, TEXT_MAX, x, type XError } from "./client";
 import { findPublication, publicationStatus, publish } from "./publish";
-import { fetchInbox, findReply, reply } from "./inbox";
+import { fetchInbox, findReply, hideItem, reply } from "./inbox";
 import { fetchInsights } from "./insights";
 
-const DEFAULT_SCOPES = [...SCOPES.base, ...SCOPES.media];
+const DEFAULT_SCOPES = [...SCOPES.base, ...SCOPES.media, ...SCOPES.moderate];
 /** DM access is optional: requested only when the caller asks for it. */
 export const DM_SCOPES = [...SCOPES.dmRead, ...SCOPES.dmWrite];
 
@@ -139,6 +139,7 @@ export function createXProvider(cfg: ProviderConfig): ProviderAdapter {
     fetchInbox: (cred, channel, opts) => fetchInbox(cred, channel, opts),
     reply: (cred, channel, req) => reply(cred, channel, req),
     findReply: (cred, channel, lookup) => findReply(cred, channel, lookup),
+    hideItem: (cred, channel, req) => hideItem(cred, channel, req),
     fetchInsights: (cred, channel, req) => fetchInsights(cred, channel, req),
     // Account Activity API (webhooks) is separately gated: polling only.
   };

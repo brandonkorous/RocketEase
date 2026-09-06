@@ -10,7 +10,7 @@ import { probe } from "../health";
 import { validateAgainstCapabilities } from "../validate";
 import { API, FB_CAPS, IG_CAPS, graph, mapGraphError, type GraphError } from "./graph";
 import { findPublication, publicationStatus, publishToInstagram, publishToPage } from "./publish";
-import { fetchInbox, findReply, reply } from "./inbox";
+import { fetchInbox, findReply, hideItem, reply } from "./inbox";
 import { fetchInsights } from "./insights";
 import { metaInboxItemsFromWebhook, parseMetaWebhook, verifyMetaWebhook } from "./webhooks";
 import { parseMetaSignedRequest } from "./signed-request";
@@ -103,6 +103,7 @@ export function createMetaProvider(cfg: ProviderConfig): ProviderAdapter {
     fetchInbox: (cred, channel, opts) => fetchInbox(cfg, cred, channel, opts),
     reply: (cred, channel, req) => reply(cfg, cred, channel, req),
     findReply: (cred, channel, lookup) => findReply(cfg, cred, channel, lookup),
+    hideItem: (cred, channel, req) => hideItem(cfg, cred, channel, req),
     fetchInsights: (cred, channel, req) => fetchInsights(cfg, cred, channel, req),
     listAdAccounts: (cred) => listAdAccounts(cfg, cred),
     fetchPaidObjects: (cred, account) => fetchPaidObjects(cfg, cred, account),

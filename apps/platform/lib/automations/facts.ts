@@ -8,11 +8,10 @@
  */
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { workspace } from "@/db/schema/app";
 import type { TriggerKind } from "@/db/schema/automations";
 import { approvalDecision } from "@/db/schema/approvals";
 import type { Facts } from "./evaluate";
-import { inBusinessHours } from "./hours";
+import { inboxSubject } from "./facts-inbox";
 
 export type SubjectContext = {
   conversationId?: string;
@@ -27,32 +26,6 @@ export type SubjectContext = {
 };
 
 export type Subject = { refId: string; workspaceId: string; organizationId: string; label: string; href: string | null; facts: Facts; ctx: SubjectContext };
-
-const timezoneOf = async (workspaceId: string) => (await db.select({ tz: workspace.timezone }).from(workspace).where(eq(workspace.id, workspaceId)))[0]?.tz ?? "UTC";
-
-async function inboxSubject(messageId: string): Promise<Subject[]> {
-  const m = await db.query.message.findFirst({ where: (x, { eq }) => eq(x.id, messageId) });
-  if (!m || m.direction !== "inbound") return [];
-  const conv = await db.query.conversation.findFirst({ where: (c, { eq }) => eq(c.id, m.conversationId) });
-  if (!conv) return [];
-  const [ch, contact, tz] = await Promise.all([
-    db.query.channel.findFirst({ where: (c, { eq }) => eq(c.id, m.channelId) }),
-    db.query.contact.findFirst({ where: (c, { eq }) => eq(c.id, conv.contactId) }),
-    timezoneOf(conv.workspaceId),
-  ]);
-  const facts: Facts = {
-    network: ch?.network ?? "",
-    channel: ch?.name ?? "",
-    kind: conv.kind,
-    text: m.body,
-    contact_tags: contact?.tags ?? [],
-    priority: conv.priority,
-    business_hours: inBusinessHours(m.occurredAt, tz),
-    first_message: conv.messageCount <= 1,
-    rating: m.rating,
-  };
-  return [{ refId: m.id, workspaceId: conv.workspaceId, organizationId: conv.organizationId, label: `${contact?.displayName ?? "Someone"} on ${ch?.name ?? "a channel"}`, href: `/app/${conv.workspaceId}/inbox/${conv.id}`, facts, ctx: { conversationId: conv.id, contactId: conv.contactId, messageId: m.id, conversationKind: conv.kind, channelId: m.channelId } }];
-}
 
 async function publishSubject(variantId: string, failed: boolean): Promise<Subject[]> {
   const v = await db.query.postVariant.findFirst({ where: (x, { eq }) => eq(x.id, variantId) });

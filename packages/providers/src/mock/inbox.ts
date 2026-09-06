@@ -3,12 +3,12 @@
  * hook so the UI/worker loop (poll → ingest → reply → reconcile) can be
  * exercised locally.
  */
-import type { InboxItem, InboxItemKind, InboxPage, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
+import type { InboxItem, InboxItemKind, InboxPage, ModerationRequest, ModerationResult, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
 import { ProviderError } from "../types";
 
-type Store = { items: Map<string, InboxItem[]>; replies: Map<string, ReplyResult>; seeded: Set<string>; ambiguousReply?: boolean; seq: number };
+type Store = { items: Map<string, InboxItem[]>; replies: Map<string, ReplyResult>; seeded: Set<string>; hidden: Set<string>; ambiguousReply?: boolean; seq: number };
 const g = globalThis as unknown as { __misMockInbox?: Store };
-const store = (): Store => (g.__misMockInbox ??= { items: new Map(), replies: new Map(), seeded: new Set(), seq: 0 });
+const store = (): Store => (g.__misMockInbox ??= { items: new Map(), replies: new Map(), seeded: new Set(), hidden: new Set(), seq: 0 });
 const now = () => new Date().toISOString();
 const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
 
@@ -59,6 +59,14 @@ export const mockInbox = {
     return item;
   },
   threads(channelRemoteId: string) { seed(channelRemoteId); return [...new Set((store().items.get(channelRemoteId) ?? []).map((i) => i.threadRemoteId))]; },
+  /** An item the network delivered by webhook exists on the network too, so it can be hidden later. */
+  remember(channelRemoteId: string, item: InboxItem) {
+    seed(channelRemoteId);
+    const list = store().items.get(channelRemoteId)!;
+    if (!list.some((i) => i.remoteId === item.remoteId)) list.push(item);
+  },
+  /** Whether the demo network currently hides this comment. */
+  isHidden(remoteId: string) { return store().hidden.has(remoteId); },
 };
 
 export async function fetchInbox(channelRemoteId: string, opts: { since?: string; cursor?: string }): Promise<InboxPage> {
@@ -93,4 +101,16 @@ export async function findReply(channelRemoteId: string, lookup: ReplyLookup): P
     (i) => i.direction === "outbound" && i.threadRemoteId === lookup.threadRemoteId && i.text === lookup.text && i.occurredAt >= lookup.sentAfter,
   );
   return hit ? { remoteId: hit.remoteId, sentAt: hit.occurredAt } : null;
+}
+
+/** Hide or show a comment. A comment whose text says "unhideable" is refused, so the failure path can be exercised. */
+export async function hideItem(channelRemoteId: string, req: ModerationRequest): Promise<ModerationResult> {
+  seed(channelRemoteId);
+  if (req.kind !== "comment") throw new ProviderError("Only comments can be hidden on the demo network.", { category: "validation", providerCode: "kind_unsupported" });
+  const item = (store().items.get(channelRemoteId) ?? []).find((i) => i.remoteId === req.remoteId);
+  if (!item) throw new ProviderError("The demo network has no such comment.", { category: "deleted" });
+  if (/\bunhideable\b/i.test(item.text)) throw new ProviderError("The demo network refused to hide this comment.", { category: "policy" });
+  if (req.hide) store().hidden.add(req.remoteId);
+  else store().hidden.delete(req.remoteId);
+  return { remoteId: req.remoteId, hidden: req.hide, at: now() };
 }

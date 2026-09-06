@@ -6,7 +6,7 @@
  * reconciled structurally over GET /me/replies (ENG-003): ours, same parent,
  * same text, at or after the attempt started.
  */
-import type { InboxAuthor, InboxItem, InboxPage, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
+import type { InboxAuthor, InboxItem, InboxPage, ModerationRequest, ModerationResult, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
 import type { ChannelDescriptor, Credential } from "../types";
 import { ProviderError } from "../types";
 import { now, threads } from "./client";
@@ -85,4 +85,12 @@ export async function findReply(cred: Credential, ch: ChannelDescriptor, lookup:
   const res = await threads<{ data?: ThreadsReply[] }>(`/${ch.remoteId}/replies`, cred.accessToken, { params: { fields: "id,text,timestamp,replied_to,root_post", limit: "50" } }).catch(() => ({ data: [] as ThreadsReply[] }));
   const hit = (res.data ?? []).find((r) => (r.replied_to?.id === target || r.root_post?.id === target) && r.text === lookup.text && (r.timestamp ?? "") >= lookup.sentAfter);
   return hit?.id ? { remoteId: hit.id, sentAt: hit.timestamp ?? now() } : null;
+}
+
+/** POST /{reply-id}/manage_reply?hide=… — hiding a top-level reply hides everything under it (HIDE_SUPPORT). */
+export async function hideItem(cred: Credential, _ch: ChannelDescriptor, req: ModerationRequest): Promise<ModerationResult> {
+  if (req.kind !== "comment") throw new ProviderError("Only replies can be hidden.", { category: "validation", providerCode: "kind_unsupported" });
+  const r = await threads<{ success?: boolean }>(`/${req.remoteId}/manage_reply`, cred.accessToken, { method: "POST", params: { hide: String(req.hide) } });
+  if (!r.success) throw new ProviderError("Threads did not confirm the change.", { category: "unknown", ambiguous: true });
+  return { remoteId: req.remoteId, hidden: req.hide, at: now() };
 }

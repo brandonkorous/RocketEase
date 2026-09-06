@@ -50,7 +50,7 @@ General workspace, members/invitations, roles, approval policies, notifications,
 
 ### Brand
 
-First-level area (decision, 2026-08-28: brand moved out of Settings because it is an input to the work, not a preference). Overview states completeness and what each gap costs; sections cover identity, voice, visual identity (logo variants, palette, typography, imagery direction), approved messaging with dated offers, audiences, compliance rules, brand assets, and per-network profile copy. Everything is entered by a person — the product never infers a brand fact — and drafting, image generation, and client reports read from it.
+First-level area (decision, 2026-08-28: brand moved out of Settings because it is an input to the work, not a preference). Overview states completeness and what each gap costs; sections cover identity, voice, visual identity (logo variants, palette, typography, imagery direction), approved messaging with dated offers, audiences, compliance rules, brand assets, and per-network profile copy. Everything is entered by a person — the product never infers a brand fact — and drafting, image generation, and client reports read from it. One tool sits beside the sections (decision, 2026-09-05): the **link-in-bio page**, a public page per workspace at `/l/:slug` built from the kit — avatar, name, bio, ordered links with click counts, an optional strip of the latest published posts, and buttons in black or the brand primary. It is hidden until switched Live; clicks are counted by RocketEase on the way out and never estimated.
 
 ### Agency overview
 

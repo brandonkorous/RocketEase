@@ -3,7 +3,7 @@
  * and comments on recent posts. Everything maps onto InboxItem; threading:
  * DMs → the customer PSID/IGSID (also what webhooks carry), comments → root comment id.
  */
-import type { InboxItem, InboxPage, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
+import type { InboxItem, InboxPage, ModerationRequest, ModerationResult, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
 import type { ChannelDescriptor, Credential, ProviderConfig } from "../types";
 import { ProviderError } from "../types";
 import { graph, now } from "./graph";
@@ -105,4 +105,16 @@ export async function findReply(cfg: ProviderConfig, cred: Credential, ch: Chann
   const res = await graph<{ data?: Conv[] }>(`/${ch.remoteId}/conversations`, cfg, t, { params: { fields: "id,messages.limit(10){id,created_time,from}", limit: "10" } }).catch(() => ({ data: [] as Conv[] }));
   for (const c of res.data ?? []) for (const m of c.messages?.data ?? []) if (m.from?.id === ch.remoteId && m.id.includes(lookup.idempotencyKey.slice(0, 8))) return { remoteId: m.id, sentAt: m.created_time };
   return null;
+}
+
+/**
+ * Hide or show a comment: `is_hidden` on a Page comment, `hide` on an IG
+ * comment (HIDE_SUPPORT). Both answer {success}; anything else is ambiguous.
+ */
+export async function hideItem(cfg: ProviderConfig, cred: Credential, ch: ChannelDescriptor, req: ModerationRequest): Promise<ModerationResult> {
+  if (req.kind !== "comment") throw new ProviderError("Only comments can be hidden.", { category: "validation", providerCode: "kind_unsupported" });
+  const ig = ch.kind === "instagram_business";
+  const r = await graph<{ success?: boolean }>(`/${req.remoteId}`, cfg, token(cred, ch), { method: "POST", params: ig ? { hide: String(req.hide) } : { is_hidden: String(req.hide) } });
+  if (!r.success) throw new ProviderError("Meta did not confirm the change.", { category: "unknown", ambiguous: true });
+  return { remoteId: req.remoteId, hidden: req.hide, at: now() };
 }

@@ -13,8 +13,9 @@
  * fetchInbox/reply/findReply here and flip the flags in client.ts `capsFor`.
  */
 import type { Capabilities } from "../types";
+import { hideWhy } from "../moderation";
 
-export const INBOX: Capabilities["inbox"] = { comments: false, mentions: false, messages: false, reviews: false, reply: false };
+export const INBOX: Capabilities["inbox"] = { comments: false, mentions: false, messages: false, reviews: false, reply: false, hide: false };
 
 export const INBOX_REASONS: Record<string, string> = {
   comments: "Pinterest API v5 has no endpoint to read comments on a pin.",
@@ -22,5 +23,6 @@ export const INBOX_REASONS: Record<string, string> = {
   messages: "Pinterest has no messaging API for third-party apps.",
   reviews: "Pinterest has no reviews.",
   reply: "Pinterest API v5 cannot post comments or replies.",
+  hide: hideWhy("pinterest")!,
   firstComment: "Pinterest API v5 cannot post comments, so a first comment cannot be scheduled with a pin.",
 };

@@ -43,7 +43,7 @@ export const IG_CAPS = (): Capabilities => ({
   formats: ["image", "carousel", "video", "reel", "story"],
   scheduling: "internal",
   limits: { textMaxChars: 2200, imagesMax: 10, videoMaxSeconds: 900, hashtagsMax: 30, mentions: true, firstComment: true, links: "none", altText: true, imageMaxBytes: 8 * 1024 * 1024, videoMaxBytes: 1024 * 1024 * 1024 },
-  inbox: { comments: true, mentions: true, messages: true, reviews: false, reply: true },
+  inbox: { comments: true, mentions: true, messages: true, reviews: false, reply: true, hide: true },
   insights: { organic: true, audience: true },
   ads: { import: true, manage: false },
   ingestion: { webhooks: true, polling: true },
@@ -64,7 +64,7 @@ export const FB_CAPS = (): Capabilities => ({
   scheduling: "native",
   limits: { textMaxChars: 63_206, imagesMax: 10, videoMaxSeconds: 14_400, mentions: true, firstComment: true, links: "inline", altText: true, videoMaxBytes: 10 * 1024 * 1024 * 1024 },
   // Page ratings/recommendations are not ingested yet; declaring false keeps the capability table honest.
-  inbox: { comments: true, mentions: true, messages: true, reviews: false, reply: true },
+  inbox: { comments: true, mentions: true, messages: true, reviews: false, reply: true, hide: true },
   insights: { organic: true, audience: true },
   ads: { import: true, manage: true },
   ingestion: { webhooks: true, polling: true },

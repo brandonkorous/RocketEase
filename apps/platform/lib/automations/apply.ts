@@ -29,7 +29,7 @@ async function namesFor(workspaceId: string, actions: AutomationRule["actions"])
   const replyIds: string[] = [];
   const userIds: string[] = [];
   for (const a of actions) {
-    if (a.kind === "inbox.saved_reply") replyIds.push(a.savedReplyId);
+    if (a.kind === "inbox.saved_reply" || a.kind === "inbox.draft_reply") replyIds.push(a.savedReplyId);
     if (a.kind === "inbox.assign") userIds.push(a.userId);
     if (a.kind === "notify") userIds.push(...(a.userIds ?? []));
     if (a.kind === "publish.request_approval" && a.assigneeUserId) userIds.push(a.assigneeUserId);

@@ -4,7 +4,7 @@ import { Button, Input } from "@wizeworks/silicaui-react";
 import type { Condition, ConditionGroup, TriggerKind } from "@/db/schema/automations";
 import { fieldDef, fieldsFor, opsFor } from "@/lib/automations/fields";
 
-const OP_LABEL: Record<string, string> = { eq: "is", neq: "is not", contains: "contains", matches: "matches regex", gt: "is greater than", lt: "is less than", in: "is one of" };
+const OP_LABEL: Record<string, string> = { eq: "is", neq: "is not", contains: "contains", has_any: "has any of (whole words)", matches: "matches regex", gt: "is greater than", lt: "is less than", in: "is one of" };
 
 type Props = { trigger: TriggerKind; group: ConditionGroup; onChange: (g: ConditionGroup) => void };
 

@@ -7,10 +7,10 @@
  * mention is a "mention" — X has no separate comments API, replies ARE posts.
  * The page cursor is the mentions `newest_id`, replayed as `since_id`.
  */
-import type { InboxAuthor, InboxItem, InboxPage, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
+import type { InboxAuthor, InboxItem, InboxPage, ModerationRequest, ModerationResult, ReplyLookup, ReplyRequest, ReplyResult } from "../inbox-types";
 import type { ChannelDescriptor, Credential } from "../types";
 import { ProviderError } from "../types";
-import { now, postUrl, x } from "./client";
+import { now, postUrl, SCOPES, x } from "./client";
 
 type XUser = { id?: string; name?: string; username?: string; profile_image_url?: string };
 type Ref = { type?: string; id?: string };
@@ -119,4 +119,14 @@ export async function findReply(cred: Credential, ch: ChannelDescriptor, lookup:
 async function ownPosts(token: string, ch: ChannelDescriptor): Promise<InboxItem[]> {
   const res = await x<{ data?: XTweet[]; includes?: Includes }>(`/users/${encodeURIComponent(ch.remoteId)}/tweets?${MENTION_FIELDS.replace("max_results=100", "max_results=50")}`, token);
   return (res.body.data ?? []).map((t) => tweetToItem({ ...t, author_id: t.author_id ?? ch.remoteId }, res.body.includes ?? {}, ch));
+}
+
+/** PUT /2/tweets/{id}/hidden — replies to the account's own posts only; needs tweet.moderate.write (HIDE_SUPPORT). */
+export async function hideItem(cred: Credential, _ch: ChannelDescriptor, req: ModerationRequest): Promise<ModerationResult> {
+  if (req.kind !== "comment") throw new ProviderError("Only replies to your own posts can be hidden on X.", { category: "validation", providerCode: "kind_unsupported" });
+  if (!SCOPES.moderate.every((s) => cred.scopes.includes(s))) throw new ProviderError("This X account did not grant tweet.moderate.write. Reconnect it to allow hiding replies.", { category: "permission", providerCode: "moderate_scope_missing" });
+  const res = await x<{ data?: { hidden?: boolean } }>(`/tweets/${encodeURIComponent(req.remoteId)}/hidden`, cred.accessToken, { method: "PUT", body: { hidden: req.hide } });
+  const hidden = res.body.data?.hidden;
+  if (typeof hidden !== "boolean") throw new ProviderError("X did not confirm the change.", { category: "unknown", ambiguous: true });
+  return { remoteId: req.remoteId, hidden, at: now() };
 }

@@ -55,6 +55,7 @@ export function capsFor(cred: Credential): Capabilities {
   if (!has(SCOPES.comments)) {
     reasons.comments = "Reading comments needs the youtube.force-ssl scope.";
     reasons.reply = "Replying to comments needs the youtube.force-ssl scope.";
+    reasons.hide = "Holding a comment for review needs the youtube.force-ssl scope.";
   }
   if (!has(SCOPES.analytics)) reasons.insights = "Daily analytics need the yt-analytics.readonly scope.";
   if (!has(SCOPES.upload)) reasons.formats = "Publishing needs the youtube.upload scope.";
@@ -73,7 +74,7 @@ export function capsFor(cred: Credential): Capabilities {
       links: "inline",
       altText: false,
     },
-    inbox: { comments: has(SCOPES.comments), mentions: false, messages: false, reviews: false, reply: has(SCOPES.comments) },
+    inbox: { comments: has(SCOPES.comments), mentions: false, messages: false, reviews: false, reply: has(SCOPES.comments), hide: has(SCOPES.comments) },
     insights: { organic: has(SCOPES.analytics), audience: has(SCOPES.analytics) },
     ads: { import: false, manage: false },
     ingestion: { webhooks: false, polling: true },

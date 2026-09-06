@@ -3,6 +3,7 @@ export * from "./inbox-types";
 export * from "./insights-types";
 export * from "./ads-types";
 export { validateAgainstCapabilities } from "./validate";
+export { HIDE_SUPPORT, hideWhy, type HideSupport } from "./moderation";
 export {
   DISCLOSURE_LINE,
   applyDisclosure,

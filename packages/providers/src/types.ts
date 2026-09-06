@@ -64,7 +64,8 @@ export type Capabilities = {
     links?: "inline" | "attached" | "none";
     altText?: boolean;
   };
-  inbox: { comments: boolean; mentions: boolean; messages: boolean; reviews: boolean; reply: boolean };
+  /** `hide`: the network can take a comment out of public view (moderation.ts). Optional so capabilities stored before it still parse; absent reads as false. */
+  inbox: { comments: boolean; mentions: boolean; messages: boolean; reviews: boolean; reply: boolean; hide?: boolean };
   insights: { organic: boolean; audience: boolean };
   ads: { import: boolean; manage: boolean };
   ingestion: { webhooks: boolean; polling: boolean };

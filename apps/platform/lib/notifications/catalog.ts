@@ -17,6 +17,7 @@ export type NotificationKind =
   | "comment.added"
   | "inbox.assigned"
   | "inbox.reply_failed"
+  | "inbox.hide_failed"
   | "promotion.created"
   | "promotion.failed"
   | "report.ready"
@@ -52,6 +53,7 @@ export const KINDS: KindSpec[] = [
   { kind: "comment.added", pref: "comments", icon: "comment", chip: { icon: "comment", label: "Comment", tone: "neutral" }, action: "Open post", needsAction: false, tabs: ["comments"] },
   { kind: "inbox.assigned", pref: "inbox_assignments", icon: "inbox", chip: { icon: "inbox", label: "Assigned to you", tone: "neutral" }, action: "Open conversation", needsAction: false, tabs: ["comments"] },
   { kind: "inbox.reply_failed", pref: "reply_failures", icon: "inbox", chip: { icon: "alert", label: "Failed", tone: "error" }, action: "Open conversation", needsAction: true, tabs: ["action", "comments"] },
+  { kind: "inbox.hide_failed", pref: "reply_failures", icon: "inbox", chip: { icon: "alert", label: "Not hidden", tone: "error" }, action: "Open conversation", needsAction: true, tabs: ["action", "comments"] },
   { kind: "promotion.created", pref: "promotions", icon: "megaphone", chip: { icon: "check", label: "Created", tone: "neutral" }, action: "Open campaign", needsAction: false, tabs: ["system"] },
   { kind: "promotion.failed", pref: "promotions", icon: "megaphone", chip: { icon: "alert", label: "Failed", tone: "error" }, action: "Open campaign", needsAction: true, tabs: ["action", "system"] },
   { kind: "report.ready", pref: "reports", icon: "file", chip: { icon: "check", label: "Ready", tone: "neutral" }, action: "Open report", needsAction: false, tabs: ["system"] },
@@ -81,7 +83,7 @@ export const PREFS: PrefSpec[] = [
   { key: "approval_decisions", group: "Approvals", label: "Approval decisions", desc: "A post you submitted was approved or sent back.", icon: "check", defaults: { inApp: true, email: false } },
   { key: "comments", group: "Comments and inbox", label: "Comments", desc: "A teammate commented on a post you are part of.", icon: "comment", defaults: { inApp: true, email: false } },
   { key: "inbox_assignments", group: "Comments and inbox", label: "Inbox assignments", desc: "A conversation was assigned to you.", icon: "inbox", defaults: { inApp: true, email: false } },
-  { key: "reply_failures", group: "Comments and inbox", label: "Reply failures", desc: "A reply you sent could not be delivered.", icon: "alert", defaults: { inApp: true, email: false } },
+  { key: "reply_failures", group: "Comments and inbox", label: "Reply failures", desc: "A reply you sent could not be delivered, or a comment could not be hidden.", icon: "alert", defaults: { inApp: true, email: false } },
   { key: "promotions", group: "Campaigns, reports and automations", label: "Promotions", desc: "A promotion you confirmed was created, or could not be.", icon: "megaphone", defaults: { inApp: true, email: false } },
   { key: "reports", group: "Campaigns, reports and automations", label: "Reports ready", desc: "A report you requested finished generating.", icon: "file", defaults: { inApp: true, email: false } },
   { key: "automations", group: "Campaigns, reports and automations", label: "Automations", desc: "A rule ran, or a rule you own was approved or declined.", icon: "bolt", defaults: { inApp: true, email: false } },

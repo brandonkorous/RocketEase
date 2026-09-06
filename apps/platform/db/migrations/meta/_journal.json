@@ -211,6 +211,13 @@
       "when": 1788657694238,
       "tag": "0029_freezing_genesis",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1788677348554,
+      "tag": "0030_legal_gorgon",
+      "breakpoints": true
     }
   ]
 }

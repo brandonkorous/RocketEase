@@ -8,12 +8,12 @@ import type { Operator, TriggerKind } from "@/db/schema/automations";
 export type FieldType = "text" | "number" | "boolean" | "enum" | "tags";
 export type FieldDef = { key: string; label: string; type: FieldType; ops: Operator[]; options?: string[]; hint?: string };
 
-const ALL_OPS: Operator[] = ["eq", "neq", "contains", "matches", "gt", "lt", "in"];
-const TEXT: Operator[] = ["eq", "neq", "contains", "matches", "in"];
+const ALL_OPS: Operator[] = ["eq", "neq", "contains", "has_any", "matches", "gt", "lt", "in"];
+const TEXT: Operator[] = ["eq", "neq", "contains", "has_any", "matches", "in"];
 const ENUM: Operator[] = ["eq", "neq", "in"];
 const NUMBER: Operator[] = ["gt", "lt", "eq", "neq"];
 const BOOL: Operator[] = ["eq"];
-const TAGS: Operator[] = ["eq", "neq", "contains", "in"];
+const TAGS: Operator[] = ["eq", "neq", "contains", "has_any", "in"];
 
 const NETWORK: FieldDef = { key: "network", label: "Network", type: "text", ops: ENUM, hint: "instagram, facebook, linkedin, tiktok…" };
 const CHANNEL: FieldDef = { key: "channel", label: "Channel name", type: "text", ops: TEXT };
@@ -29,6 +29,11 @@ const INBOX: FieldDef[] = [
   { key: "business_hours", label: "In business hours", type: "boolean", ops: BOOL, options: ["true", "false"], hint: "Mon–Fri 09:00–17:00 in the workspace timezone" },
   { key: "first_message", label: "First message in thread", type: "boolean", ops: BOOL, options: ["true", "false"] },
   { key: "rating", label: "Review rating", type: "number", ops: NUMBER, hint: "Reviews only; 1–5" },
+  { key: "has_link", label: "Contains a link", type: "boolean", ops: BOOL, options: ["true", "false"], hint: "http(s)://, www., or a bare domain such as example.com" },
+  { key: "link_hosts", label: "Link host", type: "tags", ops: TAGS, hint: "bit.ly, t.co…" },
+  { key: "language", label: "Language", type: "text", ops: ENUM, hint: "two-letter code: en, es, fr… (blank when there is too little text to tell)" },
+  { key: "prior_moderations", label: "Other messages from this contact hidden or flagged now", type: "number", ops: NUMBER },
+  { key: "prior_messages", label: "Messages from this contact before this one", type: "number", ops: NUMBER },
 ];
 
 const PUBLISH: FieldDef[] = [

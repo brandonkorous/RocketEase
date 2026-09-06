@@ -6,11 +6,13 @@ import { channel } from "@/db/schema/connections";
 import { contact, contactIdentity, conversation, message } from "@/db/schema/engagement";
 import { relativeLabel } from "./format";
 
-export type InboxTab = "all" | "unread" | "mentions" | "dms" | "comments" | "reviews";
+export type InboxTab = "all" | "unread" | "mentions" | "dms" | "comments" | "reviews" | "flagged";
 export type InboxFilters = { tab: InboxTab; status: "open" | "snoozed" | "resolved" | "all"; channel: string; assignee: string; sort: "newest" | "oldest" | "due"; q: string };
 
 export type ConversationRow = {
   id: string; kind: string; status: string; priority: string; preview: string; unread: number; lastAt: string; overdue: boolean;
+  /** A message in the thread is hidden or flagged right now. */
+  moderated: boolean;
   /** Exact instant behind `lastAt`'s relative label (the API reports this one). */
   lastMessageAt: string;
   contact: { id: string; name: string; avatarUrl: string | null; handle: string | null };
@@ -25,6 +27,7 @@ const TAB_WHERE: Record<InboxTab, SQL | undefined> = {
   dms: eq(conversation.kind, "message"),
   comments: eq(conversation.kind, "comment"),
   reviews: eq(conversation.kind, "review"),
+  flagged: sql`${conversation.moderatedAt} is not null`,
 };
 
 function filterWhere(workspaceId: string, userId: string, f: InboxFilters, tab: InboxTab) {
@@ -55,9 +58,10 @@ export async function listConversations(workspaceId: string, userId: string, f: 
   const list: ConversationRow[] = rows.map((r) => ({
     id: r.c.id, kind: r.c.kind, status: r.c.status, priority: r.c.priority, preview: r.c.preview, unread: r.c.unreadCount, lastAt: relativeLabel(r.c.lastMessageAt, tz, now), lastMessageAt: r.c.lastMessageAt.toISOString(),
     overdue: r.c.status === "open" && !r.c.firstResponseAt && !!r.c.responseDueAt && r.c.responseDueAt.getTime() < now,
+    moderated: r.c.moderatedAt != null,
     contact: { ...r.contact, handle: handleOf.get(r.contact.id) ?? null }, channel: r.ch, assignee: r.assignee?.id ? r.assignee : null,
   }));
-  const counts: Record<InboxTab, number> = { all: 0, unread: 0, mentions: 0, dms: 0, comments: 0, reviews: 0 };
+  const counts: Record<InboxTab, number> = { all: 0, unread: 0, mentions: 0, dms: 0, comments: 0, reviews: 0, flagged: 0 };
   for (const tab of Object.keys(counts) as InboxTab[]) {
     const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(conversation).innerJoin(contact, eq(contact.id, conversation.contactId)).where(filterWhere(workspaceId, userId, f, tab));
     counts[tab] = n;

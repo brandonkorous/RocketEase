@@ -7,6 +7,7 @@
  * Capabilities are derived from the scopes the account actually granted.
  */
 import type { Capabilities, Credential } from "../types";
+import { hideWhy } from "../moderation";
 import { ProviderError } from "../types";
 import { categoryFromStatus, httpJson } from "../http";
 import { retryAfterSeconds } from "../health";
@@ -30,6 +31,7 @@ export function capsFor(cred: Credential): Capabilities {
     messages: "TikTok does not expose direct messages to third-party apps.",
     mentions: "TikTok has no API for mentions of an account.",
     reviews: "TikTok has no reviews.",
+    hide: hideWhy("tiktok")!,
     altText: "TikTok has no alt-text field.",
     ads: "TikTok Ads is a separate Marketing API product this adapter does not integrate.",
     webhooks: "TikTok webhooks report publish status and authorization changes only; comments are polled.",
@@ -42,7 +44,7 @@ export function capsFor(cred: Credential): Capabilities {
     formats: ["video", "carousel"],
     scheduling: "internal",
     limits: { textMaxChars: 2200, imagesMax: 35, videoMaxSeconds: 600, hashtagsMax: 30, mentions: true, firstComment: false, links: "none", altText: false, videoMaxBytes: 4 * 1024 * 1024 * 1024 },
-    inbox: { comments: has(SCOPES.comments), mentions: false, messages: false, reviews: false, reply: has(SCOPES.reply) },
+    inbox: { comments: has(SCOPES.comments), mentions: false, messages: false, reviews: false, reply: has(SCOPES.reply), hide: false },
     insights: { organic: true, audience: has(SCOPES.insights) },
     ads: { import: false, manage: false },
     ingestion: { webhooks: true, polling: true },

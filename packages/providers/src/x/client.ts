@@ -26,6 +26,8 @@ export const SCOPES = {
   media: ["media.write"],
   dmRead: ["dm.read"],
   dmWrite: ["dm.write"],
+  /** Hide and unhide replies to the account's own posts (PUT /2/tweets/:id/hidden). */
+  moderate: ["tweet.moderate.write"],
 };
 
 /**
@@ -51,6 +53,7 @@ export function capsFor(cred: Credential): Capabilities {
   };
   if (!dm) reasons.messages = "Reading direct messages needs the dm.read scope, which the account did not grant.";
   if (!has(SCOPES.dmWrite)) reasons.reply = "Replying to direct messages needs the dm.write scope; replies to mentions only need tweet.write.";
+  if (!has(SCOPES.moderate)) reasons.hide = "Hiding a reply needs the tweet.moderate.write scope; reconnect the account to grant it.";
   if (!has(SCOPES.media)) reasons.formats = "Attaching images or video needs the media.write scope; text-only posts still work.";
   return {
     formats: has(SCOPES.media) ? ["text", "image", "carousel", "video"] : ["text"],
@@ -66,7 +69,7 @@ export function capsFor(cred: Credential): Capabilities {
       links: "inline",
       altText: true,
     },
-    inbox: { comments: true, mentions: true, messages: dm, reviews: false, reply: true },
+    inbox: { comments: true, mentions: true, messages: dm, reviews: false, reply: true, hide: has(SCOPES.moderate) },
     insights: { organic: true, audience: true },
     ads: { import: false, manage: false },
     ingestion: { webhooks: false, polling: true },

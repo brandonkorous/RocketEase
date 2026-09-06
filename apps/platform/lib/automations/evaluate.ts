@@ -4,6 +4,7 @@
  * in Settings uses exactly the same function so the preview cannot drift.
  */
 import type { Condition, ConditionGroup, ConditionResult, Operator, RunEvaluation, TriggerConfig, TriggerKind } from "@/db/schema/automations";
+import { containsPhrase } from "@/lib/brand/lint";
 
 export type FactValue = string | number | boolean | string[] | null | undefined;
 export type Facts = Record<string, FactValue>;
@@ -50,6 +51,11 @@ export function testCondition(c: Condition, facts: Facts): ConditionResult {
       const r = testRegex(show(raw), c.value);
       return decide(r.matched, r.note);
     }
+    case "has_any": {
+      const phrases = c.value.split(",").map((s) => s.trim()).filter(Boolean);
+      const texts = arr ? (raw as string[]) : [show(raw)];
+      return decide(phrases.some((p) => texts.some((t) => containsPhrase(t, p))));
+    }
     case "in": {
       const wanted = list(c.value);
       return decide(arr ? arr.some((a) => wanted.includes(a)) : wanted.includes(text));
@@ -66,7 +72,7 @@ export function testCondition(c: Condition, facts: Facts): ConditionResult {
   }
 }
 
-const OP_WORD: Record<Operator, string> = { eq: "=", neq: "≠", contains: "contains", matches: "matches", gt: ">", lt: "<", in: "is one of" };
+const OP_WORD: Record<Operator, string> = { eq: "=", neq: "≠", contains: "contains", has_any: "has any of", matches: "matches", gt: ">", lt: "<", in: "is one of" };
 
 const phrase = (r: ConditionResult) => `${r.field} ${OP_WORD[r.op] ?? r.op} ${JSON.stringify(r.value)}`;
 const withActual = (r: ConditionResult) => `${phrase(r)} (was ${r.actual === "" ? "empty" : JSON.stringify(r.actual)}${r.note ? ` — ${r.note}` : ""})`;

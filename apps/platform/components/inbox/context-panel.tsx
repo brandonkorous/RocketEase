@@ -30,6 +30,7 @@ function ContactFields({ d, workspaceId, canHandle }: { d: ConversationDetailDat
       <div className="flex gap-2"><dt className="w-4 text-secondary/70" aria-label="Location">⌖</dt><dd>{d.contact.location ?? <span className="text-secondary/70">No location</span>}</dd></div>
       <div className="flex gap-2"><dt className="w-4 text-secondary/70" aria-label="Email">✉</dt><dd className="truncate">{d.contact.email ?? <span className="text-secondary/70">No email</span>}</dd></div>
       <div className="flex gap-2"><dt className="w-4 text-secondary/70" aria-label="Customer since">▣</dt><dd>Customer since {d.contact.since}</dd></div>
+      <div className="flex gap-2"><dt className="w-4 text-secondary/70" aria-label="Moderation">⚑</dt><dd>{d.contact.moderations === 0 ? "Nothing hidden or flagged" : `${d.contact.moderations} message${d.contact.moderations === 1 ? "" : "s"} hidden or flagged now`}</dd></div>
       {canHandle && <button type="button" className="self-start text-xs text-info hover:underline" onClick={() => setEditing(true)}>Edit details</button>}
     </dl>
   );

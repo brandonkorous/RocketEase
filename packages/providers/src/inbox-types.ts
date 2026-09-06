@@ -60,3 +60,21 @@ export type ReplyLookup = ReplyRequest & {
   /** ISO timestamp of the moment the send attempt started. */
   sentAfter: string;
 };
+
+/**
+ * Moderation (M14.6). A hide asks the network to take a comment out of public
+ * view; `hide: false` puts it back. Only comments can be hidden — a DM has no
+ * audience and a mention is someone else's post. HIDE_SUPPORT (moderation.ts)
+ * says which networks can, and why the others cannot.
+ */
+export type ModerationRequest = {
+  kind: InboxItemKind;
+  /** The comment to hide or show. */
+  remoteId: string;
+  threadRemoteId: string;
+  /** The post the comment hangs off, for networks whose endpoint is post-scoped. */
+  postRemoteId?: string;
+  hide: boolean;
+};
+
+export type ModerationResult = { remoteId: string; hidden: boolean; at: string };

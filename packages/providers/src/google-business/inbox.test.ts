@@ -125,7 +125,7 @@ describe("reply and reconciliation", () => {
 describe("adapter surface", () => {
   it("declares reviews-only capabilities with reasons", () => {
     const caps = capsFor(cred);
-    expect(caps.inbox).toEqual({ comments: false, mentions: false, messages: false, reviews: true, reply: true });
+    expect(caps.inbox).toEqual({ comments: false, mentions: false, messages: false, reviews: true, reply: true, hide: false });
     expect(caps.formats).toEqual([]);
     expect(caps.ingestion).toEqual({ webhooks: false, polling: true });
     expect(caps.reasons?.formats).toBeTruthy();

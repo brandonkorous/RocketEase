@@ -14,6 +14,7 @@ export const CAPABILITY_PATHS = [
   "inbox.messages",
   "inbox.reviews",
   "inbox.reply",
+  "inbox.hide",
   "insights.organic",
   "insights.audience",
   "ads.import",
@@ -52,6 +53,7 @@ const REASON_KEYS: Record<CapabilityPath, string[]> = {
   "inbox.messages": ["messages"],
   "inbox.reviews": ["reviews"],
   "inbox.reply": ["reply", "comments"],
+  "inbox.hide": ["hide"],
   "insights.organic": ["organic", "insights"],
   "insights.audience": ["audience", "insights"],
   "ads.import": ["ads"],
@@ -75,6 +77,7 @@ export function capabilitySupported(caps: Capabilities, path: CapabilityPath): b
     case "inbox.messages": return caps.inbox.messages;
     case "inbox.reviews": return caps.inbox.reviews;
     case "inbox.reply": return caps.inbox.reply;
+    case "inbox.hide": return caps.inbox.hide === true;
     case "insights.organic": return caps.insights.organic;
     case "insights.audience": return caps.insights.audience;
     case "ads.import": return caps.ads.import;

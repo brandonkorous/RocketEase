@@ -28,7 +28,8 @@ export const TRIGGERS = ["inbox.message_received", "post.published", "post.faile
 export type TriggerKind = (typeof TRIGGERS)[number];
 export const triggerKind = pgEnum("automation_trigger", TRIGGERS);
 
-export const OPERATORS = ["eq", "neq", "contains", "matches", "gt", "lt", "in"] as const;
+/** `has_any`: any of a comma-separated list of words or phrases, whole words only — the keyword-list test moderation rules need. */
+export const OPERATORS = ["eq", "neq", "contains", "has_any", "matches", "gt", "lt", "in"] as const;
 export type Operator = (typeof OPERATORS)[number];
 
 /** One `field op value` test. `value` is stored as text; numeric ops coerce. */
@@ -43,6 +44,9 @@ export const ACTION_KINDS = [
   "inbox.add_tag",
   "inbox.saved_reply",
   "inbox.snooze",
+  "inbox.hide",
+  "inbox.flag",
+  "inbox.draft_reply",
   "notify",
   "publish.request_approval",
   "publish.retry",
@@ -59,6 +63,11 @@ export type RuleAction =
   /** Auto-send only when the creator holds conversations.handle AND set autoSend; never on reviews. */
   | { kind: "inbox.saved_reply"; savedReplyId: string; autoSend?: boolean }
   | { kind: "inbox.snooze"; hours: number }
+  /** Hide the comment at the network where it can be (HIDE_SUPPORT); elsewhere the message is flagged with the reason why not. */
+  | { kind: "inbox.hide"; reason?: string }
+  | { kind: "inbox.flag"; reason?: string }
+  /** A saved reply written into the thread as a draft; a person presses Send. */
+  | { kind: "inbox.draft_reply"; savedReplyId: string }
   | { kind: "notify"; userIds?: string[]; roles?: WorkspaceRole[]; message?: string }
   | { kind: "publish.request_approval"; assigneeUserId?: string | null }
   | { kind: "publish.retry"; delayMinutes?: number }

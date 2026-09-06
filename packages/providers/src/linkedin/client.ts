@@ -4,6 +4,7 @@
  * that more than one module needs lives here.
  */
 import type { Capabilities, Credential } from "../types";
+import { hideWhy } from "../moderation";
 import { ProviderError } from "../types";
 import { categoryFromStatus, httpJson } from "../http";
 import { retryAfterSeconds } from "../health";
@@ -26,7 +27,7 @@ export const ORG_CAPS = (): Capabilities => ({
   formats: ["text", "image", "carousel", "video", "document"],
   scheduling: "internal",
   limits: { textMaxChars: 3000, imagesMax: 20, videoMaxSeconds: 600, mentions: true, firstComment: true, links: "inline", altText: true, videoMaxBytes: 5 * 1024 * 1024 * 1024 },
-  inbox: { comments: true, mentions: true, messages: false, reviews: false, reply: true },
+  inbox: { comments: true, mentions: true, messages: false, reviews: false, reply: true, hide: false },
   insights: { organic: true, audience: true },
   ads: { import: false, manage: false },
   ingestion: { webhooks: false, polling: true },
@@ -37,6 +38,7 @@ export const ORG_CAPS = (): Capabilities => ({
     messages: "LinkedIn does not expose Page or member messaging to third-party apps.",
     disclosure: "LinkedIn's AI label is a member-facing control with no Posts API field; the label goes in the post text.",
     reviews: "LinkedIn Pages have no reviews.",
+    hide: hideWhy("linkedin"),
     webhooks: "LinkedIn offers no webhooks for Page comments or mentions; items are polled.",
     ads: "The LinkedIn Marketing (Ads) API is a separate partner-gated product this adapter does not integrate.",
   },
@@ -45,7 +47,7 @@ export const ORG_CAPS = (): Capabilities => ({
 
 export const MEMBER_CAPS = (): Capabilities => ({
   ...ORG_CAPS(),
-  inbox: { comments: false, mentions: false, messages: false, reviews: false, reply: false },
+  inbox: { comments: false, mentions: false, messages: false, reviews: false, reply: false, hide: false },
   insights: { organic: false, audience: false },
   ads: { import: false, manage: false },
   reasons: {

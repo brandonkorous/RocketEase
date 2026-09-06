@@ -36,6 +36,7 @@ export function InboxScreen({ data }: { data: InboxScreenData }) {
             <option value="">Anyone</option><option value="me">Assigned to me</option><option value="unassigned">Unassigned</option>
             {data.agents.map((a) => (<option key={a.userId} value={a.userId}>{a.name}</option>))}
           </select>
+          <Link href={workspacePath(data.workspaceId, "settings/automations")} className="btn btn-outline btn-sm">Moderation rules</Link>
           <Link href={workspacePath(data.workspaceId, "create")} className="btn btn-primary btn-sm">Compose</Link>
         </div>
       </div>

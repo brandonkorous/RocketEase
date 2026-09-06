@@ -28,8 +28,8 @@ const SCOPE_SETS = {
   tiktokAll: [...TIKTOK.base, ...TIKTOK.comments, ...TIKTOK.reply, ...TIKTOK.insights],
   youtubeAll: [...YOUTUBE.read, ...YOUTUBE.upload, ...YOUTUBE.comments, ...YOUTUBE.analytics],
   pinterestAll: [...PINTEREST.boards, ...PINTEREST.pins, ...PINTEREST.account],
-  xAll: [...X.base, ...X.media, ...X.dmRead, ...X.dmWrite],
-  xDefault: [...X.base, ...X.media],
+  xAll: [...X.base, ...X.media, ...X.moderate, ...X.dmRead, ...X.dmWrite],
+  xDefault: [...X.base, ...X.media, ...X.moderate],
   threadsAll: [...THREADS.base, ...THREADS.publish, ...THREADS.readReplies, ...THREADS.manageReplies, ...THREADS.insights],
 };
 

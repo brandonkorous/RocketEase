@@ -29,6 +29,7 @@ export const TABS: { key: InboxTab; label: string }[] = [
   { key: "dms", label: "DMs" },
   { key: "comments", label: "Comments" },
   { key: "reviews", label: "Reviews" },
+  { key: "flagged", label: "Flagged" },
 ];
 
 export const STATUS_BADGE: Record<string, { label: string; color: "success" | "warning" | "neutral" | "info" }> = {

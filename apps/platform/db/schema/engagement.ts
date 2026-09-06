@@ -91,12 +91,15 @@ export const conversation = pgTable(
     snoozedUntil: ts("snoozed_until"),
     resolvedAt: ts("resolved_at"),
     resolvedByUserId: text("resolved_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    /** Newest moderation on any of its messages; null once nothing is hidden or flagged. The Flagged tab reads this. */
+    moderatedAt: ts("moderated_at"),
     createdAt: now("created_at"),
     updatedAt: now("updated_at"),
   },
   (t) => [
     uniqueIndex("conversation_channel_thread_idx").on(t.channelId, t.remoteThreadId),
     index("conversation_ws_status_idx").on(t.workspaceId, t.status, t.lastMessageAt),
+    index("conversation_ws_moderated_idx").on(t.workspaceId, t.moderatedAt),
     index("conversation_ws_assignee_idx").on(t.workspaceId, t.assigneeUserId),
     index("conversation_contact_idx").on(t.contactId),
   ],
@@ -106,6 +109,27 @@ export const conversation = pgTable(
 export const DELIVERY_STATES = ["draft", "received", "queued", "sending", "sent", "ambiguous", "failed"] as const;
 export type DeliveryState = (typeof DELIVERY_STATES)[number];
 export const deliveryState = pgEnum("message_delivery_state", DELIVERY_STATES);
+
+export type ModerationAction = "hide" | "flag" | "unhide";
+/** What the network did about it: hidden there, waiting for it, refused by it, no API for it, or nothing asked of it (a flag). */
+export type ModerationRemote = "hidden" | "pending" | "failed" | "unsupported" | "none";
+/**
+ * The one mutable part of a message (data-model.md). `action` is what was
+ * asked for, `remote` what the network did; `note` is the network's answer
+ * or the reason it was never asked. Null once a person clears it.
+ */
+export type MessageModeration = {
+  action: ModerationAction;
+  remote: ModerationRemote;
+  note?: string;
+  /** The rule's reason, or the person's. */
+  reason: string;
+  ruleId?: string;
+  ruleName?: string;
+  actorUserId?: string;
+  at: string;
+  attempts?: number;
+};
 
 export const message = pgTable(
   "message",
@@ -127,6 +151,7 @@ export const message = pgTable(
     idempotencyKey: text("idempotency_key"),
     attempts: integer("attempts").notNull().default(0),
     error: text("error"),
+    moderation: jsonb("moderation").$type<MessageModeration>(),
     occurredAt: ts("occurred_at").notNull(),
     createdAt: now("created_at"),
   },

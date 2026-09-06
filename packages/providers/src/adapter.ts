@@ -4,7 +4,7 @@
  * re-exports this file so "../types" stays the one import for adapters.
  */
 import type { DisclosureInput } from "./disclosure";
-import type { InboxItem, InboxPage, ReplyLookup, ReplyRequest, ReplyResult } from "./inbox-types";
+import type { InboxItem, InboxPage, ModerationRequest, ModerationResult, ReplyLookup, ReplyRequest, ReplyResult } from "./inbox-types";
 import type { InsightsPage, InsightsRequest } from "./insights-types";
 import type { AdAccountDescriptor, PaidInsightsPage, PaidInsightsRequest, PaidObjects, PromotionRequest, PromotionResult } from "./ads-types";
 import type { ChannelDescriptor, ChannelKind, Credential, HealthReport, Network, ProviderKey, PublicationStatus, PublishRequest, PublishResult, ValidationIssue, WebhookEvent } from "./types";
@@ -78,6 +78,8 @@ export interface ProviderAdapter {
   reply?(cred: Credential, channel: ChannelDescriptor, request: ReplyRequest): Promise<ReplyResult>;
   /** Reconcile an ambiguous reply before any retry (by client reference where the network has one, structurally otherwise). */
   findReply?(cred: Credential, channel: ChannelDescriptor, lookup: ReplyLookup): Promise<ReplyResult | null>;
+  /** Hide a comment, or show it again, where the network offers it (moderation.ts says which do, and why the rest cannot). */
+  hideItem?(cred: Credential, channel: ChannelDescriptor, request: ModerationRequest): Promise<ModerationResult>;
   /** Organic insights as daily facts (channel + post level). Optional. */
   fetchInsights?(cred: Credential, channel: ChannelDescriptor, req: InsightsRequest): Promise<InsightsPage>;
   /** Turn a parsed webhook event into inbox items (null = not an inbox event). */

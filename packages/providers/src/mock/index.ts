@@ -24,7 +24,7 @@ import { ProviderError } from "../types";
 import type { InboxItem } from "../inbox-types";
 import { validateAgainstCapabilities } from "../validate";
 import { applyDisclosure } from "../disclosure";
-import { fetchInbox, findReply, mockInbox, reply } from "./inbox";
+import { fetchInbox, findReply, hideItem, mockInbox, reply } from "./inbox";
 import { fetchInsights, mockInsights } from "./insights";
 import { fetchPaidInsights, fetchPaidObjects, findPromotion, listAdAccounts, mockAds, promote, setPaidObjectStatus } from "./ads";
 
@@ -37,7 +37,7 @@ export const CAPS: Capabilities = {
   formats: ["text", "image", "carousel", "video"],
   scheduling: "internal",
   limits: { textMaxChars: 2200, imagesMax: 10, videoMaxSeconds: 90, hashtagsMax: 30, mentions: true, firstComment: true, links: "inline", altText: true },
-  inbox: { comments: true, mentions: true, messages: true, reviews: true, reply: true },
+  inbox: { comments: true, mentions: true, messages: true, reviews: true, reply: true, hide: true },
   insights: { organic: true, audience: true },
   ads: { import: true, manage: true },
   ingestion: { webhooks: true, polling: true },
@@ -193,6 +193,7 @@ export const mockProvider: ProviderAdapter = {
   async fetchInbox(cred, channel, opts) { assertToken(cred); return fetchInbox(channel.remoteId, opts); },
   async reply(cred, channel, req) { assertToken(cred); return reply(channel.remoteId, req); },
   async findReply(cred, channel, lookup) { assertToken(cred); return findReply(channel.remoteId, lookup); },
+  async hideItem(cred, channel, req) { assertToken(cred); return hideItem(channel.remoteId, req); },
   async fetchInsights(cred, channel, req) { assertToken(cred); return fetchInsights(channel.remoteId, req); },
   async listAdAccounts(cred) { assertToken(cred); return listAdAccounts(); },
   async fetchPaidObjects(cred, account) { assertToken(cred); return fetchPaidObjects(account); },
@@ -200,7 +201,12 @@ export const mockProvider: ProviderAdapter = {
   async promote(cred, account, req) { assertToken(cred); return promote(account, req); },
   async findPromotion(cred, _account, key) { assertToken(cred); return findPromotion(key); },
   async setPaidObjectStatus(cred, _account, remoteId, status) { assertToken(cred); return setPaidObjectStatus(remoteId, status); },
-  inboxItemsFromWebhook: (e) => (e.kind === "inbox.item" ? [e.payload as InboxItem] : null),
+  inboxItemsFromWebhook: (e) => {
+    if (e.kind !== "inbox.item") return null;
+    const item = e.payload as InboxItem;
+    if (e.channelRemoteId) mockInbox.remember(e.channelRemoteId, item);
+    return [item];
+  },
   async healthCheck(cred, channel) {
     try { assertToken(cred); } catch (e) { return { tokenOk: false, permissionsOk: false, missingScopes: [], message: (e as Error).message }; }
     const publishable = channel.capabilities.formats.length > 0;

@@ -13,7 +13,7 @@ import { probe } from "../health";
 import { validateAgainstCapabilities } from "../validate";
 import { capsFor, googleAuthorizeUrl, googleTokenCall, isShortEligible, OAUTH_REVOKE, SCOPES, yt } from "./client";
 import { findPublication, publicationStatus, publish, TITLE_MAX, titleFor } from "./publish";
-import { fetchInbox, findReply, reply } from "./inbox";
+import { fetchInbox, findReply, hideItem, reply } from "./inbox";
 import { fetchInsights } from "./insights";
 
 const DEFAULT_SCOPES = [...SCOPES.read, ...SCOPES.upload, ...SCOPES.comments, ...SCOPES.analytics];
@@ -112,6 +112,7 @@ export function createYouTubeProvider(cfg: ProviderConfig): ProviderAdapter {
     fetchInbox: (cred, channel, opts) => fetchInbox(cred, channel, opts),
     reply: (cred, channel, req) => reply(cred, channel, req),
     findReply: (cred, channel, key) => findReply(cred, channel, key),
+    hideItem: (cred, channel, req) => hideItem(cred, channel, req),
     fetchInsights: (cred, channel, req) => fetchInsights(cred, channel, req),
     // No comment webhooks on YouTube (PubSubHubbub covers uploads only): polling.
   };

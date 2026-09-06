@@ -36,6 +36,7 @@ function Row({ r, href, active }: { r: ConversationRow; href: string; active: bo
           <span className={`text-xs ${r.overdue ? "font-medium text-error" : "text-secondary/70"}`}>{r.lastAt}</span>
           {r.unread > 0 && <span className="rounded-full bg-base-content px-1.5 text-xs font-semibold text-base-100">{r.unread}</span>}
           {r.priority === "urgent" && <span className="text-xs font-semibold text-error">Urgent</span>}
+          {r.moderated && <span className="text-xs text-secondary"><span aria-hidden="true">⚑</span> Flagged</span>}
         </span>
       </Link>
     </li>
@@ -62,7 +63,7 @@ export function InboxQueue({ data, nav }: { data: InboxScreenData; nav: Nav }) {
         <div className="flex flex-wrap gap-x-4 gap-y-1" role="tablist">
           {TABS.map((t) => (
             <button key={t.key} type="button" role="tab" aria-selected={f.tab === t.key} onClick={() => nav({ tab: t.key === "all" ? null : t.key })} className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 py-2 text-sm ${f.tab === t.key ? "border-base-content font-semibold" : "border-transparent text-secondary"}`}>
-              {t.label}{t.key === "unread" && data.counts.unread > 0 && <span className="rounded-full bg-base-content px-1.5 text-xs font-semibold text-base-100">{data.counts.unread}</span>}
+              {t.label}{(t.key === "unread" || t.key === "flagged") && data.counts[t.key] > 0 && <span className="rounded-full bg-base-content px-1.5 text-xs font-semibold text-base-100">{data.counts[t.key]}</span>}
             </button>
           ))}
         </div>

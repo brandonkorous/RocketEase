@@ -79,3 +79,37 @@ describe("mock inbox", () => {
     expect((await mockProvider.healthCheck!(cred, ch)).tokenOk).toBe(false);
   });
 });
+
+describe("mock moderation", () => {
+  beforeEach(() => {
+    mockControl.reset();
+    mockInbox.reset();
+  });
+
+  it("hides and shows a comment, and refuses anything that is not a comment", async () => {
+    const { cred, ch } = await channel();
+    const comment = mockInbox.inject(ch.remoteId, { text: "buy followers at spam.example", kind: "comment" });
+    const dm = mockInbox.inject(ch.remoteId, { text: "hello", kind: "message" });
+    const hide = (item: typeof comment, hide: boolean) => mockProvider.hideItem!(cred, ch, { kind: item.kind, remoteId: item.remoteId, threadRemoteId: item.threadRemoteId, hide });
+    expect(await hide(comment, true)).toMatchObject({ remoteId: comment.remoteId, hidden: true });
+    expect(mockInbox.isHidden(comment.remoteId)).toBe(true);
+    expect(await hide(comment, false)).toMatchObject({ hidden: false });
+    expect(mockInbox.isHidden(comment.remoteId)).toBe(false);
+    await expect(hide(dm, true)).rejects.toMatchObject({ category: "validation" });
+  });
+
+  it("can hide a comment that arrived by webhook, because the network delivered it", async () => {
+    const { cred, ch } = await channel();
+    const item = { remoteId: "hook-1", threadRemoteId: "hook-t1", kind: "comment" as const, direction: "inbound" as const, author: { remoteId: "u-x", name: "X" }, text: "spam", occurredAt: new Date().toISOString() };
+    expect(mockProvider.inboxItemsFromWebhook!({ eventId: "e1", channelRemoteId: ch.remoteId, kind: "inbox.item", occurredAt: item.occurredAt, payload: item })).toEqual([item]);
+    expect(await mockProvider.hideItem!(cred, ch, { kind: "comment", remoteId: "hook-1", threadRemoteId: "hook-t1", hide: true })).toMatchObject({ hidden: true });
+    expect(mockInbox.isHidden("hook-1")).toBe(true);
+  });
+
+  it("reports a refusal as a policy error", async () => {
+    const { cred, ch } = await channel();
+    const c = mockInbox.inject(ch.remoteId, { text: "this one is unhideable", kind: "comment" });
+    await expect(mockProvider.hideItem!(cred, ch, { kind: "comment", remoteId: c.remoteId, threadRemoteId: c.threadRemoteId, hide: true })).rejects.toMatchObject({ category: "policy" });
+    expect(mockInbox.isHidden(c.remoteId)).toBe(false);
+  });
+});

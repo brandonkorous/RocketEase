@@ -7,6 +7,7 @@
  * from the lexicons or docs.bsky.app, read 2026-09-05.
  */
 import { createHash } from "node:crypto";
+import { hideWhy } from "../moderation";
 import type { Capabilities } from "../types";
 import { ProviderError } from "../types";
 import { categoryFromStatus, httpJson } from "../http";
@@ -48,7 +49,7 @@ export const CAPS = (): Capabilities => ({
     links: "inline",
     altText: true,
   },
-  inbox: { comments: true, mentions: true, messages: false, reviews: false, reply: true },
+  inbox: { comments: true, mentions: true, messages: false, reviews: false, reply: true, hide: false },
   insights: { organic: true, audience: false },
   ads: { import: false, manage: false },
   ingestion: { webhooks: false, polling: true },
@@ -58,6 +59,7 @@ export const CAPS = (): Capabilities => ({
     firstComment: "A follow-up is a reply in the thread, not a separate first-comment field.",
     messages: "Bluesky chat needs an app password created with direct-message access and a second service (chat.bsky); not wired yet.",
     reviews: "Bluesky has no reviews.",
+    hide: hideWhy("bluesky"),
     ads: "Bluesky sells no ads.",
     webhooks: "AT Protocol has no per-account webhooks; the firehose is a whole-network stream, so notifications are polled.",
     audience: "Bluesky publishes follower counts but no audience demographics.",

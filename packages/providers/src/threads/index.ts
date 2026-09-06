@@ -14,7 +14,7 @@ import { validateAgainstCapabilities } from "../validate";
 import { parseMetaSignedRequest } from "../meta/signed-request";
 import { capsFor, expiry, LIMITS, OAUTH_AUTH, SCOPES, threads, tokenCall } from "./client";
 import { findPublication, publicationStatus, publish, type ThreadsSettings } from "./publish";
-import { fetchInbox, findReply, reply } from "./inbox";
+import { fetchInbox, findReply, hideItem, reply } from "./inbox";
 import { fetchInsights } from "./insights";
 
 export const DEFAULT_SCOPES = [...SCOPES.base, ...SCOPES.publish, ...SCOPES.readReplies, ...SCOPES.manageReplies, ...SCOPES.insights];
@@ -112,6 +112,7 @@ export function createThreadsProvider(cfg: ProviderConfig): ProviderAdapter {
     fetchInbox: (cred, channel, opts) => fetchInbox(cred, channel, opts),
     reply: (cred, channel, req) => reply(cred, channel, req),
     findReply: (cred, channel, lookup) => findReply(cred, channel, lookup),
+    hideItem: (cred, channel, req) => hideItem(cred, channel, req),
     fetchInsights: (cred, channel, req) => fetchInsights(cred, channel, req),
 
     /** Uninstall and delete callbacks are Meta-style signed_request posts, signed with the Threads app secret. */

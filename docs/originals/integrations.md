@@ -10,7 +10,7 @@ Represent support per connected channel rather than a marketing-wide yes/no:
 
 - compose and publish formats
 - schedule or immediate publish
-- comments, mentions, messages, reviews, and reply
+- comments, mentions, messages, reviews, reply, and hide (where the network offers it; the reason where it does not)
 - organic insights
 - ad accounts, campaigns, audiences, creative, spend, and conversion data
 - direct ad mutation versus read-only import

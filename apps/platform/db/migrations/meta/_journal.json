@@ -218,6 +218,41 @@
       "when": 1788677348554,
       "tag": "0030_legal_gorgon",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1788681354826,
+      "tag": "0031_magical_lady_mastermind",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788684527247,
+      "tag": "0032_rainy_lockjaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788685833741,
+      "tag": "0033_demonic_prodigy",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1788687210365,
+      "tag": "0034_military_charles_xavier",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1788689179939,
+      "tag": "0035_material_johnny_storm",
+      "breakpoints": true
     }
   ]
 }

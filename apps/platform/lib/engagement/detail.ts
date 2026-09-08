@@ -1,15 +1,20 @@
 import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { user } from "@/db/schema/auth";
+import { automationRule } from "@/db/schema/automations";
 import { contactIdentity, conversation, conversationEvent, internalNote, message, savedReply, type Message } from "@/db/schema/engagement";
 import { networkLabel } from "@/lib/publishing/receipt-copy";
 import { formatInZone } from "@/lib/time";
 import { KIND_LABEL } from "./format";
+import { replyDecision } from "./messaging/decide";
+import type { SendDecision } from "./messaging/window";
 import { canHideAt } from "./moderation/decide";
 import type { HideDecision } from "./moderation/support";
 import { moderatedBy, moderationView, type ModerationView } from "./moderation/view";
 
 export type MessageRow = { id: string; direction: "inbound" | "outbound"; body: string; attachments: { url: string; mimeType: string; name?: string; sizeBytes?: number }[]; at: string; dayKey: string; by: string | null; state: string; error: string | null; rating: number | null; moderation: ModerationView | null };
+/** The DM decision for a person replying now, with its times already formatted for the composer. */
+export type SendableView = { ok: true; closesAt: string | null; rule: string | null } | { ok: false; why: string; retryAt: string | null };
 export type NoteRow = { id: string; by: string; at: string; body: string };
 export type ActivityRow = { id: string; label: string; at: string; network: string };
 /** `moderations`: this contact's inbound messages that are hidden or flagged right now. */
@@ -21,7 +26,12 @@ export type ConversationDetailData = {
   textMax: number;
   /** Whether a comment in this thread can be hidden at the network, and why not. */
   hideable: HideDecision;
+  /** Whether a reply can go out now (direct messages: the network's window and caps), and why not. */
+  sendable: SendableView;
 };
+
+const sendableView = (d: SendDecision, fmt: (at: Date) => string): SendableView =>
+  d.ok ? { ok: true, closesAt: d.closesAt ? fmt(d.closesAt) : null, rule: d.rule } : { ok: false, why: d.why, retryAt: d.retryAt ? fmt(d.retryAt) : null };
 
 const EVENT_LABEL: Record<string, string> = {
   opened: "Conversation opened", reopened: "Reopened", assigned: "Assigned", unassigned: "Unassigned", replied: "Replied", reply_failed: "Reply failed", resolved: "Resolved", snoozed: "Snoozed", priority: "Priority changed", note: "Note added", escalated: "Escalated",
@@ -46,12 +56,13 @@ export async function conversationDetail(workspaceId: string, id: string, tz: st
   ]);
   if (!ch || !contact) return null;
   const fmt = (d: Date) => formatInZone(d, tz, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
-  const [msgs, notes, replies, related, moderated] = await Promise.all([
-    db.select({ m: message, by: user.name }).from(message).leftJoin(user, eq(user.id, message.authorUserId)).where(eq(message.conversationId, conv.id)).orderBy(message.occurredAt),
+  const [msgs, notes, replies, related, moderated, sendable] = await Promise.all([
+    db.select({ m: message, by: user.name, rule: automationRule.name }).from(message).leftJoin(user, eq(user.id, message.authorUserId)).leftJoin(automationRule, eq(automationRule.id, message.ruleId)).where(eq(message.conversationId, conv.id)).orderBy(message.occurredAt),
     db.select({ n: internalNote, by: user.name }).from(internalNote).innerJoin(user, eq(user.id, internalNote.authorUserId)).where(and(eq(internalNote.workspaceId, workspaceId), eq(internalNote.contactId, conv.contactId))).orderBy(desc(internalNote.createdAt)),
     db.select({ id: savedReply.id, title: savedReply.title, body: savedReply.body, shortcut: savedReply.shortcut }).from(savedReply).where(eq(savedReply.workspaceId, workspaceId)).orderBy(savedReply.title),
     db.select({ id: conversation.id }).from(conversation).where(and(eq(conversation.workspaceId, workspaceId), eq(conversation.contactId, conv.contactId))),
     db.select({ n: sql<number>`count(*)::int` }).from(message).where(and(eq(message.workspaceId, workspaceId), eq(message.authorContactId, conv.contactId), eq(message.direction, "inbound"), isNotNull(message.moderation))),
+    replyDecision(conv, ch, { automated: false }),
   ]);
   const events = related.length ? await db.select({ e: conversationEvent }).from(conversationEvent).where(inArray(conversationEvent.conversationId, related.map((r) => r.id))).orderBy(desc(conversationEvent.createdAt)).limit(6) : [];
   const names = await moderatorNames(msgs.map((r) => r.m));
@@ -62,8 +73,8 @@ export async function conversationDetail(workspaceId: string, id: string, tz: st
     responseDue: conv.responseDueAt && !conv.firstResponseAt ? fmt(conv.responseDueAt) : null, overdue: conv.status === "open" && !conv.firstResponseAt && !!conv.responseDueAt && conv.responseDueAt.getTime() < now,
     channel: { id: ch.id, name: ch.name, network: ch.network, provider: ch.provider },
     contact: { id: contact.id, name: contact.displayName, avatarUrl: contact.avatarUrl, handle: identity?.handle ?? null, profileUrl: identity?.profileUrl ?? null, network: identity?.network ?? ch.network, email: contact.email, location: contact.location, tags: contact.tags, since: formatInZone(contact.firstSeenAt, tz, { dateStyle: "medium" }), moderations: moderated[0]?.n ?? 0 },
-    messages: msgs.map(({ m, by }) => ({
-      id: m.id, direction: m.direction, body: m.body, attachments: m.attachments, at: fmt(m.occurredAt), dayKey: formatInZone(m.occurredAt, tz, { dateStyle: "medium" }), by, state: m.deliveryState, error: m.error, rating: m.rating,
+    messages: msgs.map(({ m, by, rule }) => ({
+      id: m.id, direction: m.direction, body: m.body, attachments: m.attachments, at: fmt(m.occurredAt), dayKey: formatInZone(m.occurredAt, tz, { dateStyle: "medium" }), by: rule ? `rule “${rule}”` : by, state: m.deliveryState, error: m.error, rating: m.rating,
       moderation: m.moderation ? moderationView(m.moderation, network, moderatedBy(m.moderation, names), fmt(new Date(m.moderation.at))) : null,
     })),
     notes: notes.map(({ n, by }) => ({ id: n.id, by, at: formatInZone(n.createdAt, tz, { dateStyle: "medium" }), body: n.body })),
@@ -71,5 +82,6 @@ export async function conversationDetail(workspaceId: string, id: string, tz: st
     savedReplies: replies,
     textMax: conv.kind === "message" ? 2000 : (ch.capabilities.limits.textMaxChars ?? 2000),
     hideable: canHideAt(ch, conv.kind),
+    sendable: sendableView(sendable, fmt),
   };
 }

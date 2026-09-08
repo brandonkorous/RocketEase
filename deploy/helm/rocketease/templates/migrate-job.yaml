@@ -1,0 +1,36 @@
+{{- if .Values.migrate.enabled }}
+# Migrations run INSIDE the cluster, before install and before every upgrade,
+# from the worker image of the same tag, so the schema applied is the one the
+# code expects. backoffLimit 0: a migration that failed part way deserves a
+# person, not a second attempt. The Job is kept until the next run so its logs
+# can be read.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-db-migrate
+  labels:
+    {{- include "rocketease.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: {{ .Values.migrate.timeoutSeconds }}
+  template:
+    spec:
+      {{- include "rocketease.podSpecCommon" . | nindent 6 }}
+      restartPolicy: Never
+      enableServiceLinks: false
+      containers:
+        - name: migrate
+          image: {{ include "rocketease.image.worker" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["pnpm", "exec", "drizzle-kit", "migrate"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: { name: {{ .Values.secrets.existingSecret | quote }}, key: {{ .Values.migrate.databaseUrlKey | quote }} }
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+{{- end }}

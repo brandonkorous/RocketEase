@@ -49,7 +49,7 @@ export async function loadComposer(ctx: WorkspaceContext, sp: CreateSearch, base
     syntheticFlag: item.syntheticMedia?.flag ?? "none",
     syntheticNote: item.syntheticMedia?.note ?? "",
     channelIds: variants.map((v) => v.channelId),
-    variants: Object.fromEntries(variants.map((v) => [v.channelId, { format: v.format, textOverride: v.textOverride, assetIdsOverride: v.assetIdsOverride, firstComment: v.firstComment, linkOverride: v.linkOverride, validation: v.validation?.issues ?? [] }])),
+    variants: Object.fromEntries(variants.map((v) => [v.channelId, { format: v.format, textOverride: v.textOverride, assetIdsOverride: v.assetIdsOverride, firstComment: v.firstComment, linkOverride: v.linkOverride, settings: v.settings ?? {}, validation: v.validation?.issues ?? [] }])),
   };
 
   const [approval, reviewerRows, templates, ws] = await Promise.all([approvalRequirement(workspaceId, item.id), reviewerOptions(workspaceId), listTemplates(workspaceId), db.select({ settings: workspaceTable.settings }).from(workspaceTable).where(eq(workspaceTable.id, workspaceId))]);

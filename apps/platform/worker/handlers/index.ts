@@ -20,6 +20,8 @@ import { recommendationsCompute } from "./recommendations-compute";
 import { automationEvaluate } from "./automation-evaluate";
 import { automationApply } from "./automation-apply";
 import { trackingSync } from "./tracking-sync";
+import { importCanva } from "./import-canva";
+import { listeningCheck } from "./listening-check";
 import { recycleTick } from "./recycle-tick";
 import { rightsExpiring } from "./rights-expiring";
 import { approvalRemind } from "./approval-remind";
@@ -63,6 +65,8 @@ export const handlers: { [N in Exclude<JobName, "outbox.relay">]: Handler<N> } =
   "automation.evaluate": automationEvaluate,
   "automation.apply": automationApply,
   "tracking.sync": trackingSync,
+  "import.canva": importCanva,
+  "listening.check": listeningCheck,
   "rights.expiring": rightsExpiring,
   "approval.remind": approvalRemind,
   "recycle.tick": recycleTick,

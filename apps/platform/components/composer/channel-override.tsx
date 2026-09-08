@@ -1,7 +1,8 @@
 "use client";
 
-import type { ValidationIssue } from "@rocketease/providers";
+import type { GbpPostSettings as GbpSettings, ValidationIssue } from "@rocketease/providers/client";
 import { Input, Label, Switch, Textarea } from "@wizeworks/silicaui-react";
+import { GbpPostSettings } from "./gbp-post-settings";
 import type { ComposerChannel, Override } from "./types";
 
 export function IssueList({ issues }: { issues: ValidationIssue[] }) {
@@ -13,7 +14,8 @@ export function IssueList({ issues }: { issues: ValidationIssue[] }) {
   );
 }
 
-export function ChannelOverride({ channel, shared, value, onChange, issues }: { channel: ComposerChannel; shared: string; value: Override; onChange: (v: Override) => void; issues: ValidationIssue[] }) {
+/** `sharedLink`: whether the post has a link, so the Business Profile button knows it has one to fall back on. */
+export function ChannelOverride({ channel, shared, sharedLink, value, onChange, issues }: { channel: ComposerChannel; shared: string; sharedLink?: boolean; value: Override; onChange: (v: Override) => void; issues: ValidationIssue[] }) {
   const overriding = value.textOverride != null;
   const current = overriding ? value.textOverride! : shared;
   return (
@@ -30,6 +32,7 @@ export function ChannelOverride({ channel, shared, value, onChange, issues }: { 
           <Input id={`fc-${channel.id}`} value={value.firstComment} onChange={(e) => onChange({ ...value, firstComment: e.target.value })} className="mt-2" />
         </>
       )}
+      {channel.network === "google_business" && <GbpPostSettings channelId={channel.id} value={value.settings as GbpSettings} hasLink={Boolean(sharedLink || value.linkOverride)} onChange={(settings) => onChange({ ...value, settings: settings as Record<string, unknown> })} />}
       <IssueList issues={issues} />
     </div>
   );

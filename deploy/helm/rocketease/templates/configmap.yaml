@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    {{- include "rocketease.labels" . | nindent 4 }}
+data:
+  BETTER_AUTH_URL: {{ .Values.app.url | quote }}
+  NEXT_PUBLIC_APP_URL: {{ .Values.app.url | quote }}
+  MAIL_FROM: {{ .Values.app.mailFrom | quote }}
+  LOG_LEVEL: {{ .Values.app.logLevel | quote }}
+  STORAGE_DRIVER: {{ .Values.app.storageDriver | quote }}
+  STAFF_EMAILS: {{ .Values.app.staffEmails | quote }}
+  DEPLOYMENT_MODE: {{ .Values.deployment.mode | quote }}
+  UPDATE_CHANNEL: {{ .Values.updates.channel | quote }}
+  UPDATE_FEED_URL: {{ .Values.updates.feedUrl | quote }}
+  {{- range $k, $v := .Values.app.extraConfig }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}

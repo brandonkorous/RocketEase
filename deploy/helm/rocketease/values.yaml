@@ -1,0 +1,104 @@
+# RocketEase self-hosted install. Everything secret lives in ONE Kubernetes
+# Secret you create yourself (`secrets.existingSecret`); this chart never
+# renders a secret value, so a values file can be committed.
+
+image:
+  registry: ghcr.io/brandonkorous
+  platform: rocketease-platform
+  worker: rocketease-worker
+  web: rocketease-web
+  # Empty = follow `updates.channel`. Set a version tag (v1.2.0) or sha-<commit> to pin.
+  tag: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+updates:
+  # stable = tagged releases; edge = every build of main. Also what the product
+  # reports on Settings › Billing and at /api/health.
+  channel: stable
+  # Optional. When set, the worker reads this JSON once a day and Settings › Billing
+  # says whether a newer build is listed. Unset = the install never calls out.
+  feedUrl: ""
+
+app:
+  # The public address people open. Also BETTER_AUTH_URL and NEXT_PUBLIC_APP_URL.
+  url: https://rocketease.example.com
+  mailFrom: "RocketEase <noreply@example.com>"
+  logLevel: info
+  # s3 (MinIO or any S3-compatible store) or azure. The credentials go in the Secret.
+  storageDriver: s3
+  # Operators who may open /staff (comma list). A `staff_user` row wins over this.
+  staffEmails: ""
+  # Extra non-secret env (string values). NEXT_PUBLIC_* does NOT work here: it is baked at image build.
+  extraConfig: {}
+
+deployment:
+  # self-hosted = one organization per install, licence-key entitlements, no Stripe subscription.
+  mode: self-hosted
+
+secrets:
+  # Required. Keys: DATABASE_URL, BETTER_AUTH_SECRET, TOKEN_MASTER_KEY, SMTP_URL, LICENCE_KEY,
+  # plus storage credentials and any optional provider keys. See README.md.
+  existingSecret: rocketease-env
+  # Bump to restart every pod after rotating a value in the Secret (env is read at pod start).
+  revision: "1"
+
+migrate:
+  # Runs `drizzle-kit migrate` as a Helm hook before install and every upgrade.
+  enabled: true
+  # A key in `secrets.existingSecret` holding a connection string that may run DDL.
+  # The default reuses DATABASE_URL, so the app role must own the schema — or give
+  # it a separate admin URL under another key.
+  databaseUrlKey: DATABASE_URL
+  timeoutSeconds: 600
+
+platform:
+  replicas: 2
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: 1, memory: 1Gi }
+
+worker:
+  replicas: 1
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: 1, memory: 1Gi }
+
+mediaWorker:
+  enabled: true
+  # ffmpeg renders need real disk; this is an emptyDir the pod writes to.
+  scratchSize: 20Gi
+  resources:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits: { cpu: 2, memory: 4Gi }
+
+web:
+  # The marketing site. Off by default: a self-hosted install only needs the product.
+  enabled: false
+  replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  # Off by default; your cluster's ingress controller and certificates are yours.
+  enabled: false
+  className: ""
+  annotations: {}
+  host: ""
+  tls: []
+
+# Applied to every pod. Matches the images, which run as uid/gid 1001.
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  allowPrivilegeEscalation: false
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []

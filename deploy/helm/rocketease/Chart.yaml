@@ -1,0 +1,12 @@
+apiVersion: v2
+name: rocketease
+description: RocketEase, installed on your own Kubernetes cluster under a licence key. Derived from deploy/k8s, which is what runs RocketEase's own cloud.
+type: application
+version: 0.1.0
+# The image tag is NOT taken from here: it follows `updates.channel` (stable/edge)
+# unless `image.tag` pins one. appVersion only labels the chart.
+appVersion: "stable"
+kubeVersion: ">=1.27.0-0"
+home: https://rocketease.com
+sources:
+  - https://github.com/brandonkorous/RocketEase

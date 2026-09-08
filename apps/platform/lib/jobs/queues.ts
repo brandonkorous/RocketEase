@@ -44,6 +44,10 @@ export type JobPayloads = {
   "automation.apply": { runId: string };
   /** Pull one conversion-tracking source (GA4/Shopify) or recompute a webhook source's facts. */
   "tracking.sync": { sourceId: string; since?: string };
+  /** Export one Canva design and write its pages into the waiting asset rows (lib/import). */
+  "import.canva": { sourceId: string; designId: string; assetIds: string[]; format: "png" | "jpg" };
+  /** Search every network a listening query lists (lib/listening/check.ts). */
+  "listening.check": { queryId: string };
   /** Hourly evergreen recycling pass; one workspace/rule or all. */
   "recycle.tick": { workspaceId?: string; ruleId?: string };
   /** Nightly warning before a rights or authorisation clock lapses under a scheduled/promoted post. */
@@ -123,6 +127,10 @@ export const QUEUES: Record<JobName, QueuePolicy> = {
   "automation.evaluate": { ...STANDARD, retryLimit: 3, expireInSeconds: 300 },
   "automation.apply": { ...STANDARD, retryLimit: 3, expireInSeconds: 300 },
   "tracking.sync": { policy: "singleton", retryLimit: 3, retryDelay: 60, retryBackoff: true, expireInSeconds: 1800 },
+  // A retry makes a new export job at Canva, which is a render, not state; the rows stay pending until it lands or gives up.
+  "import.canva": { policy: "stately", retryLimit: 2, retryDelay: 30, retryBackoff: true, expireInSeconds: 600 },
+  // A failed network is recorded, not retried: the next scheduled check tries again anyway.
+  "listening.check": { policy: "singleton", retryLimit: 1, retryDelay: 60, expireInSeconds: 600 },
   // One run per (rule, occurrence) is enforced in the database, so a retry is always safe.
   "recycle.tick": { policy: "singleton", retryLimit: 2, retryDelay: 120, retryBackoff: true, expireInSeconds: 1800 },
   "rights.expiring": { policy: "singleton", retryLimit: 1, retryDelay: 300, expireInSeconds: 1800 },

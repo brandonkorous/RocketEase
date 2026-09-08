@@ -8,6 +8,8 @@
  */
 import { db } from "@/db";
 import { featureGrant } from "@/db/schema/features";
+import { isSelfHosted } from "@/lib/deployment";
+import { currentLicence, licenceFeatures } from "@/lib/licence";
 import { BETA_FEATURES, decideAccess, parseBetaEnv, type Access, type BetaFeature } from "./policy";
 
 export { BETA_FEATURES, isBetaFeature, type BetaFeature } from "./policy";
@@ -21,6 +23,9 @@ function envGrants(): Map<BetaFeature, Set<string>> {
   return cache.grants;
 }
 
+/** On a self-hosted install the licence grants betas the way the env bootstrap does; a stored revoke still wins. */
+const licenceGranted = (feature: BetaFeature) => isSelfHosted() && licenceFeatures(currentLicence()).includes(feature);
+
 /** The stored row for one organization and beta, or null. */
 async function grantRow(organizationId: string, feature: BetaFeature) {
   const row = await db.query.featureGrant.findFirst({
@@ -32,7 +37,7 @@ async function grantRow(organizationId: string, feature: BetaFeature) {
 
 /** Full decision, for the few places that need to distinguish revoked from expired. */
 export async function featureAccess(organizationId: string, feature: BetaFeature, now = new Date()): Promise<Access> {
-  const envGranted = envGrants().get(feature)?.has(organizationId) ?? false;
+  const envGranted = (envGrants().get(feature)?.has(organizationId) ?? false) || licenceGranted(feature);
   return decideAccess(await grantRow(organizationId, feature), envGranted, now);
 }
 
@@ -46,7 +51,7 @@ export async function hasFeature(organizationId: string, feature: BetaFeature): 
  * leave one you were invited to and rejoin it, but you cannot grant yourself one.
  */
 export async function isInvited(organizationId: string, feature: BetaFeature): Promise<boolean> {
-  if (envGrants().get(feature)?.has(organizationId)) return true;
+  if (envGrants().get(feature)?.has(organizationId) || licenceGranted(feature)) return true;
   return (await grantRow(organizationId, feature)) !== null;
 }
 

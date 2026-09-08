@@ -23,6 +23,7 @@ register; a finding that turns into work to do gets a bug file here.
 | [B-013](B-013-voice-refused-for-want-of-a-rate.md) | P2 | **fixed** | The ceiling refused every voice-over because the speech model had no configured rate |
 | [B-014](B-014-voiceover-retries-paid-twice.md) | P1 | **fixed** | Every voice-over retry paid the vendor again — a per-call key inside a retrying queue |
 | [B-015](B-015-whisper-needs-a-file-extension.md) | P1 | **fixed** | Transcription 400s on a file part with no extension, and it failed the whole job |
+| [B-016](B-016-new-workspace-refused-after-fresh-login.md) | P2 | **fixed** | An owner on a fresh login could not add a workspace: the check read the session's active organization instead of the membership row |
 
 **Severity** — P0 production down or data loss · P1 wrong public output, money, or
 a control that does not control · P2 wrong or misleading in-product · P3 cosmetic.

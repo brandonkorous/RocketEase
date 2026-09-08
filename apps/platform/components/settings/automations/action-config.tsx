@@ -58,6 +58,7 @@ function InboxConfig({ action, options, onChange }: Props) {
             <Checkbox checked={Boolean(action.autoSend)} onChange={(e) => onChange({ ...action, autoSend: e.target.checked })} />
             Send without review
           </label>
+          <span className="w-full text-xs text-secondary/70">A direct message goes out only inside the network&apos;s reply window (Meta: 24 h after the customer&apos;s last message), and a rule sends at most one automated DM per contact per 24 h.</span>
         </span>
       );
     case "inbox.hide":

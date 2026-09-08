@@ -40,10 +40,11 @@ export async function createWorkspace(_prev: CreateWorkspaceState, formData: For
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form" };
   const { organizationId, name, timezone } = parsed.data;
 
-  // Organization-level authorization via Better Auth membership (owner/admin only).
+  // Organization-level authorization from the membership ROW (owner/admin only): a fresh
+  // login has no active organization yet, and getActiveMember answered "not a member" then.
   const h = await headers();
-  const member = await auth.api.getActiveMember({ headers: h, query: { organizationId } }).catch(() => null);
-  const role = member?.role ?? "";
+  const membership = await db.query.member.findFirst({ where: (m, { and, eq }) => and(eq(m.organizationId, organizationId), eq(m.userId, session.user.id)), columns: { role: true } });
+  const role = membership?.role ?? "";
   if (!["owner", "admin"].includes(role)) {
     await audit({ action: "workspace.create", actorUserId: session.user.id, organizationId, result: "denied" });
     return { error: "Only organization owners and admins can create workspaces." };

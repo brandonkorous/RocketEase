@@ -7,6 +7,9 @@ import { auth } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { track } from "@/lib/telemetry";
 import { requireUser } from "@/lib/session";
+import { isSelfHosted } from "@/lib/deployment";
+import { installOrganization } from "@/lib/self-hosted/install";
+import { organizationDecision } from "@/lib/self-hosted/policy";
 import { db } from "@/db";
 import { workspace, workspaceMembership } from "@/db/schema/app";
 
@@ -53,6 +56,10 @@ export async function createOrganizationAndWorkspace(_prev: OnboardingState, for
     return { fieldErrors };
   }
   const { organizationName, workspaceName, timezone, isAgency, workspaceType, industry } = parsed.data;
+  if (isSelfHosted()) {
+    const decision = organizationDecision({ selfHosted: true, claimedBy: (await installOrganization())?.name ?? null });
+    if (!decision.allowed) return { error: decision.message };
+  }
   const h = await headers();
 
   // Organization via Better Auth so membership/roles stay in its tables.

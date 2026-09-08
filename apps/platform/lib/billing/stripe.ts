@@ -19,7 +19,9 @@ let cached: Stripe | null = null;
 export function stripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new BillingNotConfiguredError();
-  cached ??= new Stripe(key, { appInfo: { name: "RocketEase", url: "https://rocketease.com" } });
+  // STRIPE_API_HOST points a local check at a stand-in; production never sets it.
+  const host = process.env.STRIPE_API_HOST;
+  cached ??= new Stripe(key, { appInfo: { name: "RocketEase", url: "https://rocketease.com" }, ...(host ? { host, port: process.env.STRIPE_API_PORT, protocol: "http" as const } : {}) });
   return cached;
 }
 

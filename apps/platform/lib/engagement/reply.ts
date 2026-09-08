@@ -11,11 +11,15 @@ import { db } from "@/db";
 import type { Channel } from "@/db/schema/connections";
 import { conversation, message, type Conversation, type DeliveryState } from "@/db/schema/engagement";
 import { audit } from "@/lib/audit";
+import { replyDecision } from "./messaging/decide";
 
-export type ReplyTarget = { conversation: Conversation; channel: Channel; max: number; inReplyToRemoteId: string | null };
+/** `sendAfter`: a network cap that clears with time; the reply is queued to go out then. */
+export type ReplyTarget = { conversation: Conversation; channel: Channel; max: number; inReplyToRemoteId: string | null; sendAfter: Date | null };
+/** `automated`: a rule is sending (one automated DM per contact per day). `draft`: nothing is sent, so the DM window is not judged. */
+export type ReplyOptions = { automated?: boolean; draft?: boolean };
 
 /** Every check a reply must pass before a row is written, in the inbox's own words. */
-export async function resolveReplyTarget(workspaceId: string, conversationId: string, body: string): Promise<{ error: string } | { target: ReplyTarget }> {
+export async function resolveReplyTarget(workspaceId: string, conversationId: string, body: string, opts: ReplyOptions = {}): Promise<{ error: string } | { target: ReplyTarget }> {
   if (!body.trim()) return { error: "Write a reply first." };
   const conv = await db.query.conversation.findFirst({ where: (c, { and, eq }) => and(eq(c.id, conversationId), eq(c.workspaceId, workspaceId)) });
   if (!conv) return { error: "Conversation not found." };
@@ -24,12 +28,14 @@ export async function resolveReplyTarget(workspaceId: string, conversationId: st
   if (!ch.capabilities.inbox.reply) return { error: `${ch.name} does not allow replies through RocketEase.` };
   const max = conv.kind === "message" ? 2000 : (ch.capabilities.limits.textMaxChars ?? 2000);
   if (body.trim().length > max) return { error: `Replies on this channel are limited to ${max} characters.` };
+  const decision = opts.draft ? null : await replyDecision(conv, ch, { automated: Boolean(opts.automated) });
+  if (decision && !decision.ok && !decision.retryAt) return { error: decision.why };
   const last = await db.query.message.findFirst({ where: (m, { and, eq }) => and(eq(m.conversationId, conv.id), eq(m.direction, "inbound")), orderBy: (m, { desc }) => desc(m.occurredAt) });
-  return { target: { conversation: conv, channel: ch, max, inReplyToRemoteId: last?.remoteId ?? null } };
+  return { target: { conversation: conv, channel: ch, max, inReplyToRemoteId: last?.remoteId ?? null, sendAfter: decision && !decision.ok ? decision.retryAt : null } };
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-export type OutboundInput = { authorUserId: string | null; body: string; deliveryState: DeliveryState; idempotencyKey?: string | null };
+export type OutboundInput = { authorUserId: string | null; body: string; deliveryState: DeliveryState; idempotencyKey?: string | null; ruleId?: string | null };
 
 /** Writes the outbound row. Callers own what happens next (queue it, or leave it as a draft). */
 export async function insertOutboundMessage(tx: Tx, t: ReplyTarget, input: OutboundInput) {
@@ -46,6 +52,7 @@ export async function insertOutboundMessage(tx: Tx, t: ReplyTarget, input: Outbo
       body: input.body.trim(),
       deliveryState: input.deliveryState,
       idempotencyKey: input.idempotencyKey ?? (input.deliveryState === "queued" ? randomUUID() : null),
+      ruleId: input.ruleId ?? null,
       occurredAt: new Date(),
     })
     .returning({ id: message.id });
@@ -69,7 +76,7 @@ export async function draftReply(
     const prior = await db.query.message.findFirst({ where: (m, { eq }) => eq(m.idempotencyKey, idempotencyKey) });
     if (prior) return { messageId: prior.id, existing: true };
   }
-  const resolved = await resolveReplyTarget(actor.workspaceId, conversationId, body);
+  const resolved = await resolveReplyTarget(actor.workspaceId, conversationId, body, { draft: true });
   if ("error" in resolved) return { error: resolved.error };
   const messageId = await db.transaction(async (tx) => {
     const id = await insertOutboundMessage(tx, resolved.target, { authorUserId: actor.userId, body, deliveryState: "draft", idempotencyKey });

@@ -39,6 +39,9 @@ export type ClientRate = {
   adSpendMarkupBps: number | null;
   aiCreditMarkupBps: number | null;
   note: string;
+  /** Who the statement goes to (M14.10). */
+  billingName?: string | null;
+  billingEmail?: string | null;
 };
 
 export type MarginInput = {
@@ -97,8 +100,8 @@ export function withMarkup(base: Money, bps: number | null): Money {
   return money(base.cents * (1 + bps / 10_000));
 }
 
-/** What the agency invoices this client for the period, before any rebilled pass-through. */
-function baseRevenue(rate: ClientRate | null, postsPublished: number): Money {
+/** What the agency invoices this client for the period, before any rebilled pass-through. Shared with the statement (M14.10). */
+export function baseRevenue(rate: ClientRate | null, postsPublished: number): Money {
   if (!rate || rate.billingModel === "none") return unknownMoney(NO_RATE);
   if (rate.billingModel === "retainer") return money(rate.retainerCents);
   if (rate.billingModel === "per_post") {

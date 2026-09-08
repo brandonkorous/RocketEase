@@ -93,15 +93,48 @@ async function pickGoalUntilEnabled(page: Page) {
   await cb.check().catch(() => undefined);
 }
 
-/** Signup → onboarding (org + workspace, goals) → lands in the workspace shell. Returns the workspace id. */
-export async function signupAndOnboard(page: Page, u: { name: string; email: string; password: string; organizationName: string; workspaceName: string }): Promise<string> {
-  await page.goto("/signup");
+/**
+ * A chunk fetched while the dev server is still writing it arrives cut off and the
+ * page never hydrates ("Invalid or unexpected token"); a fresh load a few seconds
+ * later is complete. Up to four loads, each with a short hydration wait.
+ */
+export async function gotoHydrated(page: Page, url: string, selector = "form", attempts = 4) {
+  // The element ITSELF must carry React's props: a root that merely started
+  // hydrating (a key on `document`) still submits a form natively on click.
+  const owned = (timeout: number) => page.waitForFunction((sel) => { const el = document.querySelector(sel); return Boolean(el && Object.keys(el).some((k) => k.startsWith("__reactProps"))); }, selector, { timeout });
+  for (let i = 0; i < attempts; i++) {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 120_000 }).catch(() => undefined);
+    if (await owned(20_000).then(() => true).catch(() => false)) return;
+    await page.waitForTimeout(3_000);
+  }
+  await owned(60_000);
+}
+
+/**
+ * One sign-up attempt, then sign-in. A re-sent sign-up after a slow first
+ * navigation answers 422 (the account exists by then) and never moves, so the
+ * retry is a sign-in with the same credentials.
+ */
+async function signupOrSignIn(page: Page, u: { name: string; email: string; password: string }) {
+  await gotoHydrated(page, "/signup");
+  await page.locator("#name").fill(u.name);
+  await page.locator("#email").fill(u.email);
+  await page.locator("#password").fill(u.password);
+  await page.getByRole("checkbox", { name: /i agree to the terms/i }).check();
+  await page.getByRole("button", { name: /create account/i }).first().click({ timeout: 90_000 }).catch(() => undefined);
+  if (await page.waitForURL(/\/onboarding/, { timeout: 90_000 }).then(() => true).catch(() => false)) return;
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  // The sign-up may have created the session already: /login then redirects straight to onboarding.
+  if (await page.waitForURL(/\/onboarding/, { timeout: 20_000 }).then(() => true).catch(() => false)) return;
   await submitUntilUrl(page, async () => {
-    await page.locator("#name").fill(u.name);
     await page.locator("#email").fill(u.email);
     await page.locator("#password").fill(u.password);
-    await page.getByRole("checkbox", { name: /i agree to the terms/i }).check();
-  }, /create account/i, /\/onboarding/);
+  }, /log in/i, /\/onboarding/);
+}
+
+/** Signup → onboarding (org + workspace, goals) → lands in the workspace shell. Returns the workspace id. */
+export async function signupAndOnboard(page: Page, u: { name: string; email: string; password: string; organizationName: string; workspaceName: string }): Promise<string> {
+  await signupOrSignIn(page, u);
   await submitUntilUrl(page, async () => {
     await page.locator("#organizationName").fill(u.organizationName);
     await page.locator("#workspaceName").fill(u.workspaceName);

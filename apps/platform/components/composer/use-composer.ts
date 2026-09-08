@@ -64,8 +64,8 @@ export function useComposer(args: { workspaceId: string; timezone: string; item:
   const [utmEdited, setUtmEdited] = useState(false);
   const setUtm = (v: Utm) => { setUtmEdited(true); setUtmValue(v); };
   const [selected, setSelected] = useState<string[]>(item.channelIds.length ? item.channelIds : channels.filter((c) => c.formats.length).slice(0, 6).map((c) => c.id));
-  const [customize, setCustomize] = useState(Object.values(item.variants).some((v) => v.textOverride !== null || v.firstComment));
-  const [overrides, setOverrides] = useState<Record<string, Override>>(Object.fromEntries(Object.entries(item.variants).map(([k, v]) => [k, { textOverride: v.textOverride, firstComment: v.firstComment ?? "", linkOverride: v.linkOverride }])));
+  const [customize, setCustomize] = useState(Object.values(item.variants).some((v) => v.textOverride !== null || v.firstComment || Object.keys(v.settings ?? {}).length));
+  const [overrides, setOverrides] = useState<Record<string, Override>>(Object.fromEntries(Object.entries(item.variants).map(([k, v]) => [k, { textOverride: v.textOverride, firstComment: v.firstComment ?? "", linkOverride: v.linkOverride, settings: v.settings ?? {} }])));
   const [validation, setValidation] = useState<Record<string, ValidationIssue[]>>(Object.fromEntries(Object.entries(item.variants).map(([k, v]) => [k, v.validation])));
   const [save, setSave] = useState<{ saving: boolean; savedAt: string | null; error: string | null }>({ saving: false, savedAt: null, error: null });
   const [method, setMethod] = useState<Method>(approval.required && approval.state !== "approved" ? "review" : "schedule");
@@ -89,7 +89,7 @@ export function useComposer(args: { workspaceId: string; timezone: string; item:
   const buildInput = useCallback(
     () => ({
       workspaceId, itemId: item.id, title: title || undefined, sharedText: text, sharedAssetIds: assetIds, link: effectiveLink || "", channelIds: selected,
-      variants: Object.fromEntries(selected.map((id) => { const o = overrides[id]; return [id, customize && o ? { textOverride: o.textOverride, firstComment: o.firstComment || null, linkOverride: o.linkOverride } : { textOverride: null, firstComment: null, linkOverride: null }]; })),
+      variants: Object.fromEntries(selected.map((id) => { const o = overrides[id]; return [id, customize && o ? { textOverride: o.textOverride, firstComment: o.firstComment || null, linkOverride: o.linkOverride, settings: o.settings } : { textOverride: null, firstComment: null, linkOverride: null, settings: {} }]; })),
       syntheticFlag, syntheticNote: syntheticNote || undefined,
     }),
     [workspaceId, item.id, title, text, assetIds, effectiveLink, selected, overrides, customize, syntheticFlag, syntheticNote],

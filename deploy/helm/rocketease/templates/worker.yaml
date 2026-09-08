@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-worker
+  labels:
+    app: {{ .Release.Name }}-worker
+    {{- include "rocketease.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels: { app: {{ .Release.Name }}-worker }
+  template:
+    metadata:
+      labels: { app: {{ .Release.Name }}-worker }
+      annotations:
+        {{- include "rocketease.podAnnotations" . | nindent 8 }}
+    spec:
+      {{- include "rocketease.podSpecCommon" . | nindent 6 }}
+      terminationGracePeriodSeconds: 30 # pg-boss graceful stop waits up to 15s
+      containers:
+        - name: worker
+          image: {{ include "rocketease.image.worker" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- include "rocketease.envFrom" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}

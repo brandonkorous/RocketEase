@@ -14,6 +14,8 @@ import { enqueueInsightsIngests } from "@/lib/analytics/schedule";
 import { enqueueAdsSyncs } from "@/lib/campaigns/schedule";
 import { enqueueTrackingSyncs } from "@/lib/tracking/schedule";
 import { enqueueMediaPolls } from "@/lib/media/schedule";
+import { enqueueListeningChecks } from "@/lib/listening/schedule";
+import { checkForUpdates } from "@/lib/updates/check";
 import { enqueueDueReports } from "./handlers/report-run";
 import { scheduleApprovalReminders, scheduleAutomationSweep, scheduleNightly, scheduleRecycling } from "./ticks";
 
@@ -49,6 +51,10 @@ export async function startGeneralSchedules(boss: PgBoss): Promise<void> {
   // expires with money already spent behind it (docs/bugs/B-008). The media
   // worker executes the sweep; this only asks for it.
   every(15_000, 5_000, "media poll enqueue", enqueueMediaPolls);
+  // Listening: each query is searched every 30 minutes on the networks it lists (lib/listening/coverage.ts).
+  every(5 * 60_000, 60_000, "listening check enqueue", enqueueListeningChecks);
+  // Self-hosted update check: once a day, and only when UPDATE_FEED_URL is set (lib/updates/check.ts).
+  every(24 * 3_600_000, 90_000, "update check", checkForUpdates);
 
   // Nightly maintenance (5.7 data quality, M7 reliability): cron-scheduled singletons.
   await scheduleNightly(boss);

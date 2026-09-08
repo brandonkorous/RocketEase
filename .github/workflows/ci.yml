@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+    # A release tag builds the same images again under vX.Y.Z and `stable` — the
+    # self-hosted update channel (docs/plans/m14.12-self-hosted.md). It never deploys.
+    tags: ["v*"]
   pull_request:
   # Manual trigger, so a config-only change (a Key Vault secret, a repo variable
   # baked in as a build arg) can be rolled out without an empty commit.
@@ -134,7 +137,7 @@ jobs:
   # ---------------------------------------------------------------------------
   images:
     needs: [verify, e2e]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
     strategy:
@@ -159,16 +162,36 @@ jobs:
       # these. They are repository VARIABLES, not secrets: every one is served to
       # the browser by definition, and treating a public identifier as a secret
       # only makes a failed build harder to read.
+      # Channel tags for self-hosted installs: main -> `edge` (+ `latest`, which the
+      # cloud deploy pins to the SHA anyway); a `v*` tag -> the version and `stable`.
+      - name: Choose image tags
+        id: tags
+        run: |
+          IMAGE="ghcr.io/brandonkorous/rocketease-${{ matrix.name }}"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="$GITHUB_REF_NAME"; CHANNEL=stable
+          else
+            VERSION="edge-${GITHUB_SHA::7}"; CHANNEL=edge
+          fi
+          {
+            echo "tags<<TAGS"
+            echo "$IMAGE:sha-$GITHUB_SHA"
+            echo "$IMAGE:$VERSION"
+            echo "$IMAGE:$CHANNEL"
+            [[ "$CHANNEL" == edge ]] && echo "$IMAGE:latest"
+            echo "TAGS"
+            echo "version=$VERSION"
+          } >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: .
           file: ${{ matrix.file }}
           push: true
           provenance: false
-          tags: |
-            ghcr.io/brandonkorous/rocketease-${{ matrix.name }}:sha-${{ github.sha }}
-            ghcr.io/brandonkorous/rocketease-${{ matrix.name }}:latest
+          tags: ${{ steps.tags.outputs.tags }}
           build-args: |
+            APP_VERSION=${{ steps.tags.outputs.version }}
+            GIT_SHA=${{ github.sha }}
             NEXT_PUBLIC_APP_URL=https://app.rocketease.com
             NEXT_PUBLIC_AUTH_SOCIAL=${{ vars.NEXT_PUBLIC_AUTH_SOCIAL }}
             NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}

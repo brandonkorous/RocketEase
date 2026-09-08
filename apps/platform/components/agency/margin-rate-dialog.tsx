@@ -15,6 +15,8 @@ export type RateFormValues = {
   adSpendMarkupBps: number | null;
   aiCreditMarkupBps: number | null;
   note: string;
+  billingName?: string | null;
+  billingEmail?: string | null;
 };
 
 type Props = { organizationId: string; workspaceId: string; clientName: string; initial: RateFormValues | null };
@@ -81,6 +83,15 @@ function RateFields({ values: v, set }: { values: RateFormValues; set: Setter })
       {v.billingModel === "hourly" && <Amount id="rate-hourly" label="Hourly rate" hint="Hours aren't tracked here, so revenue stays unavailable." value={toAmount(v.hourlyCents)} onChange={(s) => set("hourlyCents", toCents(s))} />}
       <Amount id="rate-ads" label="Ad spend markup %" hint="Set only if you buy the media and rebill it." value={toPct(v.adSpendMarkupBps)} onChange={(s) => set("adSpendMarkupBps", toBps(s))} />
       <Amount id="rate-ai" label="AI markup %" hint="Set only if you rebill AI usage." value={toPct(v.aiCreditMarkupBps)} onChange={(s) => set("aiCreditMarkupBps", toBps(s))} />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="rate-billing-name">Billing contact</Label>
+        <Input id="rate-billing-name" size="sm" maxLength={120} value={v.billingName ?? ""} onChange={(e) => set("billingName", e.target.value || null)} placeholder="Name on the invoice" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="rate-billing-email">Billing email</Label>
+        <Input id="rate-billing-email" size="sm" type="email" maxLength={254} value={v.billingEmail ?? ""} onChange={(e) => set("billingEmail", e.target.value || null)} placeholder="Statements are emailed here" />
+        <span className="text-xs text-secondary/70">Stripe sends the statement to this address from your account.</span>
+      </div>
       <div className="flex flex-col gap-1.5 sm:col-span-2">
         <Label htmlFor="rate-note">Note</Label>
         <Textarea id="rate-note" rows={2} className="w-full text-sm" maxLength={500} value={v.note} onChange={(e) => set("note", e.target.value)} placeholder="e.g. renewal in March, media billed separately" />

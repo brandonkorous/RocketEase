@@ -123,18 +123,19 @@ describe("reply and reconciliation", () => {
 });
 
 describe("adapter surface", () => {
-  it("declares reviews-only capabilities with reasons", () => {
+  it("declares posts and reviews, with a reason for everything that is off", () => {
     const caps = capsFor(cred);
     expect(caps.inbox).toEqual({ comments: false, mentions: false, messages: false, reviews: true, reply: true, hide: false });
-    expect(caps.formats).toEqual([]);
+    expect(caps.formats).toEqual(["text", "image"]);
+    expect(caps.limits).toMatchObject({ textMaxChars: 1500, imagesMax: 1, links: "attached" });
     expect(caps.ingestion).toEqual({ webhooks: false, polling: true });
-    expect(caps.reasons?.formats).toBeTruthy();
-    expect(caps.reasons?.webhooks).toBeTruthy();
+    expect(caps.reasons?.formats).toBeUndefined();
+    for (const key of ["video", "imagesMax", "textMaxChars", "webhooks", "quota", "lifetime"]) expect(caps.reasons?.[key], key).toBeTruthy();
   });
 
-  it("refuses to publish", () => {
-    expect(gbp.validate(ch, { format: "text", text: "hi", media: [] })[0].code).toBe("publishing_unsupported");
-    expect(() => gbp.publish(cred, ch, { idempotencyKey: "k", format: "text", text: "hi", media: [] })).toThrow(ProviderError);
+  it("validates a text post as publishable and an event without details as not", () => {
+    expect(gbp.validate(ch, { format: "text", text: "hi", media: [] })).toEqual([]);
+    expect(gbp.validate(ch, { format: "text", text: "hi", media: [], settings: { topicType: "EVENT" } }).map((i) => i.code)).toEqual(["event_title_required", "event_dates_required"]);
   });
 
   it("lists locations as account-scoped v4 resource names", async () => {

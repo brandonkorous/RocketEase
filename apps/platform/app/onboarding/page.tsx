@@ -4,6 +4,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { workspace, workspaceInvitation } from "@/db/schema/app";
 import { channel } from "@/db/schema/connections";
+import { ClaimedStep } from "@/components/onboarding/claimed-step";
 import { ConnectStep } from "@/components/onboarding/connect-step";
 import { DoneStep } from "@/components/onboarding/done-step";
 import { FirstPostStep } from "@/components/onboarding/first-post-step";
@@ -12,8 +13,10 @@ import { InviteStep } from "@/components/onboarding/invite-step";
 import { WorkspaceStep } from "@/components/onboarding/workspace-step";
 import { GoalsForm } from "./goals/goals-form";
 import { readGoals } from "@/lib/actions/settings/catalog";
+import { isSelfHosted } from "@/lib/deployment";
 import { workspacePath } from "@/lib/nav";
 import { providers } from "@/lib/providers";
+import { installOrganization } from "@/lib/self-hosted/install";
 import { listUserWorkspaces, requireUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Get started" };
@@ -30,7 +33,8 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
 
   if (step === "workspace") {
     if (mine.length > 0) redirect(href("connect", mine[0].id));
-    return <OnboardingFrame step="workspace" exitHref={null}><WorkspaceStep /></OnboardingFrame>;
+    const claimed = isSelfHosted() ? await installOrganization() : null;
+    return <OnboardingFrame step="workspace" exitHref={null}>{claimed ? <ClaimedStep organizationName={claimed.name} /> : <WorkspaceStep />}</OnboardingFrame>;
   }
   if (!target) redirect(mine.length ? href("connect", mine[0].id) : "/onboarding");
   if (!["owner", "admin"].includes(target.role)) redirect(workspacePath(target.id, "home"));

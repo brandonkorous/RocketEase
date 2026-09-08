@@ -7,6 +7,7 @@ import { conversation, conversationEvent, internalNote, message } from "@/db/sch
 import { audit } from "@/lib/audit";
 import { track } from "@/lib/telemetry";
 import { emit } from "@/lib/jobs/outbox";
+import { replyDecision } from "@/lib/engagement/messaging/decide";
 import { insertOutboundMessage, resolveReplyTarget } from "@/lib/engagement/reply";
 import { requireCapability } from "@/lib/session";
 import { fail, guard, type ActionState } from "../content/shared";
@@ -26,25 +27,31 @@ export async function sendReply(workspaceId: string, conversationId: string, tex
       const id = await insertOutboundMessage(tx, resolved.target, { authorUserId: ctx.session.user.id, body: text, deliveryState: "queued" });
       await tx.update(conversation).set({ assigneeUserId: conv.assigneeUserId ?? ctx.session.user.id, unreadCount: 0, status: opts.resolve ? "resolved" : "open", resolvedAt: opts.resolve ? new Date() : null, resolvedByUserId: opts.resolve ? ctx.session.user.id : null, snoozedUntil: null, updatedAt: new Date() }).where(eq(conversation.id, conv.id));
       if (opts.resolve) await tx.insert(conversationEvent).values({ workspaceId, conversationId: conv.id, kind: "resolved", actorUserId: ctx.session.user.id, data: { withReply: true } });
-      await emit(tx, "inbox.reply", { messageId: id }, { organizationId: conv.organizationId, workspaceId, dedupeKey: `inbox.reply:${id}` });
+      await emit(tx, "inbox.reply", { messageId: id }, { organizationId: conv.organizationId, workspaceId, dedupeKey: `inbox.reply:${id}`, runAt: resolved.target.sendAfter });
       return id;
     });
     await audit({ action: "conversation.reply", actorUserId: ctx.session.user.id, organizationId: conv.organizationId, workspaceId, targetType: "conversation", targetId: conv.id, summary: { after: { messageId } } });
     await track("conversation_replied", { userId: ctx.session.user.id, organizationId: conv.organizationId, workspaceId, surface: "action:sendReply", props: { resolve: Boolean(opts.resolve) } });
-    return { ok: opts.resolve ? "Reply sent and resolved." : "Reply queued.", messageId };
+    const queued = resolved.target.sendAfter ? "Reply queued — it goes out when the network's limit clears." : "Reply queued.";
+    return { ok: opts.resolve ? "Reply sent and resolved." : queued, messageId };
   });
 }
 
-/** Send a reply an agent drafted through the public API. The human gate, pressed. */
+/** Send a reply an agent or a rule drafted. The human gate, pressed — and the DM window judged now, not when the draft was made. */
 export async function sendDraftReply(workspaceId: string, messageId: string): Promise<ActionState> {
   return guard(async () => {
     const ctx = await requireCapability(workspaceId, "conversations.handle");
     const m = await db.query.message.findFirst({ where: (x, { and, eq }) => and(eq(x.id, messageId), eq(x.workspaceId, workspaceId)) });
     if (!m || m.direction !== "outbound" || m.deliveryState !== "draft") return fail("That reply isn't a draft.");
+    const conv = await db.query.conversation.findFirst({ where: (c, { eq }) => eq(c.id, m.conversationId) });
+    const ch = conv && (await db.query.channel.findFirst({ where: (c, { eq }) => eq(c.id, conv.channelId) }));
+    if (!conv || !ch) return fail("Conversation not found.");
+    const decision = await replyDecision(conv, ch, { automated: false });
+    if (!decision.ok && !decision.retryAt) return fail(decision.why);
     await db.transaction(async (tx) => {
       await tx.update(message).set({ deliveryState: "queued", idempotencyKey: m.idempotencyKey ?? randomUUID(), occurredAt: new Date(), error: null }).where(eq(message.id, m.id));
       await tx.update(conversation).set({ assigneeUserId: ctx.session.user.id, unreadCount: 0, snoozedUntil: null, updatedAt: new Date() }).where(eq(conversation.id, m.conversationId));
-      await emit(tx, "inbox.reply", { messageId: m.id }, { organizationId: m.organizationId, workspaceId, dedupeKey: `inbox.reply:${m.id}` });
+      await emit(tx, "inbox.reply", { messageId: m.id }, { organizationId: m.organizationId, workspaceId, dedupeKey: `inbox.reply:${m.id}`, runAt: decision.ok ? null : decision.retryAt });
     });
     await audit({ action: "conversation.reply", actorUserId: ctx.session.user.id, organizationId: m.organizationId, workspaceId, targetType: "conversation", targetId: m.conversationId, summary: { after: { messageId: m.id }, note: "sent a drafted reply" } });
     await track("conversation_replied", { userId: ctx.session.user.id, organizationId: m.organizationId, workspaceId, surface: "action:sendDraftReply", props: { fromDraft: true } });

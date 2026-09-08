@@ -3,12 +3,12 @@
  * from the thread, and it is recorded the same way (conversation_event) so the
  * history stays one story.
  */
-import { randomUUID } from "node:crypto";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { workspaceMembership } from "@/db/schema/app";
 import type { ActionOutcome, RuleAction } from "@/db/schema/automations";
-import { contact, conversation, conversationEvent, message, type Priority } from "@/db/schema/engagement";
+import { contact, conversation, conversationEvent, type Priority } from "@/db/schema/engagement";
+import { insertOutboundMessage, resolveReplyTarget } from "@/lib/engagement/reply";
 import { emit } from "@/lib/jobs/outbox";
 import { applyModerationAction } from "./moderation";
 import type { ApplyContext } from "./types";
@@ -64,27 +64,25 @@ async function addTag(c: ApplyContext, tag: string): Promise<ActionOutcome> {
   return done("inbox.add_tag", `tagged the contact "${clean}"`);
 }
 
-/** Queues the reply as a `message` row; the inbox.reply worker owns delivery and reconciliation (ENG-003). */
+/**
+ * Queues the reply as a `message` row the rule signs (`rule_id`); the
+ * inbox.reply worker owns delivery and reconciliation (ENG-003). The same
+ * checks a person's reply passes apply, plus the DM rules for an automated
+ * sender: inside the network's window, and one automated DM per contact per day.
+ */
 async function sendSavedReply(c: ApplyContext, savedReplyId: string): Promise<ActionOutcome> {
-  const id = conversationId(c)!;
-  const conv = await db.query.conversation.findFirst({ where: (x, { eq }) => eq(x.id, id) });
+  const kind = "inbox.saved_reply";
   const reply = await db.query.savedReply.findFirst({ where: (r, { and, eq }) => and(eq(r.id, savedReplyId), eq(r.workspaceId, c.subject.workspaceId)) });
-  if (!conv || !reply) return skip("inbox.saved_reply", "that saved reply no longer exists");
-  const ch = await db.query.channel.findFirst({ where: (x, { eq }) => eq(x.id, conv.channelId) });
-  if (!ch || !["healthy", "degraded"].includes(ch.status)) return skip("inbox.saved_reply", "the channel is disconnected");
-  if (!ch.capabilities.inbox.reply) return skip("inbox.saved_reply", `${ch.name} does not allow replies through RocketEase`);
-  const max = conv.kind === "message" ? 2000 : (ch.capabilities.limits.textMaxChars ?? 2000);
-  if (reply.body.length > max) return skip("inbox.saved_reply", `the saved reply is longer than this channel's ${max} character limit`);
-  const last = await db.query.message.findFirst({ where: (m, { and, eq }) => and(eq(m.conversationId, conv.id), eq(m.direction, "inbound")), orderBy: (m, { desc }) => desc(m.occurredAt) });
+  if (!reply) return skip(kind, "that saved reply no longer exists");
+  const resolved = await resolveReplyTarget(c.subject.workspaceId, conversationId(c)!, reply.body, { automated: true });
+  if ("error" in resolved) return skip(kind, resolved.error);
+  const t = resolved.target;
   await db.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(message)
-      .values({ organizationId: conv.organizationId, workspaceId: conv.workspaceId, conversationId: conv.id, channelId: ch.id, direction: "outbound", inReplyToRemoteId: last?.remoteId ?? null, authorUserId: c.creator?.userId ?? null, body: reply.body, deliveryState: "queued", idempotencyKey: randomUUID(), occurredAt: new Date() })
-      .returning({ id: message.id });
-    await tx.update(conversation).set({ unreadCount: 0, snoozedUntil: null, updatedAt: new Date() }).where(eq(conversation.id, conv.id));
-    await emit(tx, "inbox.reply", { messageId: row.id }, { organizationId: conv.organizationId, workspaceId: conv.workspaceId, dedupeKey: `inbox.reply:${row.id}` });
+    const id = await insertOutboundMessage(tx, t, { authorUserId: c.creator?.userId ?? null, body: reply.body, deliveryState: "queued", ruleId: c.rule.id });
+    await tx.update(conversation).set({ unreadCount: 0, snoozedUntil: null, updatedAt: new Date() }).where(eq(conversation.id, t.conversation.id));
+    await emit(tx, "inbox.reply", { messageId: id }, { organizationId: t.conversation.organizationId, workspaceId: t.conversation.workspaceId, dedupeKey: `inbox.reply:${id}`, runAt: t.sendAfter });
   });
-  return done("inbox.saved_reply", `queued the saved reply "${reply.title}"`);
+  return done(kind, t.sendAfter ? `queued the saved reply "${reply.title}" to go out at ${t.sendAfter.toISOString()}, when the network's limit clears` : `queued the saved reply "${reply.title}"`);
 }
 
 async function snooze(c: ApplyContext, hours: number): Promise<ActionOutcome> {

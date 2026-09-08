@@ -64,6 +64,14 @@ describe("mock inbox", () => {
     expect(await mockProvider.findReply!(cred, ch, { ...req, sentAfter: new Date(Date.now() + 60_000).toISOString() })).toBeNull();
   });
 
+  it("accepts a DM reply inside 24 h of the customer's last message and refuses one after", async () => {
+    const { cred, ch } = await channel();
+    const fresh = mockInbox.inject(ch.remoteId, { text: "hi", kind: "message" });
+    await expect(mockProvider.reply!(cred, ch, { kind: "message", threadRemoteId: fresh.threadRemoteId, text: "hello!", idempotencyKey: "w1" })).resolves.toMatchObject({ remoteId: expect.any(String) });
+    const stale = mockInbox.inject(ch.remoteId, { text: "old", kind: "message", threadRemoteId: "stale-thread", occurredAt: new Date(Date.now() - 25 * 3_600_000).toISOString() });
+    await expect(mockProvider.reply!(cred, ch, { kind: "message", threadRemoteId: stale.threadRemoteId, text: "too late", idempotencyKey: "w2" })).rejects.toMatchObject({ category: "policy", providerCode: "window_closed" });
+  });
+
   it("maps policy rejections", async () => {
     const { cred, ch } = await channel();
     const [thread] = mockInbox.threads(ch.remoteId);

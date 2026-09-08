@@ -36,6 +36,8 @@ export type LibraryData = {
   videoGeneration: { enabled: boolean };
   /** In-flight and recently-failed jobs. Empty is the normal case. */
   generations: GenerationRow[];
+  /** Canva import (M14.9): whether this server has a Canva integration, and this person's own connected account. */
+  canva: { configured: boolean; source: { id: string; name: string } | null };
 };
 
 export const fmtBytes = (b: number | null) => (b == null ? "" : b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);

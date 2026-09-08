@@ -183,6 +183,63 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
   mutable part of a message), the network call is the `inbox.moderate` job (idempotent: setting hidden
   twice is one state), and the Flagged tab reads `conversation.moderated_at`. A rule's draft reply is a
   `draft` message a person sends; nothing a rule does speaks to a customer on its own.
+- **DM rules** (M14.7, `docs/plans/m14.7-dm-rules.md`): `MESSAGING_RULES` (packages/providers) cites
+  the document behind every network's direct-message rules — Meta's 24 h standard messaging window and
+  7-day Human Agent window, X's published send caps — and the reason for every network without DMs.
+  `sendDecision` (`lib/engagement/messaging/window.ts`, pure) is the ONE answer to "can this DM go out
+  now?"; `replyDecision` plugs in the counts, and the composer, the send actions, the rule action and the
+  worker right before the network call all read it, so every path refuses for the same reason. The window
+  counts from the customer's last message RocketEase has SEEN (a reaction Meta also counts is invisible
+  here), so it can be shorter than the network's, never longer. A cap that clears with time makes the reply
+  WAIT (`runAt`); only the customer reopens a closed window. **A number nobody published is not declared**:
+  the "~200 automated DMs an hour" and the "2026 one automated message" rule vendor blogs repeat are in no
+  Meta document, so the one-automated-DM-per-contact-per-day rule is RocketEase's OWN, applied on every
+  network, and `message.rule_id` says which messages a rule wrote.
+- **Business Profile posts** (M14.8, `docs/plans/m14.8-gbp-posts.md`): a location publishes `localPosts`
+  (update, event, offer; one photo; one button) through `google-business/posts.ts`. The post's knobs live
+  on `post_variant.settings` as `GbpPostSettings` (`post-fields.ts`, client-safe, exported from
+  `@rocketease/providers/client`), edited in Create's per-channel panel. **One validator serves the
+  composer and the worker** (`postIssues`), after the shared capability validator. A `REJECTED` answer is
+  a `policy` failure, never a success. Google publishes no photos-per-post count and no video support for
+  local posts, so one photo and no video are RocketEase's conservative choices and are labelled as such;
+  the 1,500-character limit is Google's editor's, not its API reference's, and the reason says so.
+- **Canva import** (M14.9, `docs/plans/m14.9-canva-import.md`): `import_source` is a PERSON's link to an
+  outside design tool inside one workspace (unique on workspace, kind, member), sealed like the other
+  secrets. `lib/import/canva.ts` is the Connect API client with every endpoint and limit sourced;
+  `accessTokenFor` refreshes under a row lock because a Canva refresh token is single-use. The
+  `import.canva` job reserves nothing itself: the action makes one `pending` asset row per page, the job
+  exports once, writes each page into its row's own key and hands it to `asset.process`; a page Canva did
+  not return fails its row in Canva's words. Rights = owned, `rights_note` names the design, and
+  `provenance.chain` carries the design and export ids. Adobe Express is a later editor-embed on the same
+  shape; `docs/media-generation.md` §12 records why.
+- **Client statements** (M14.10, `docs/plans/m14.10-client-billing.md`): an agency invoices a client
+  from ITS OWN Stripe account — Stripe Connect (Standard, OAuth) gives us the `acct_…`, every call carries
+  `stripeAccount`, and RocketEase never holds the money. `buildStatement` (pure) makes the lines from the
+  same `marginInputs` the Economics table reads, so the two never disagree; one unknown input blocks the
+  whole statement with its reason, and a zero total is "nothing to bill". Status mirrors Stripe's invoice
+  states; the Connect webhook (`/api/webhooks/stripe-connect`, its own secret) applies an event only when
+  `event.account` is the organization's own. A send Stripe refused leaves a `void` row, never a "sent".
+- **Listening** (M14.11, `docs/plans/m14.11-listening.md`): `/analytics/listening` searches ONLY what a
+  network lets an app search — `LISTENING_COVERAGE` cites the document behind every yes and the reason
+  for every no, and the screen shows both. Every search runs AS a connected account (`searchAs`):
+  Bluesky's public AppView answers 403 to `searchPosts` while profiles and feeds answer 200 (checked
+  2026-09-06), so "no connection needed" is never claimed. A hit has a definition (one public post that
+  matched one term at check time, unique per query/network/post); every check is a `listening_check`
+  row per network, ok or failed in the network's words. The ad library stores nothing and labels dates
+  and reach as the repository's own. Paging, never load-more. X (metered) and Reddit (needs written
+  approval) are off with their reasons stated.
+- **Self-hosted tier** (M14.12, `docs/plans/m14.12-self-hosted.md`): `DEPLOYMENT_MODE=self-hosted` is
+  ONE organization per install — the first sign-up claims it, and afterwards a Better Auth DATABASE hook
+  creates accounts only for invited addresses, so social sign-in obeys the same rule as the form. The
+  licence (`lib/licence/`) is an Ed25519-signed key checked OFFLINE against the public key baked into
+  `lib/licence/public-key.ts`; signature first, payload second, and the key is never shown or logged.
+  Entitlements come from the licence in the same shape Stripe's do (`licence-entitlements.ts`), so every
+  gate reads one thing; expired = 30 days of grace, then nothing NEW (reading and exporting never stop);
+  no key = an evaluation of one workspace for the trial length. `scripts/licence.ts` signs keys on an
+  operator's machine; the private key never enters a repository. `deploy/helm/rocketease` is the chart
+  (derived from `deploy/k8s`; renders no secret value); the image tag IS the update channel
+  (`stable` = `v*` tags, `edge` = main) unless pinned, and `UPDATE_FEED_URL` is empty by default so an
+  install never calls out.
 - **Approval due dates** (M14.3, `docs/plans/m14.3-approval-due-dates.md`): every request has a
   `due_at` — the requester's own, else the policy window (24 h without a policy); a time not ahead of
   now is refused. **Overdue has ONE definition** (`lib/approvals/rules.ts`: pending and past due) and

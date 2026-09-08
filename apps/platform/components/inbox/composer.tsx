@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, Textarea } from "@wizeworks/silicaui-react";
-import type { ConversationDetailData } from "@/lib/engagement/detail";
+import type { ConversationDetailData, SendableView } from "@/lib/engagement/detail";
 import { draftReply, recordDraftUsed } from "@/lib/actions/ai";
 import { addInternalNote, saveSavedReply, sendReply } from "@/lib/actions/inbox";
 import { useActionFeedback } from "@/lib/use-action-feedback";
@@ -29,11 +29,19 @@ function SavedReplies({ d, workspaceId, onPick, onSave, text }: { d: Conversatio
   );
 }
 
+/** The DM window as the person sees it: open (with its end), waiting on a cap, or closed. Status is a glyph plus a label. */
+function WindowLine({ s }: { s: SendableView }) {
+  if (s.ok) return s.closesAt ? <p className="mb-1.5 text-xs text-secondary"><span aria-hidden="true">⏱</span> Reply window open until {s.closesAt} · {s.rule}</p> : null;
+  if (s.retryAt) return <p className="mb-1.5 text-xs text-secondary"><span aria-hidden="true">⏱</span> Will wait · {s.why} Sends after {s.retryAt}.</p>;
+  return <p className="mb-1.5 text-xs font-medium text-error"><span aria-hidden="true">⊘</span> Reply window closed · {s.why}</p>;
+}
+
 export function ReplyComposer({ d, workspaceId, canHandle }: { d: ConversationDetailData; workspaceId: string; canHandle: boolean }) {
   const { run, pending, toast } = useActionFeedback();
   const [mode, setMode] = useState<Mode>("reply");
   const [text, setText] = useState("");
   const over = text.length > d.textMax;
+  const closed = !d.sendable.ok && !d.sendable.retryAt;
   const clear = (r: { error?: string }) => { if (!r.error) setText(""); };
   const send = (resolve: boolean) => run(() => sendReply(workspaceId, d.id, text, { resolve }), clear);
   const saveAsReply = (title: string) => run(() => saveSavedReply(workspaceId, { title, body: text }));
@@ -47,15 +55,16 @@ export function ReplyComposer({ d, workspaceId, canHandle }: { d: ConversationDe
         ))}
       </div>
       <div className={`px-4 pb-3 pt-2 ${mode === "note" ? "bg-warning/10" : ""}`}>
-        <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder={mode === "reply" ? "Type your message..." : "Internal note — only your team sees this"} className="w-full text-sm" aria-label={mode === "reply" ? "Reply" : "Internal note"} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !over) mode === "reply" ? send(false) : run(() => addInternalNote(workspaceId, d.id, text), clear); }} />
+        {mode === "reply" && <WindowLine s={d.sendable} />}
+        <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder={mode === "note" ? "Internal note — only your team sees this" : closed ? "The customer must write again before a reply can go out." : "Type your message..."} className="w-full text-sm" aria-label={mode === "reply" ? "Reply" : "Internal note"} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !over && !(mode === "reply" && closed)) mode === "reply" ? send(false) : run(() => addInternalNote(workspaceId, d.id, text), clear); }} />
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
           {mode === "reply" ? <SavedReplies d={d} workspaceId={workspaceId} text={text} onPick={(b) => setText((t) => (t ? `${t}\n${b}` : b))} onSave={saveAsReply} /> : <span className="text-xs text-secondary">Notes never reach the customer.</span>}
           <div className="flex items-center gap-2">
             <span className={`text-xs ${over ? "font-medium text-error" : "text-secondary/70"}`}>{text.length} / {d.textMax.toLocaleString()}</span>
             {mode === "reply" ? (
               <>
-                <Button size="sm" color="primary" loading={pending} disabled={over || !text.trim()} onClick={() => send(false)}>Send</Button>
-                <Button size="sm" variant="outline" color="neutral" disabled={pending || over || !text.trim()} onClick={() => send(true)} title="Send and resolve">Send &amp; resolve</Button>
+                <Button size="sm" color="primary" loading={pending} disabled={over || closed || !text.trim()} onClick={() => send(false)}>Send</Button>
+                <Button size="sm" variant="outline" color="neutral" disabled={pending || over || closed || !text.trim()} onClick={() => send(true)} title="Send and resolve">Send &amp; resolve</Button>
               </>
             ) : (
               <Button size="sm" color="primary" loading={pending} disabled={!text.trim()} onClick={() => run(() => addInternalNote(workspaceId, d.id, text), (r) => { clear(r); if (!r.error) toast.add({ title: "Note added", type: "success" }); })}>Add note</Button>

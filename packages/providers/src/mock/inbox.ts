@@ -48,13 +48,13 @@ export const mockInbox = {
   setAmbiguousReply(v: boolean) { store().ambiguousReply = v; },
   /** Test hook: drop the client-reference index so reconciliation must match structurally. */
   forgetReplyKeys() { store().replies.clear(); },
-  /** Simulate a customer writing in (new thread when threadRemoteId is omitted). */
-  inject(channelRemoteId: string, input: { text: string; kind?: InboxItemKind; threadRemoteId?: string; who?: number }): InboxItem {
+  /** Simulate a customer writing in (new thread when threadRemoteId is omitted); `occurredAt` backdates it. */
+  inject(channelRemoteId: string, input: { text: string; kind?: InboxItemKind; threadRemoteId?: string; who?: number; occurredAt?: string }): InboxItem {
     seed(channelRemoteId);
     const s = store();
     const who = PEOPLE[(input.who ?? s.seq) % PEOPLE.length];
     const thread = input.threadRemoteId ?? `${channelRemoteId}-t${Date.now().toString(36)}`;
-    const item: InboxItem = { remoteId: `${thread}-m${++s.seq}-${Date.now().toString(36)}`, threadRemoteId: thread, kind: input.kind ?? "message", direction: "inbound", author: who, text: input.text, occurredAt: now() };
+    const item: InboxItem = { remoteId: `${thread}-m${++s.seq}-${Date.now().toString(36)}`, threadRemoteId: thread, kind: input.kind ?? "message", direction: "inbound", author: who, text: input.text, occurredAt: input.occurredAt ?? now() };
     s.items.get(channelRemoteId)!.push(item);
     return item;
   },
@@ -76,12 +76,21 @@ export async function fetchInbox(channelRemoteId: string, opts: { since?: string
   return { items: all.filter((i) => Date.parse(i.occurredAt) > since).sort((a, b) => a.occurredAt.localeCompare(b.occurredAt)) };
 }
 
+const WINDOW_MS = 24 * 3_600_000;
+
+/** Meta's standard messaging window, mirrored: a DM reply is accepted only within 24 h of the customer's last message on the thread. */
+function assertWindowOpen(channelRemoteId: string, threadRemoteId: string) {
+  const last = (store().items.get(channelRemoteId) ?? []).filter((i) => i.threadRemoteId === threadRemoteId && i.direction === "inbound").map((i) => Date.parse(i.occurredAt)).sort((a, b) => b - a)[0];
+  if (last === undefined || Date.now() - last > WINDOW_MS) throw new ProviderError("The demo network accepts a reply only within 24 h of the customer's last message.", { category: "policy", providerCode: "window_closed" });
+}
+
 export async function reply(channelRemoteId: string, req: ReplyRequest): Promise<ReplyResult> {
   seed(channelRemoteId);
   const s = store();
   const existing = s.replies.get(req.idempotencyKey);
   if (existing) return existing;
   if (/\bforbidden\b/i.test(req.text)) throw new ProviderError("The demo network rejected this reply.", { category: "policy" });
+  if (req.kind === "message") assertWindowOpen(channelRemoteId, req.threadRemoteId);
   const result = { remoteId: `${req.threadRemoteId}-r${++s.seq}`, sentAt: now() };
   s.replies.set(req.idempotencyKey, result);
   s.items.get(channelRemoteId)!.push({ remoteId: result.remoteId, threadRemoteId: req.threadRemoteId, kind: req.kind, direction: "outbound", author: { remoteId: channelRemoteId, name: "Demo Brand" }, text: req.text, occurredAt: result.sentAt, inReplyToRemoteId: req.inReplyToRemoteId });

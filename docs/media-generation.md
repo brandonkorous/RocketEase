@@ -528,7 +528,11 @@ floor, seeds, consent-gated models in v1). Pipeline-level:
 1. **Render build vs buy** — ffmpeg in our worker (recommended) vs Shotstack/Creatomate.
 2. **Canva interop** — the Connect API can autofill brand templates (text and image fields only;
    colours and fonts are fixed; requires Canva Enterprise). Worth it as an export target for teams
-   already on Canva, or a distraction?
+   already on Canva, or a distraction? **Decided 2026-09-06 (M14.9):** import first, not export.
+   The Connect API lists a person's designs and renders them server-side, so "Import from Canva"
+   became a library feature (`docs/plans/m14.9-canva-import.md`). Autofill/export needs Enterprise
+   and nobody asked for it. Adobe Express has no listing/export API, only an editor embed, so it is
+   a later, browser-side feature on the same `import_source` shape.
 3. **C2PA signing identity** — sign as RocketEase, or per-organization. Per-org is more honest and
    more certificate management.
 4. **Where `AdPlan` lives** — on the draft, or its own versioned table once plans get reused as

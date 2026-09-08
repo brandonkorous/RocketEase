@@ -19,8 +19,17 @@ export const STATUS_LABEL: Record<SubscriptionStatus, string> = {
 export const statusLabel = (status: string) => STATUS_LABEL[status as SubscriptionStatus] ?? status;
 
 /** The plain-language line under the plan card, never a colour on its own. */
-export function stateSummary(state: EntitlementState, opts: { gracefulUntil?: string | null } = {}): string {
+export function stateSummary(state: EntitlementState, opts: { gracefulUntil?: string | null; active?: boolean } = {}): string {
   switch (state) {
+    case "licensed":
+      return "This install is licensed. Everything is active.";
+    case "licence_grace":
+      return `The licence has expired. Everything keeps working until ${opts.gracefulUntil ?? "the end of the grace period"}; after that new scheduling and new workspaces pause until a new key is set.`;
+    case "licence_expired":
+      return "The licence has expired. Everything you have stays readable and exportable; new scheduling and new workspaces are paused until a new key is set.";
+    case "unlicensed":
+      if (opts.active === false) return `The evaluation ended${opts.gracefulUntil ? ` on ${opts.gracefulUntil}` : ""}. Set a licence key to schedule again; everything you have stays readable and exportable.`;
+      return opts.gracefulUntil ? `No licence key is set. This install is an evaluation until ${opts.gracefulUntil}.` : "No licence key is set. This install runs as an evaluation.";
     case "unconfigured":
       return "Billing isn't configured for this deployment, so nothing here is charged.";
     case "none":

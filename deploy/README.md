@@ -13,6 +13,7 @@ with its **own** Postgres server, Key Vault and storage account. Manifests are i
 | TLS + routing | `sparx.works/k8s/ingress/Caddyfile` |
 | Public DNS | `sparx.works/terraform/modules/dns` (Cloudflare) |
 | Workloads | this repo, `deploy/k8s` |
+| Self-hosted installs (customers' clusters) | this repo, `deploy/helm/rocketease` — a Helm chart derived from `deploy/k8s`; see its README and `docs/plans/m14.12-self-hosted.md` |
 
 ## There is no Ingress object
 

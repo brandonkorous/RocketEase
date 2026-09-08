@@ -45,6 +45,10 @@ RUN pnpm --filter @rocketease/platform build
 FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+# What this build calls itself, reported at /api/health and on Settings > Billing. Set by CI.
+ARG APP_VERSION=dev
+ARG GIT_SHA=
+ENV APP_VERSION=$APP_VERSION GIT_SHA=$GIT_SHA
 # NUMERIC uid/gid, and USER is the NUMBER. Kubernetes cannot verify a non-numeric
 # user against runAsNonRoot: true — it refuses the container outright with
 #   "image has non-numeric user (app), cannot verify user is non-root"

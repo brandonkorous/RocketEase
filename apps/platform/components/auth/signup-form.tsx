@@ -9,7 +9,7 @@ import { AuthError, AuthHeading, AuthSwitch } from "./shell";
 import { SocialButtons } from "./social-buttons";
 
 /** Sign-up card (auth mockup): name, work email, password, terms consent, optional product updates. */
-export function SignupForm() {
+export function SignupForm({ note }: { note?: string }) {
   const router = useRouter();
   const next = useSearchParams().get("next") ?? "/";
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function SignupForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
-      <AuthHeading mode="signup" />
+      <AuthHeading mode="signup" note={note} />
       <SocialButtons mode="signup" />
       <AuthError error={error} />
       <div className="flex flex-col gap-1.5">

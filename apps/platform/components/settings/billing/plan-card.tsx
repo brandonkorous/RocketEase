@@ -9,7 +9,7 @@ export function PlanCard({ workspaceId, data }: { workspaceId: string; data: Bil
     <section aria-labelledby="billing-plan">
       <h3 id="billing-plan" className="text-base font-semibold">Plan</h3>
       <p className="mt-1 text-sm leading-relaxed text-secondary">
-        {stateSummary(data.entitlements.state, { gracefulUntil: data.gracefulUntil })}
+        {stateSummary(data.entitlements.state, { gracefulUntil: data.gracefulUntil, active: data.entitlements.active })}
       </p>
       <PlanAlerts data={data} />
       <PlanFacts data={data} />

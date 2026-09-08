@@ -10,3 +10,4 @@ export { validateAgainstCapabilities } from "./validate";
 export { PROVIDER_COST_NOTES, estimatePublishCost, isFreeToPublish, type CapWindow, type CostVariant, type CostWindow, type PublishCost } from "./cost";
 export * from "./disclosure";
 export { CAPABILITY_PATHS, capabilitySupported, extraNotes, reasonFor, type CapabilityPath, type CatalogEntry } from "./capability-paths";
+export { ACTION_TYPES, BUTTON_LABEL, TOPIC_LABEL, TOPIC_TYPES, type ActionType, type GbpPostSettings, type TopicType } from "./google-business/post-fields";

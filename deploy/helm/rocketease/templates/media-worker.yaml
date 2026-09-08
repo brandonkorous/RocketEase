@@ -1,0 +1,40 @@
+{{- if .Values.mediaWorker.enabled }}
+# Same image as the worker, WORKER_ROLE=media: ffmpeg work in its own pod so a
+# render cannot starve inbox polling. Only the general worker runs the timers.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-media-worker
+  labels:
+    app: {{ .Release.Name }}-media-worker
+    {{- include "rocketease.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: {{ .Release.Name }}-media-worker }
+  template:
+    metadata:
+      labels: { app: {{ .Release.Name }}-media-worker }
+      annotations:
+        {{- include "rocketease.podAnnotations" . | nindent 8 }}
+    spec:
+      {{- include "rocketease.podSpecCommon" . | nindent 6 }}
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: media-worker
+          image: {{ include "rocketease.image.worker" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - { name: WORKER_ROLE, value: media }
+            - { name: MEDIA_SCRATCH_DIR, value: /scratch }
+          {{- include "rocketease.envFrom" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.mediaWorker.resources | nindent 12 }}
+          volumeMounts:
+            - { name: scratch, mountPath: /scratch }
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+      volumes:
+        - name: scratch
+          emptyDir: { sizeLimit: {{ .Values.mediaWorker.scratchSize }} }
+{{- end }}

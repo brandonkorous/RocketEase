@@ -1,0 +1,14 @@
+RocketEase {{ include "rocketease.tag" . }} ({{ .Values.deployment.mode }}) is rolling out in {{ .Release.Namespace }}.
+
+1. The Secret "{{ .Values.secrets.existingSecret }}" must exist with at least
+   DATABASE_URL, BETTER_AUTH_SECRET, TOKEN_MASTER_KEY, SMTP_URL and LICENCE_KEY.
+   Without LICENCE_KEY the install runs as an evaluation (one workspace, scheduling
+   for the trial period) and Settings > Billing says so.
+2. Open {{ .Values.app.url }}. The FIRST person to sign up claims the install and
+   creates its one organization; everyone after that needs an invitation.
+3. Check: kubectl -n {{ .Release.Namespace }} get pods
+          curl {{ .Values.app.url }}/api/health   (version, channel, licence state)
+
+Rotate a Secret value: bump secrets.revision and upgrade, or the pods keep the old value.
+Change channel or pin a version: set updates.channel or image.tag and upgrade; the
+migrate hook runs first.

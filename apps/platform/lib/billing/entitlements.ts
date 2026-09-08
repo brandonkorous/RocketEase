@@ -8,14 +8,19 @@
  */
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
+import { organization } from "@/db/schema/auth";
 import { billingSubscription, type SubscriptionStatus } from "@/db/schema/billing";
-import { GRACE_DAYS, includedAiCredits } from "./plans";
+import { isSelfHosted } from "@/lib/deployment";
+import { currentLicence, type LicenceState } from "@/lib/licence";
+import { computeLicenceEntitlements } from "./licence-entitlements";
+import { GRACE_DAYS, includedAiCredits, trialDays } from "./plans";
 import { billingConfigured } from "./stripe";
 
 /** Workspaces an organization may have before it needs a subscription. */
 export const FREE_WORKSPACES = 1;
 
-export type EntitlementState = SubscriptionStatus | "none" | "unconfigured";
+/** Stripe states, the two no-Stripe states, and the licence states of a self-hosted install. */
+export type EntitlementState = SubscriptionStatus | "none" | "unconfigured" | LicenceState;
 
 export type Entitlements = {
   state: EntitlementState;
@@ -85,8 +90,15 @@ export function computeEntitlements(sub: SubRow | null, now: Date, opts: { confi
   };
 }
 
-/** Entitlements for an organization, from the mirror written by the webhook. */
+/** Self-hosted: the licence decides, and the evaluation clock starts when the organization was created. */
+async function licenceEntitlements(organizationId: string, now: Date): Promise<Entitlements> {
+  const [org] = await db.select({ createdAt: organization.createdAt }).from(organization).where(eq(organization.id, organizationId));
+  return computeLicenceEntitlements(currentLicence(now), { claimedAt: org?.createdAt ?? null, now, includedCredits: includedAiCredits(), evaluationDays: trialDays() });
+}
+
+/** Entitlements for an organization: from the licence on a self-hosted install, else from the mirror the webhook writes. */
 export async function entitlements(organizationId: string, now = new Date()): Promise<Entitlements> {
+  if (isSelfHosted()) return licenceEntitlements(organizationId, now);
   const configured = billingConfigured();
   const [sub] = configured
     ? await db.select().from(billingSubscription).where(eq(billingSubscription.organizationId, organizationId))
@@ -103,6 +115,18 @@ export class BillingRequiredError extends Error {
 
 export const NEEDS_SUBSCRIPTION = "Adding another workspace needs an active subscription. Open Settings → Billing to start one.";
 export const NEEDS_PAYMENT = "A payment failed, so new workspaces are paused until billing is fixed. Everything you already have stays exactly as it is.";
+export const NEEDS_LICENCE = "An evaluation install has one workspace. Set LICENCE_KEY in the install's Secret to add more.";
+export const LICENCE_WORKSPACES_FULL = "This licence's workspace allowance is used up. Ask RocketEase for a larger licence.";
+export const LICENCE_EXPIRED_WORKSPACES = "The licence has expired, so new workspaces are paused until a new key is set. Everything you already have stays exactly as it is.";
+
+function workspaceRefusal(ent: Entitlements): string {
+  switch (ent.state) {
+    case "unlicensed": return NEEDS_LICENCE;
+    case "licensed": case "licence_grace": return LICENCE_WORKSPACES_FULL;
+    case "licence_expired": return LICENCE_EXPIRED_WORKSPACES;
+    default: return ent.inGrace || ent.state === "past_due" || ent.state === "unpaid" ? NEEDS_PAYMENT : NEEDS_SUBSCRIPTION;
+  }
+}
 
 /**
  * Guard for workspace creation only. It never gates reading, publishing an
@@ -112,5 +136,5 @@ export async function requireEntitled(organizationId: string, currentWorkspaces:
   const ent = await entitlements(organizationId);
   if (ent.workspacesAllowed === null) return;
   if (currentWorkspaces < ent.workspacesAllowed) return;
-  throw new BillingRequiredError(ent.inGrace || ent.state === "past_due" || ent.state === "unpaid" ? NEEDS_PAYMENT : NEEDS_SUBSCRIPTION);
+  throw new BillingRequiredError(workspaceRefusal(ent));
 }

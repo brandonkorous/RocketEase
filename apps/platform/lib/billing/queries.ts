@@ -12,7 +12,10 @@ import { currentMonthWindow } from "@/lib/ai/usage/period";
 import { usageByWorkspace } from "@/lib/ai/usage/export";
 import { formatInZone } from "@/lib/time";
 import { activeWorkspaceCount, customerForOrg } from "./customer";
+import { isSelfHosted } from "@/lib/deployment";
+import { currentLicence } from "@/lib/licence";
 import { entitlements, type Entitlements } from "./entitlements";
+import { installView, licenceView, LICENCE_STATUS_LABEL, type InstallView, type LicenceView } from "./licence-view";
 import { includedAiCredits, plans } from "./plans";
 import { billingConfigured, describePrice, formatAmount, stripe } from "./stripe";
 import { statusLabel } from "./view";
@@ -41,6 +44,9 @@ export type BillingData = {
   workspaceCredits: WorkspaceCreditRow[];
   /** Set when Stripe was unreachable; the page says so instead of showing nothing. */
   stripeError: boolean;
+  /** A self-hosted install shows its licence and build instead of a plan. */
+  licence: LicenceView | null;
+  install: InstallView | null;
 };
 
 const day = (d: Date | null, tz: string) => (d ? formatInZone(d, tz, { dateStyle: "medium" }) : null);
@@ -72,7 +78,9 @@ async function creditRows(organizationId: string, sub: typeof billingSubscriptio
 
 export async function billingData(ctx: { organizationId: string; organizationName: string; userId: string; timezone: string }): Promise<BillingData> {
   const { organizationId, timezone } = ctx;
-  const configured = billingConfigured();
+  const selfHosted = isSelfHosted();
+  // A self-hosted install's Stripe key (Connect for client statements) is not a subscription.
+  const configured = billingConfigured() && !selfHosted;
   const [ent, canManage, activeWorkspaces, [sub]] = await Promise.all([
     entitlements(organizationId),
     canManageBilling(organizationId, ctx.userId),
@@ -87,7 +95,7 @@ export async function billingData(ctx: { organizationId: string; organizationNam
     canManage,
     organizationName: ctx.organizationName,
     entitlements: ent,
-    statusLabel: sub ? statusLabel(sub.status) : "No subscription",
+    statusLabel: selfHosted ? LICENCE_STATUS_LABEL[currentLicence().state] : sub ? statusLabel(sub.status) : "No subscription",
     gracefulUntil: day(ent.gracefulUntil, timezone),
     renewsOn: day(sub?.currentPeriodEnd ?? null, timezone),
     trialEndsOn: day(sub?.trialEnd ?? null, timezone),
@@ -101,6 +109,8 @@ export async function billingData(ctx: { organizationId: string; organizationNam
     periodLabel: sub?.currentPeriodStart ? `${day(sub.currentPeriodStart, timezone)} – ${day(period.to, timezone)}` : null,
     workspaceCredits,
     stripeError: false,
+    licence: selfHosted ? licenceView(currentLicence(), ent, timezone) : null,
+    install: selfHosted ? await installView(timezone) : null,
   };
   if (!configured || !canManage) return base;
 
@@ -154,4 +164,6 @@ export const EMPTY_BILLING: BillingData = {
   periodLabel: null,
   workspaceCredits: [],
   stripeError: false,
+  licence: null,
+  install: null,
 };

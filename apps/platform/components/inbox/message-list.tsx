@@ -45,7 +45,7 @@ function Bubble({ m, d, workspaceId, canHandle }: { m: MessageRow; d: Conversati
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs text-secondary/70">
           <span>{m.at}</span>
           {out && <span>· Sent by {m.by ?? "you"}</span>}
-          {out && m.state !== "sent" && <span className={m.state === "failed" ? "font-medium text-error" : ""}>· {DELIVERY_LABEL[m.state] ?? m.state}{m.state === "failed" && m.error ? ` — ${m.error}` : ""}</span>}
+          {out && m.state !== "sent" && <span className={m.state === "failed" ? "font-medium text-error" : ""}>· {m.state === "queued" && m.error ? `Waiting — ${m.error}` : (DELIVERY_LABEL[m.state] ?? m.state)}{m.state === "failed" && m.error ? ` — ${m.error}` : ""}</span>}
           {out && m.state === "sent" && <span className="text-success" aria-label="Delivered">✓✓</span>}
           {out && m.state === "failed" && <Button size="xs" variant="ghost" color="neutral" loading={pending} onClick={() => run(() => retryReply(workspaceId, m.id))}>Retry</Button>}
           {out && m.state === "draft" && <Button size="xs" variant="outline" color="neutral" loading={pending} onClick={() => run(() => sendDraftReply(workspaceId, m.id))}>Send</Button>}

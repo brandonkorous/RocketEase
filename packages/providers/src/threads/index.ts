@@ -17,7 +17,7 @@ import { findPublication, publicationStatus, publish, type ThreadsSettings } fro
 import { fetchInbox, findReply, hideItem, reply } from "./inbox";
 import { fetchInsights } from "./insights";
 
-export const DEFAULT_SCOPES = [...SCOPES.base, ...SCOPES.publish, ...SCOPES.readReplies, ...SCOPES.manageReplies, ...SCOPES.insights];
+export const DEFAULT_SCOPES = [...SCOPES.base, ...SCOPES.publish, ...SCOPES.readReplies, ...SCOPES.manageReplies, ...SCOPES.insights, ...SCOPES.keywordSearch];
 
 type Me = { id?: string; username?: string; name?: string; threads_profile_picture_url?: string };
 type ShortToken = { access_token?: string; user_id?: string | number };

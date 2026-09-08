@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { buttonClasses } from "@wizeworks/silicaui-react/server";
-import { agencyPeriod, canSeeEconomics, marginReport, type Client } from "@/lib/agency/margin-queries";
+import { agencyPeriod, canSeeEconomics, marginInputs, marginReport, type Client } from "@/lib/agency/margin-queries";
 import { DEFINITIONS } from "@/lib/agency/margin-csv";
 import { MarginTable } from "./margin-table";
+import { StatementsBlock } from "./statements-block";
 
 type Props = { organizationId: string; userId: string; clients: Client[]; timezone: string; period: string | undefined };
 
@@ -19,6 +20,7 @@ export async function EconomicsSection({ organizationId, userId, clients, timezo
   if (!(await canSeeEconomics(organizationId, userId))) return null;
   const window = agencyPeriod(period, timezone);
   const report = await marginReport({ organizationId, clients, period: window, timezone });
+  const inputs = await marginInputs({ organizationId, clients, period: window, timezone });
 
   return (
     <section className="mt-10 rounded-box border border-base-300 p-5" aria-labelledby={`econ-${organizationId}`}>
@@ -49,6 +51,7 @@ export async function EconomicsSection({ organizationId, userId, clients, timezo
       </div>
 
       <MarginTable organizationId={organizationId} rows={report.rows} totals={report.totals} rates={report.rates} canEdit />
+      <StatementsBlock organizationId={organizationId} clients={clients} inputs={inputs} rates={report.rates} period={window} />
 
       <dl className="mt-4 grid gap-x-6 gap-y-1 border-t border-base-300 pt-3 text-xs text-secondary/70 sm:grid-cols-2">
         {DEFINITIONS.slice(0, 6).map(([term, meaning]) => (

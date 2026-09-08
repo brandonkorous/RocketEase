@@ -152,6 +152,8 @@ export const message = pgTable(
     attempts: integer("attempts").notNull().default(0),
     error: text("error"),
     moderation: jsonb("moderation").$type<MessageModeration>(),
+    /** The automation rule that wrote this outbound message; null when a person did. No FK: the record outlives the rule. */
+    ruleId: text("rule_id"),
     occurredAt: ts("occurred_at").notNull(),
     createdAt: now("created_at"),
   },

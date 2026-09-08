@@ -19,6 +19,8 @@ export const SCOPES = {
   readReplies: ["threads_read_replies"],
   manageReplies: ["threads_manage_replies"],
   insights: ["threads_manage_insights"],
+  /** Public keyword search (M14.11 listening): 2,200 queries a day per user, sensitive terms answer empty. */
+  keywordSearch: ["threads_keyword_search"],
 };
 
 export const LIMITS = {

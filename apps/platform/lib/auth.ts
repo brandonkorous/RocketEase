@@ -5,6 +5,7 @@ import { oneTap, organization, twoFactor } from "better-auth/plugins";
 import { sso } from "@better-auth/sso";
 import { db, schema } from "@/db";
 import { sendMail } from "./mail-queue";
+import { refuseSignupWhenClaimed } from "./self-hosted/signup-hook";
 import { blockPasswordWhenSsoEnforced } from "./sso/enforce-hook";
 
 /**
@@ -56,6 +57,9 @@ export const auth = betterAuth({
   socialProviders: socialProviders(),
   // Server-side enforcement: hiding the password field is not authorization.
   hooks: { before: blockPasswordWhenSsoEnforced },
+  // A claimed self-hosted install creates accounts only for invited addresses,
+  // whatever the sign-in method (docs/plans/m14.12-self-hosted.md).
+  databaseHooks: { user: { create: { before: async (user) => { await refuseSignupWhenClaimed(user); } } } },
   plugins: [
     // Organization = billing/ownership boundary (docs/originals/data-model.md).
     // Workspace membership and the 8 role presets live in our own tables.

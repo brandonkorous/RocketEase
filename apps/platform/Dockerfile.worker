@@ -40,6 +40,10 @@ COPY packages/providers packages/providers
 COPY packages/media packages/media
 COPY apps/platform apps/platform
 ENV NODE_ENV=production RKE_PROCESS=worker
+# What this build calls itself, reported by the update check. Set by CI.
+ARG APP_VERSION=dev
+ARG GIT_SHA=
+ENV APP_VERSION=$APP_VERSION GIT_SHA=$GIT_SHA
 # NUMERIC uid/gid, and USER is the NUMBER. Kubernetes cannot verify a non-numeric
 # user against runAsNonRoot: true — it refuses the container outright with
 #   "image has non-numeric user (app), cannot verify user is non-root"

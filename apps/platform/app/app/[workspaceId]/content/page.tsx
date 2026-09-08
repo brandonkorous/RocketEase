@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { and, desc, eq, ilike, inArray, isNull, ne, or, sql, count, lt, gt } from "drizzle-orm";
 import { LibraryScreen, type AssetCard, type CollectionRow, type LibraryData } from "@/components/library-screen";
+import { QueryToast } from "@/components/query-toast";
 import { db } from "@/db";
 import { user } from "@/db/schema/auth";
 import { asset, assetRendition, folder, tag } from "@/db/schema/assets";
@@ -14,12 +15,14 @@ import { loadBrandKit } from "@/lib/brand/store";
 import { canGenerate } from "@/lib/media/jobs";
 import { imageUnitEstimate } from "@/lib/media/estimate";
 import { recentGenerations } from "@/lib/media/recent";
+import { canvaAppConfig } from "@/lib/import/canva";
+import { ownSource } from "@/lib/import/sources";
 
 export const metadata: Metadata = { title: "Content" };
 
 const PAGE = 12;
 
-type SP = { q?: string; tab?: string; folder?: string; smart?: string; sort?: string; page?: string; asset?: string; tag?: string };
+type SP = { q?: string; tab?: string; folder?: string; smart?: string; sort?: string; page?: string; asset?: string; tag?: string; ok?: string; error?: string };
 
 export default async function ContentPage({ params, searchParams }: { params: Promise<{ workspaceId: string }>; searchParams: Promise<SP> }) {
   const { workspaceId } = await params;
@@ -157,6 +160,7 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
     // A job that fails has to be visible somewhere, and this is where the
     // toast told the person to look (docs/bugs/B-007).
     generations: await recentGenerations(workspaceId),
+    canva: await canvaStatus(workspaceId, ctx.session.user.id),
     selected,
     matched: Number(matched),
     page,
@@ -174,7 +178,15 @@ export default async function ContentPage({ params, searchParams }: { params: Pr
 
   return (
     <Suspense>
+      <QueryToast ok={sp.ok === "canva_connected" ? "Canva connected. Pick designs with Import from Canva." : null} error={sp.error ?? null} />
       <LibraryScreen data={data} />
     </Suspense>
   );
+}
+
+/** The Canva button's state: off when the server has no integration, else this person's own connection. */
+async function canvaStatus(workspaceId: string, userId: string): Promise<LibraryData["canva"]> {
+  if (!canvaAppConfig()) return { configured: false, source: null };
+  const src = await ownSource(workspaceId, userId);
+  return { configured: true, source: src ? { id: src.id, name: src.name } : null };
 }

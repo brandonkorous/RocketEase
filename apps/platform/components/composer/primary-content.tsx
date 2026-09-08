@@ -10,7 +10,7 @@ import { ChannelOverride } from "./channel-override";
 import { HashtagSets } from "./hashtag-sets";
 import { AiCaption } from "./ai-caption";
 import { DisclosureSection } from "./disclosure";
-import type { ComposerChannel } from "./types";
+import { EMPTY_OVERRIDE, type ComposerChannel } from "./types";
 import type { ComposerState } from "./use-composer";
 import { lightboxMedia, NETWORK_LABEL } from "./types";
 
@@ -31,7 +31,7 @@ export function PrimaryContent({ s, channels, workspaceId, onPickMedia }: Props)
         {shared ? (
           <SharedFields s={s} workspaceId={workspaceId} onPickMedia={onPickMedia} />
         ) : (
-          <ChannelOverride channel={channels.find((c) => c.id === tab)!} shared={s.text} value={s.overrides[tab] ?? { textOverride: null, firstComment: "", linkOverride: null }} onChange={(v) => s.setOverrides((o) => ({ ...o, [tab]: v }))} issues={s.validation[tab] ?? []} />
+          <ChannelOverride channel={channels.find((c) => c.id === tab)!} shared={s.text} sharedLink={Boolean(s.link)} value={s.overrides[tab] ?? EMPTY_OVERRIDE} onChange={(v) => s.setOverrides((o) => ({ ...o, [tab]: v }))} issues={s.validation[tab] ?? []} />
         )}
       </div>
       <DisclosureSection s={s} channels={channels} />
@@ -113,7 +113,7 @@ function SharedFields({ s, workspaceId, onPickMedia }: { s: ComposerState; works
         <>
           <Label htmlFor="first-comment" className="mt-5 block text-sm font-semibold">Add first comment <span className="font-normal text-secondary/70">(optional)</span></Label>
           <div className="mt-2 flex items-center rounded-lg border border-base-300 focus-within:border-base-content">
-            <Input id="first-comment" value={fc} onChange={(e) => s.setOverrides((o) => ({ ...o, __shared: { ...(o.__shared ?? { textOverride: null, linkOverride: null, firstComment: "" }), firstComment: e.target.value } }))} placeholder="e.g. Link in bio, or a follow-up question" className="flex-1 border-0 bg-transparent focus:outline-none" />
+            <Input id="first-comment" value={fc} onChange={(e) => s.setOverrides((o) => ({ ...o, __shared: { ...(o.__shared ?? EMPTY_OVERRIDE), firstComment: e.target.value } }))} placeholder="e.g. Link in bio, or a follow-up question" className="flex-1 border-0 bg-transparent focus:outline-none" />
             <span className="pr-3 text-xs text-secondary/70">{fc.length} / 1,000</span>
           </div>
         </>
@@ -124,7 +124,7 @@ function SharedFields({ s, workspaceId, onPickMedia }: { s: ComposerState; works
 
 /** The shared first comment lives under the `__shared` override key. */
 function setSharedFirstComment(s: ComposerState, value: string) {
-  s.setOverrides((o) => ({ ...o, __shared: { ...(o.__shared ?? { textOverride: null, linkOverride: null, firstComment: "" }), firstComment: value } }));
+  s.setOverrides((o) => ({ ...o, __shared: { ...(o.__shared ?? EMPTY_OVERRIDE), firstComment: value } }));
 }
 
 function MediaStrip({ s, onPickMedia }: { s: ComposerState; onPickMedia: () => void }) {

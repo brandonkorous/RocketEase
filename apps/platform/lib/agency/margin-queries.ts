@@ -18,7 +18,7 @@ import { conversation } from "@/db/schema/engagement";
 import { usageByWorkspace } from "@/lib/ai/usage/export";
 import { monthOf, monthWindow, type MonthWindow } from "@/lib/ai/usage/period";
 import { dayKey } from "@/lib/time";
-import { computeMargin, marginTotals, money, unknownMoney, type ClientRate, type MarginRow, type MarginTotals } from "./margin";
+import { computeMargin, marginTotals, money, unknownMoney, type ClientRate, type MarginInput, type MarginRow, type MarginTotals } from "./margin";
 import { aiCost, platformCosts, type PlatformCosts } from "./margin-costs";
 
 export const NO_AD_ACCOUNT = "No ad account is connected for this client, so ad spend is unknown. Connect one from a campaign's Ads tab.";
@@ -101,19 +101,22 @@ export async function clientRates(organizationId: string): Promise<Map<string, C
     adSpendMarkupBps: r.adSpendMarkupBps,
     aiCreditMarkupBps: r.aiCreditMarkupBps,
     note: r.note,
+    billingName: r.billingName,
+    billingEmail: r.billingEmail,
   }]));
 }
 
 export type Client = { id: string; name: string };
 export type MarginReport = { rows: MarginRow[]; totals: MarginTotals; platform: PlatformCosts; period: AgencyPeriod; rates: Map<string, ClientRate> };
 
-/** Everything the Economics table renders for one organization and one month. */
-export async function marginReport(input: {
-  organizationId: string;
-  clients: Client[];
-  period: AgencyPeriod;
-  timezone: string;
-}): Promise<MarginReport> {
+export type ReportInput = { organizationId: string; clients: Client[]; period: AgencyPeriod; timezone: string };
+
+/** The measured inputs per client, shared by the Economics row and the statement (M14.10) so the two never disagree. */
+export async function marginInputs(input: ReportInput): Promise<MarginInput[]> {
+  return (await gather(input)).inputs;
+}
+
+async function gather(input: ReportInput): Promise<{ inputs: MarginInput[]; platform: PlatformCosts; rates: Map<string, ClientRate> }> {
   const ids = input.clients.map((c) => c.id);
   const empty = new Map<string, never>();
   const [platform, rates, usage, published, handled, spend, accounts] = await Promise.all([
@@ -127,11 +130,11 @@ export async function marginReport(input: {
   ]);
   const credits = new Map(usage.map((u) => [u.workspaceId, u.credits]));
 
-  const rows = input.clients.map((c) => {
+  const inputs = input.clients.map((c): MarginInput => {
     // No ledger row means no AI was used — a real zero, not a missing input.
     const used = credits.get(c.id) ?? 0;
     const connected = accounts.has(c.id);
-    return computeMargin({
+    return {
       workspaceId: c.id,
       workspaceName: c.name,
       currency: accounts.get(c.id) ?? platform.currency,
@@ -143,7 +146,14 @@ export async function marginReport(input: {
       postsPublished: published.get(c.id) ?? 0,
       conversationsHandled: handled.get(c.id) ?? 0,
       rate: rates.get(c.id) ?? null,
-    });
+    };
   });
+  return { inputs, platform, rates };
+}
+
+/** Everything the Economics table renders for one organization and one month. */
+export async function marginReport(input: ReportInput): Promise<MarginReport> {
+  const { inputs, platform, rates } = await gather(input);
+  const rows = inputs.map(computeMargin);
   return { rows, totals: marginTotals(rows), platform, period: input.period, rates };
 }

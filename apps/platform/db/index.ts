@@ -28,8 +28,11 @@ import * as staff from "./schema/staff";
 import * as media from "./schema/media";
 import * as voice from "./schema/voice";
 import * as bio from "./schema/bio";
+import * as imports from "./schema/imports";
+import * as listening from "./schema/listening";
+import * as install from "./schema/install";
 
-export const schema = { ...auth, ...app, ...api, ...scim, ...connections, ...assets, ...content, ...approvals, ...engagement, ...analytics, ...telemetry, ...quality, ...campaigns, ...recommendations, ...automations, ...tracking, ...hashtags, ...recycling, ...rights, ...billing, ...aiUsage, ...generator, ...agency, ...features, ...staff, ...media, ...voice, ...bio };
+export const schema = { ...auth, ...app, ...api, ...scim, ...connections, ...assets, ...content, ...approvals, ...engagement, ...analytics, ...telemetry, ...quality, ...campaigns, ...recommendations, ...automations, ...tracking, ...hashtags, ...recycling, ...rights, ...billing, ...aiUsage, ...generator, ...agency, ...features, ...staff, ...media, ...voice, ...bio, ...imports, ...listening, ...install };
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set");

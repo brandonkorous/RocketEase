@@ -1,7 +1,9 @@
 import { Alert, AlertContent } from "@wizeworks/silicaui-react";
 import { AiUsageMeter } from "@/components/ai/usage-meter";
 import type { BillingData } from "@/lib/billing/queries";
+import { InstallCard } from "./install-card";
 import { Invoices } from "./invoices";
+import { LicenceCard } from "./licence-card";
 import { PlanCard } from "./plan-card";
 import { WorkspaceCredits } from "./workspace-credits";
 
@@ -26,7 +28,9 @@ export function BillingSettings({ workspaceId, timezone, data }: Props) {
         These settings apply to the whole {data.organizationName} organization, not just this workspace.
       </p>
 
-      {!data.configured && (
+      {data.licence && <LicenceCard data={data} licence={data.licence} />}
+      {data.install && <InstallCard install={data.install} />}
+      {!data.configured && !data.licence && (
         <Alert color="info">
           <AlertContent>
             <p className="font-semibold">Billing isn&apos;t configured.</p>
@@ -37,7 +41,7 @@ export function BillingSettings({ workspaceId, timezone, data }: Props) {
         </Alert>
       )}
 
-      <PlanCard workspaceId={workspaceId} data={data} />
+      {!data.licence && <PlanCard workspaceId={workspaceId} data={data} />}
       <AiUsageMeter workspaceId={workspaceId} />
       <WorkspaceCredits rows={data.workspaceCredits} periodLabel={data.periodLabel} />
       {data.configured && <Invoices invoices={data.invoices} timezone={timezone} />}

@@ -5,20 +5,21 @@
  * channel is one LOCATION, and its remoteId is the account-scoped resource name
  * (`accounts/{a}/locations/{l}`) because the v4 reviews endpoints are parented
  * on the account while the v1 Business Information API returns bare
- * `locations/{l}`. Nothing is published from here: see inbox.ts for what the
- * product does offer and client.ts for why everything else is off.
+ * `locations/{l}`. Posts (updates, events, offers) go out as localPosts
+ * (posts.ts, M14.8); reviews are the inbox (inbox.ts); client.ts says why
+ * everything else is off.
  */
-import type { ChannelDescriptor, ChannelKind, Credential, HealthReport, ProviderAdapter, ProviderConfig, PublicationStatus, PublishResult, ValidationIssue } from "../types";
+import type { ChannelDescriptor, ChannelKind, Credential, HealthReport, ProviderAdapter, ProviderConfig, ValidationIssue } from "../types";
 import { ProviderError } from "../types";
 import { probe } from "../health";
+import { validateAgainstCapabilities } from "../validate";
 import { ACCOUNTS, capsFor, gbp, INFO, LOCATION_READ_MASK } from "./client";
 import { fetchInbox, findReply, reply } from "./inbox";
 import { DEFAULT_SCOPES, googleBusinessOAuth } from "./oauth";
+import { findPublication, postIssues, publicationStatus, publish } from "./posts";
 
 type GbpAccount = { name?: string; accountName?: string; type?: string; verificationState?: string };
 type GbpLocation = { name?: string; title?: string; storeCode?: string; storefrontAddress?: { locality?: string; administrativeArea?: string } };
-
-const NO_PUBLISH = "RocketEase does not publish to Google Business Profile; a location is connected for reviews only.";
 
 async function listAccounts(cred: Credential): Promise<GbpAccount[]> {
   const res = await gbp<{ accounts?: GbpAccount[] }>("/accounts", cred.accessToken, { base: ACCOUNTS, query: { pageSize: "100" } });
@@ -66,7 +67,7 @@ export function createGoogleBusinessProvider(cfg: ProviderConfig): ProviderAdapt
     key: "google_business",
     displayName: "Google Business Profile",
     networks: ["google_business"],
-    accessSummary: ["See the business accounts and locations you manage", "Read reviews left on the locations you choose", "Reply to those reviews as the business"],
+    accessSummary: ["See the business accounts and locations you manage", "Publish posts (updates, events, offers) to the locations you choose", "Read reviews left on the locations you choose", "Reply to those reviews as the business"],
     defaultScopes: DEFAULT_SCOPES,
     ...googleBusinessOAuth(cfg, identify),
 
@@ -82,18 +83,12 @@ export function createGoogleBusinessProvider(cfg: ProviderConfig): ProviderAdapt
       return probe(DEFAULT_SCOPES, cred.scopes, () => gbp("/accounts", cred.accessToken, { base: ACCOUNTS, query: { pageSize: "1" } }));
     },
 
-    validate(): ValidationIssue[] {
-      return [{ severity: "error", code: "publishing_unsupported", message: NO_PUBLISH, field: "settings" }];
+    validate(channel, req): ValidationIssue[] {
+      return [...validateAgainstCapabilities(channel.capabilities, req), ...postIssues(req)];
     },
-    publish(): Promise<PublishResult> {
-      throw new ProviderError(NO_PUBLISH, { category: "validation", providerCode: "publishing_unsupported" });
-    },
-    async findPublication(): Promise<PublishResult | null> {
-      return null;
-    },
-    async publicationStatus(): Promise<PublicationStatus> {
-      return { state: "unknown" };
-    },
+    publish: (cred, channel, req) => publish(cred, channel, req),
+    findPublication: (cred, channel, key) => findPublication(cred, channel, key),
+    publicationStatus: (cred, _channel, remoteId) => publicationStatus(cred, remoteId),
 
     fetchInbox: (cred, channel, opts) => fetchInbox(cred, channel, opts),
     reply: (cred, channel, req) => reply(cred, channel, req),

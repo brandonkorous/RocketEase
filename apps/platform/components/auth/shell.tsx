@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { Alert, AlertContent } from "@wizeworks/silicaui-react";
 
-export function AuthHeading({ mode }: { mode: "login" | "signup" }) {
+/** `note` replaces the subtitle — a self-hosted install has no trial to offer. */
+export function AuthHeading({ mode, note }: { mode: "login" | "signup"; note?: string }) {
   return (
     <div>
       <h1 className="text-2xl font-bold tracking-tight">{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
-      <p className="mt-1.5 text-sm text-secondary">{mode === "signup" ? "Start your free 14-day trial. No credit card required." : "Log in to your RocketEase account."}</p>
+      <p className="mt-1.5 text-sm text-secondary">{note ?? (mode === "signup" ? "Start your free 14-day trial. No credit card required." : "Log in to your RocketEase account.")}</p>
     </div>
   );
 }

@@ -2,7 +2,9 @@ import { eq, sql } from "drizzle-orm";
 import { ProviderError, type ReplyResult } from "@rocketease/providers";
 import { db } from "@/db";
 import { conversation, conversationEvent, message, type Message } from "@/db/schema/engagement";
+import { replyDecision } from "@/lib/engagement/messaging/decide";
 import type { JobPayloads } from "@/lib/jobs/queues";
+import { emit } from "@/lib/jobs/outbox";
 import { notify } from "@/lib/notifications";
 import { getAdapter, loadCredential, toDescriptor } from "@/lib/providers";
 import { workspacePath } from "@/lib/nav";
@@ -14,7 +16,7 @@ async function markSent(m: Message, r: ReplyResult) {
   await db.transaction(async (tx) => {
     await tx.update(message).set({ deliveryState: "sent", remoteId: r.remoteId, occurredAt: new Date(r.sentAt), error: null }).where(eq(message.id, m.id));
     await tx.update(conversation).set({ lastOutboundAt: new Date(r.sentAt), firstResponseAt: sql`coalesce(${conversation.firstResponseAt}, ${new Date(r.sentAt).toISOString()}::timestamptz)`, lastMessageAt: new Date(r.sentAt), preview: m.body.slice(0, 200), updatedAt: new Date() }).where(eq(conversation.id, m.conversationId));
-    await tx.insert(conversationEvent).values({ workspaceId: m.workspaceId, conversationId: m.conversationId, kind: "replied", actorUserId: m.authorUserId, data: { messageId: m.id, remoteId: r.remoteId } });
+    await tx.insert(conversationEvent).values({ workspaceId: m.workspaceId, conversationId: m.conversationId, kind: "replied", actorUserId: m.authorUserId, data: { messageId: m.id, remoteId: r.remoteId, ruleId: m.ruleId ?? undefined } });
   });
 }
 
@@ -26,17 +28,34 @@ async function markFailed(m: Message, reason: string) {
   await notify({ workspaceId: m.workspaceId, organizationId: m.organizationId, userId: m.authorUserId, kind: "inbox.reply_failed", title: "A reply could not be sent", body: reason, href: workspacePath(m.workspaceId, `inbox/${m.conversationId}`) });
 }
 
-/**
- * ENG-003: an ambiguous provider outcome is reconciled (findReply by
- * idempotency key) before anything is sent again. Non-retryable categories
- * fail fast and notify the author.
- */
-export async function inboxReply(data: JobPayloads["inbox.reply"], ctx: HandlerContext) {
-  const m = await db.query.message.findFirst({ where: (x, { eq }) => eq(x.id, data.messageId) });
-  if (!m || m.direction !== "outbound" || m.deliveryState === "sent" || m.deliveryState === "failed") return;
+/** A network cap that clears with time: the row stays queued, says why, and a later job tries again. */
+async function waitUntil(m: Message, why: string, at: Date) {
+  await db.transaction(async (tx) => {
+    await tx.update(message).set({ deliveryState: "queued", error: why }).where(eq(message.id, m.id));
+    await emit(tx, "inbox.reply", { messageId: m.id }, { organizationId: m.organizationId, workspaceId: m.workspaceId, dedupeKey: `inbox.reply:${m.id}:${at.getTime()}`, runAt: at });
+  });
+}
+
+async function loadContext(messageId: string) {
+  const m = await db.query.message.findFirst({ where: (x, { eq }) => eq(x.id, messageId) });
+  if (!m || m.direction !== "outbound" || m.deliveryState === "sent" || m.deliveryState === "failed") return null;
   const conv = await db.query.conversation.findFirst({ where: (c, { eq }) => eq(c.id, m.conversationId) });
   const ch = conv && (await db.query.channel.findFirst({ where: (c, { eq }) => eq(c.id, conv.channelId) }));
   const conn = ch && (await db.query.providerConnection.findFirst({ where: (c, { eq }) => eq(c.id, ch.connectionId) }));
+  return { m, conv, ch, conn };
+}
+
+/**
+ * ENG-003: an ambiguous provider outcome is reconciled (findReply by
+ * idempotency key) before anything is sent again. Non-retryable categories
+ * fail fast and notify the author. A direct message is judged against the
+ * network's window and caps right before the call (M14.7), because a reply
+ * queued inside the window can reach the front of the queue outside it.
+ */
+export async function inboxReply(data: JobPayloads["inbox.reply"], ctx: HandlerContext) {
+  const loaded = await loadContext(data.messageId);
+  if (!loaded) return;
+  const { m, conv, ch, conn } = loaded;
   if (!conv || !ch || !conn) return markFailed(m, "The channel is no longer connected.");
   const adapter = getAdapter(conn.provider);
   if (!adapter.reply) return markFailed(m, "This network does not support replies from RocketEase.");
@@ -53,6 +72,8 @@ export async function inboxReply(data: JobPayloads["inbox.reply"], ctx: HandlerC
     if (found) { l.info("ambiguous reply reconciled as sent"); return markSent(m, found); }
     l.info("ambiguous reply not found remotely; sending again");
   }
+  const gate = await replyDecision(conv, ch, { automated: Boolean(m.ruleId), excludeMessageId: m.id });
+  if (!gate.ok) { l.info("reply held", { why: gate.why, retryAt: gate.retryAt }); return gate.retryAt ? waitUntil(m, gate.why, gate.retryAt) : markFailed(m, gate.why); }
 
   const identity = await db.query.contactIdentity.findFirst({ where: (i, { and, eq }) => and(eq(i.contactId, conv.contactId), eq(i.network, ch.network)) });
   const request = { kind: conv.kind, threadRemoteId: conv.remoteThreadId, inReplyToRemoteId: m.inReplyToRemoteId ?? undefined, recipientRemoteId: identity?.remoteId, postRemoteId: conv.postRemoteId ?? undefined, text: m.body, idempotencyKey: key };

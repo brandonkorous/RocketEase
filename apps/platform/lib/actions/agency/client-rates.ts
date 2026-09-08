@@ -24,6 +24,8 @@ const schema = z.object({
   adSpendMarkupBps: bps.default(null),
   aiCreditMarkupBps: bps.default(null),
   note: z.string().max(500).default(""),
+  billingName: z.string().trim().max(120).nullable().default(null),
+  billingEmail: z.string().trim().email().max(254).nullable().default(null).or(z.literal("").transform(() => null)),
 });
 export type ClientRateInput = z.input<typeof schema>;
 

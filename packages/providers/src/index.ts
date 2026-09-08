@@ -4,6 +4,7 @@ export * from "./insights-types";
 export * from "./ads-types";
 export { validateAgainstCapabilities } from "./validate";
 export { HIDE_SUPPORT, hideWhy, type HideSupport } from "./moderation";
+export { MESSAGING_RULES, dmWhy, type MessagingRules } from "./messaging";
 export {
   DISCLOSURE_LINE,
   applyDisclosure,

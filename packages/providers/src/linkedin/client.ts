@@ -14,9 +14,16 @@ export const OAUTH = "https://www.linkedin.com/oauth/v2";
 export const VERSION = "202411";
 export const now = () => new Date().toISOString();
 
-/** Scopes each feature needs (Community Management API). */
+/*
+ * Scopes each feature needs (Community Management API).
+ *
+ * Identity is `r_basicprofile`, NOT OpenID Connect. LinkedIn refuses to put the
+ * Community Management API on an app that carries any other product, so the app
+ * that can post to a Page can never also have Sign In with OpenID Connect — and
+ * so never has `openid` to call /v2/userinfo with.
+ */
 export const SCOPES = {
-  identity: ["openid", "profile"],
+  identity: ["r_basicprofile"],
   orgRead: ["r_organization_social"],
   orgWrite: ["w_organization_social"],
   orgAdmin: ["rw_organization_admin"],

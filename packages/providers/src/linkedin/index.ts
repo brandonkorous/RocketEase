@@ -14,9 +14,10 @@ import { findPublication, publicationStatus, publish } from "./publish";
 import { fetchInbox, findReply, reply } from "./inbox";
 import { fetchInsights } from "./insights";
 
-const DEFAULT_SCOPES = [...SCOPES.identity, "email", ...SCOPES.member, ...SCOPES.orgRead, ...SCOPES.orgWrite, ...SCOPES.orgAdmin, "r_organization_admin"];
+const DEFAULT_SCOPES = [...SCOPES.identity, ...SCOPES.member, ...SCOPES.orgRead, ...SCOPES.orgWrite, ...SCOPES.orgAdmin];
 type TokenRes = { access_token?: string; expires_in?: number; refresh_token?: string; refresh_token_expires_in?: number; scope?: string } & LiError;
 type UserInfo = { sub?: string; name?: string; picture?: string };
+type Me = { id?: string; localizedFirstName?: string; localizedLastName?: string };
 type Acl = { organization: string; role: string; state: string };
 
 async function token(body: Record<string, string>): Promise<TokenRes> {
@@ -27,10 +28,14 @@ async function token(body: Record<string, string>): Promise<TokenRes> {
 
 const expiry = (s: number | undefined, fallback?: string) => (s ? new Date(Date.now() + s * 1000).toISOString() : fallback);
 
+/* The member behind the token, via r_basicprofile — see SCOPES for why not OIDC.
+ * /v2/me's default projection returns the avatar as a digitalmediaAsset URN, not
+ * a URL, so no picture is reported rather than a URN dressed up as one. */
 async function userinfo(accessToken: string): Promise<UserInfo> {
-  const me = await httpJson<UserInfo & LiError>("https://api.linkedin.com/v2/userinfo", { headers: { Authorization: `Bearer ${accessToken}` } });
+  const me = await httpJson<Me & LiError>("https://api.linkedin.com/v2/me", { headers: { Authorization: `Bearer ${accessToken}`, "X-RestLi-Protocol-Version": "2.0.0" } });
   if (me.status >= 400) throw mapLinkedInError(me.status, me.body, { headers: me.headers });
-  return me.body;
+  const name = [me.body.localizedFirstName, me.body.localizedLastName].filter(Boolean).join(" ");
+  return { sub: me.body.id, name: name || undefined };
 }
 
 async function adminOrganizations(cred: Credential): Promise<ChannelDescriptor[]> {

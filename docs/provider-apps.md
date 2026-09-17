@@ -57,8 +57,8 @@ only — **LinkedIn Community Management came back granted**.
 |---|---|---|---|
 | Meta (Facebook, Instagram, Messenger) | RocketEase — App ID `1488577546410666` | ✅ `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN` | Configured, **Unpublished**. All 15 adapter scopes `Ready for testing` (fixed 2026-08-30). Dev-mode connect works for app-role users. Webhooks subscribed 2026-09-16 (test-only until published). |
 | Threads | separate App ID `1558790839312850` | ❌ `THREADS_APP_ID`, `THREADS_APP_SECRET` not yet copied | Use case enabled on the Meta app. **Adapter built 2026-09-05** (`packages/providers/src/threads`). Copy the Threads app secret, add redirect URI `https://app.rocketease.com/api/connect/threads/callback` plus the uninstall/delete callback URLs (`…/api/connect/threads/deauthorize`, `…/api/connect/threads/data-deletion`), then connect. |
-| LinkedIn (member + identity) | RocketEase — client `86fk181ipt6rb5` (app `263549053`) | ✅ `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | Company-verified. *Sign In with OpenID Connect* provisioned. |
-| LinkedIn (organization) | RocketEase Community Management — client `86jcpr1hj2u7hi` (app `263545132`) | — (throwaway app) | **Development Tier GRANTED** (seen 2026-09-16). All twelve organization scopes are listed on the app's Auth tab. Standard Tier is the next request and needs a screencast. |
+| LinkedIn (unused) | RocketEase — client `86fk181ipt6rb5` (app `263549053`) | — | Company-verified, *Sign In with OpenID Connect* only. **Not the app RocketEase uses.** LinkedIn is not a sign-in provider here, and this app can never gain the Community Management API. |
+| **LinkedIn** | RocketEase Community Management — client `86jcpr1hj2u7hi` (app `263545132`) | ✅ `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` (local `.env` updated 2026-09-16; **Key Vault still points at the old app**) | **Development Tier GRANTED** (2026-09-16). Twelve organization scopes on the Auth tab; redirect URLs added for production and `localhost:5001`. This is the real LinkedIn app — not a throwaway. Standard Tier needs a screencast. |
 | TikTok | RocketEase — app `7679511401195653138`, client key `aw0hmw00gt9blqwz` | ✅ `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET` | **Production draft is EMPTY** — see the TikTok gotcha below. Domain `rocketease.com` verified. Sandbox `rocketease-dev` (id `7686179673482758151`) created and fully configured 2026-09-16. |
 | YouTube / Google Business / GA4 | Google Cloud project `rocketease` (`920126186446`), OAuth client `rocketease-providers` | ✅ `YOUTUBE_*`, `GOOGLE_BUSINESS_*`, `GA4_*` (one client serves all three) | APIs enabled. Consent screen in **Testing**. |
 | Pinterest | WizeWorks RocketEase — App id `1606292` | ❌ none until approved | **Trial access pending** (checked 2026-09-16). |
@@ -69,6 +69,13 @@ only — **LinkedIn Community Management came back granted**.
 ## What is configured, per platform
 
 ### Meta
+- **Tech Provider**, accepted 2026-09-16. This cannot be undone, and it is what a multi-tenant social
+  tool has to be. It adds *access verification* and data-handling questions to App Review.
+- Business verification: **Verified**, WizeWork LLC, portfolio `1675983323508921`.
+- Access-verification answers as drafted (SaaS Platform; does not manage other portfolios;
+  `https://rocketease.com`): the free-text answer is in `docs/provider-apps.md` history and in the
+  console draft. Read it before submitting — it speaks for the company.
+- Webhooks: Page `feed`/`mention`/`messages`, Instagram `comments`/`mentions`/`messages`.
 - Use cases: Manage everything on your Page · Manage messaging & content on Instagram · Engage with
   customers on Messenger · Measure ad performance data with Marketing API (`ads_read` only, no ad-write)
   · Access the Threads API.
@@ -147,23 +154,46 @@ goes anywhere near a submission.
 | B6 | Google app verification (every scope used is *sensitive*) | Google | anyone outside the test-user list |
 | B7 | Google Business Profile API access request — the three APIs ship with **quota 0** even when enabled | Google | Business Profile entirely |
 | B8 | DMCA designated agent not registered with the U.S. Copyright Office | us | §512(c) safe harbour (not a provider gate) |
-| B9 | **Meta Tech Provider verification** — new. The dashboard requires it before App Review can be submitted at all, and it carries its own access verification | Meta, once we apply | Facebook and Instagram entirely |
+| B9 | **Meta access verification** — Tech Provider was accepted 2026-09-16 (irreversible, and the right answer: RocketEase touches other businesses' assets). Business verification already reads *Verified* for WizeWork LLC. The access-verification form is **filled and saved as a draft, not submitted**. **Hard deadline 11/15/2026 or 2 apps get restricted.** Meta answers within 5 days | us to submit, then Meta | Facebook and Instagram entirely |
 
 ## When an approval lands — resume here
 
-**LinkedIn Community Management approved (B4) — this happened.** Confirmed 2026-09-16: on app
-`263545132` the product sits under *Added products* at **Development Tier**, and the Auth tab lists
-`r_organization_social`, `w_organization_social`, `rw_organization_admin`, `r_organization_followers`,
-`r_organization_social_feed`, `w_organization_social_feed`, `w_member_social`, `w_member_social_feed`,
-`r_basicprofile`, `r_member_postAnalytics`, `r_member_profileAnalytics`, `r_1st_connections_size`.
-The main app `263549053` still has only *Sign In with OpenID Connect*. The throwaway app is only a
-vehicle. Next:
-1. On app `263545132`, complete the **Standard Tier** request: form plus a screencast of each use case.
-2. Once Standard Tier is granted, request Community Management API **on the main app** (`263549053`),
-   entering `86jcpr1hj2u7hi` as the client ID to skip most questions.
-3. Then request *Share on LinkedIn* on the main app for `w_member_social`.
-4. The throwaway app can be discarded. No `.env` change — the main app's credentials are already set.
-5. Verify `packages/providers/src/linkedin/index.ts` `DEFAULT_SCOPES` matches what was actually granted.
+**LinkedIn Community Management approved (B4) — this happened, and it reshaped the integration.**
+
+Confirmed 2026-09-16: on app `263545132` the product sits under *Added products* at **Development Tier**,
+and the Auth tab lists `r_organization_social`, `w_organization_social`, `rw_organization_admin`,
+`r_organization_followers`, `r_organization_social_feed`, `w_organization_social_feed`, `w_member_social`,
+`w_member_social_feed`, `r_basicprofile`, `r_member_postAnalytics`, `r_member_profileAnalytics`,
+`r_1st_connections_size`.
+
+**The plan that used to be written here — "then request Community Management on the main app" — does not
+work.** The button is disabled on app `263549053`, and LinkedIn says why in a tooltip:
+
+> This API product requires that it be the only product on the application for legal and security reasons.
+> This product cannot be requested because there are currently other provisioned products or other pending
+> product requests. A new developer application can be created to request this product.
+
+So `263545132` is permanently the LinkedIn app, and `263549053` (Sign In with OpenID Connect) is
+permanently unused — LinkedIn is not a sign-in provider in RocketEase, so nothing needs it. Done 2026-09-16:
+
+1. Redirect URLs added to `263545132`: production and `http://localhost:5001/api/connect/linkedin/callback`
+   (LinkedIn accepts localhost, so **LinkedIn is the one network testable without deploying**).
+2. `packages/providers/src/linkedin` moved off OpenID Connect. `SCOPES.identity` is now `r_basicprofile`
+   and `userinfo()` calls `GET /v2/me` (with `X-RestLi-Protocol-Version: 2.0.0`), because an app without
+   OIDC has no `openid` to call `/v2/userinfo` with. `email` and `r_organization_admin` left `DEFAULT_SCOPES`
+   — neither is granted on this app, and an ungranted scope fails the whole authorize.
+3. Local `apps/platform/.env` points at `86jcpr1hj2u7hi`.
+
+Still to do:
+
+- **Key Vault is NOT updated** — production still points at `86fk181ipt6rb5`, which cannot post to a Page:
+  ```
+  az keyvault secret set --vault-name kv-rocketease-prod-cus --name LINKEDIN-CLIENT-ID --value 86jcpr1hj2u7hi
+  az keyvault secret set --vault-name kv-rocketease-prod-cus --name LINKEDIN-CLIENT-SECRET --value '<secret>'
+  ```
+  Then redeploy so the pods pick up a new `platform-env` (see `deploy/README.md` on the env-hash annotation).
+- Standard Tier on `263545132`: form plus a screencast of each use case.
+- Then request *Share on LinkedIn* if member posting ever needs more than `w_member_social`.
 
 **TikTok approved.** Credentials are already in `.env`; nothing to copy. Confirm the granted scope set
 against `SCOPES` in `packages/providers/src/tiktok/client.ts` — see the gap below.

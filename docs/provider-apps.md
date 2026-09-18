@@ -151,7 +151,7 @@ goes anywhere near a submission.
 | B3 | TikTok "explain each product and scope" write-up (1000 chars) | us — an 892-char draft is kept below, unreviewed | TikTok app review |
 | ~~B4~~ | ~~LinkedIn Community Management review~~ — **granted at Development Tier**, seen 2026-09-16 | — | — |
 | B5 | Pinterest access review | Pinterest | Pinterest entirely |
-| B6 | Google app verification (every scope used is *sensitive*) — checked 2026-09-17: publishing status **Testing**, user type **External**, **1 of 100** test users (`brandon@wize.works`). Nothing has been submitted for verification yet, so this is ours to start, not Google's to answer. | us to submit, then Google | anyone outside the test-user list |
+| B6 | Google app verification — **prepared 2026-09-17, one click short of submitted.** Branding was already complete (logo, home/privacy/terms on `rocketease.com`, authorized domain, `support@`/`hello@`); the app name read `rocketease` and is now `RocketEase`, because that string is what the consent screen shows a customer. Data Access carried **only** `openid`/`email`/`profile` — none of the six scopes the adapters actually send — so all six were added and saved. **The header on this blocker was wrong: not every scope is sensitive.** Google classifies `business.manage` and `yt-analytics.readonly` as non-sensitive, `analytics.readonly` and the three `youtube.*` as sensitive, and **none as restricted** — so this needs a brand review, not a CASA third-party security assessment. Remaining: press **Publish app** on the Audience page (that is what starts the review), then answer the per-scope justification and supply a demo video. | us to press Publish, then Google | anyone outside the test-user list |
 | B7 | Google Business Profile API access request — the three APIs ship with **quota 0** even when enabled. Confirmed 2026-09-17 on `mybusinessbusinessinformation`: *Requests per minute* = **0**, while Create/Update/Search Location per-day quotas are non-zero. Google's own console note points at <https://developers.google.com/my-business/content/prereqs#request-access>. | Google | Business Profile entirely |
 | B8 | DMCA designated agent not registered with the U.S. Copyright Office | us | §512(c) safe harbour (not a provider gate) |
 | B9 | **Meta access verification** — Tech Provider was accepted 2026-09-16 (irreversible, and the right answer: RocketEase touches other businesses' assets). Business verification already reads *Verified* for WizeWork LLC. **Submitted 2026-09-16 7:54 PM by Brandon Korous; still *In review* on 2026-09-17.** The console now states the deadline as **11/16/2026** or 2 apps get restricted. Meta answers within 5 business days | Meta | Facebook and Instagram entirely |
@@ -186,7 +186,9 @@ permanently unused — LinkedIn is not a sign-in provider in RocketEase, so noth
 
 Still to do:
 
-- **Key Vault is NOT updated** — production still points at `86fk181ipt6rb5`, which cannot post to a Page:
+- **Key Vault is NOT updated** — re-checked 2026-09-17: both entries still carry their 2026-08-30 write
+  timestamp and `LINKEDIN-CLIENT-ID` still reads `86fk181ipt6rb5`, which cannot post to a Page. The local
+  `.env` *is* correct, which is the easy thing to mistake for the vault being correct:
   ```
   az keyvault secret set --vault-name kv-rocketease-prod-cus --name LINKEDIN-CLIENT-ID --value 86jcpr1hj2u7hi
   az keyvault secret set --vault-name kv-rocketease-prod-cus --name LINKEDIN-CLIENT-SECRET --value '<secret>'
@@ -201,9 +203,9 @@ against `SCOPES` in `packages/providers/src/tiktok/client.ts` — see the gap be
 **Pinterest approved.** Copy App ID and secret into `PINTEREST_APP_ID` / `PINTEREST_APP_SECRET`, then
 add the redirect URI `https://app.rocketease.com/api/connect/pinterest/callback`.
 
-**Google verification passed (B6).** Switch the consent screen from Testing to In production
-(`console.cloud.google.com/auth/audience?project=rocketease`). Until then only listed test users can
-complete *any* Google OAuth flow; `brandon@wize.works` is the only one.
+**Google verification passed (B6).** The consent screen goes to In production as part of *starting*
+the review, not after it finishes — see B6. Until that click, only listed test users can complete
+*any* Google OAuth flow; `brandon@wize.works` is the only one.
 
 **Meta review.** Set the Data Deletion Request **callback** URL
 (`…/api/connect/meta/data-deletion`) in Facebook Login settings, replacing the instructions URL, once

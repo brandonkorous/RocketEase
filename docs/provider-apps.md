@@ -32,7 +32,17 @@ Callback `https://app.rocketease.com/api/webhooks/meta`, verified against the li
 confirmed after a reload. Note the dashboard's own warning: while the app is **Unpublished only test
 webhooks sent from the dashboard are delivered** — no production events, not even from app admins.
 
-The gate in front of Meta App Review is no longer webhooks, it is **Tech Provider verification** (B9).
+Tech Provider verification cleared on 2026-09-18, so the gate in front of Meta App Review is now the
+**submission itself**. The Dashboard checklist has six of ten items green; the four that are not are
+*Customize the Messenger use case*, *Facebook Login for Business*, *App Review* and *publish the app* —
+and the Messenger one is grey only because it waits on App Review, not on any setting. The submission
+basket already holds all 24 items and matches the adapters exactly. The wizard has five sections
+(Verification, App settings, Allowed usage, Data handling, Reviewer instructions); the last one wants a
+screencast and test credentials, so **Meta, TikTok and Google are now all blocked on the same missing
+thing: a demo video**.
+
+One number to watch: the Marketing API use case sits at **Limited access, 0 of 500 API calls** with an
+85% success-rate floor. Every other permission reads *Ready for testing*.
 The dashboard says so plainly: *"Become a Tech Provider to submit to App Review and request access to
 user data and data from other businesses."*
 
@@ -56,7 +66,7 @@ only — **LinkedIn Community Management came back granted**.
 | Platform | App / project | Credentials in `.env` | State |
 |---|---|---|---|
 | Meta (Facebook, Instagram, Messenger) | RocketEase — App ID `1488577546410666` | ✅ `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN` | Configured, **Unpublished**. All 15 adapter scopes `Ready for testing` (fixed 2026-08-30). Dev-mode connect works for app-role users. Webhooks subscribed 2026-09-16 (test-only until published). |
-| Threads | separate App ID `1558790839312850` | ❌ `THREADS_APP_ID`, `THREADS_APP_SECRET` not yet copied | Use case enabled on the Meta app. **Adapter built 2026-09-05** (`packages/providers/src/threads`). Copy the Threads app secret, add redirect URI `https://app.rocketease.com/api/connect/threads/callback` plus the uninstall/delete callback URLs (`…/api/connect/threads/deauthorize`, `…/api/connect/threads/data-deletion`), then connect. |
+| Threads | separate App ID `1558790839312850` | ⚠ `THREADS_APP_ID` set in local `.env` 2026-09-18; `THREADS_APP_SECRET` still empty (and neither is in Key Vault) | **Configured 2026-09-18.** Display name, redirect callback, uninstall callback and delete callback are all saved and verified after a reload. All six scopes the adapter sends are on the use case; the four it does not send were removed. Only the secret is left. |
 | LinkedIn (unused) | RocketEase — client `86fk181ipt6rb5` (app `263549053`) | — | Company-verified, *Sign In with OpenID Connect* only. **Not the app RocketEase uses.** LinkedIn is not a sign-in provider here, and this app can never gain the Community Management API. |
 | **LinkedIn** | RocketEase Community Management — client `86jcpr1hj2u7hi` (app `263545132`) | ✅ `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` (local `.env` updated 2026-09-16; **Key Vault still points at the old app**) | **Development Tier GRANTED** (2026-09-16). Twelve organization scopes on the Auth tab; redirect URLs added for production and `localhost:5001`. This is the real LinkedIn app — not a throwaway. Standard Tier needs a screencast. |
 | TikTok | RocketEase — app `7679511401195653138`, client key `aw0hmw00gt9blqwz` | ✅ `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET` | **Production draft is EMPTY** — see the TikTok gotcha below. Domain `rocketease.com` verified. Sandbox `rocketease-dev` (id `7686179673482758151`) created and fully configured 2026-09-16. |
@@ -212,7 +222,7 @@ Business Profile location and a real GA4 property on the test account.
 | B6 | Google app verification — **prepared 2026-09-17, one click short of submitted.** Branding was already complete (logo, home/privacy/terms on `rocketease.com`, authorized domain, `support@`/`hello@`); the app name read `rocketease` and is now `RocketEase`, because that string is what the consent screen shows a customer. Data Access carried **only** `openid`/`email`/`profile` — none of the six scopes the adapters actually send — so all six were added and saved. **The header on this blocker was wrong: not every scope is sensitive.** Google classifies `business.manage` and `yt-analytics.readonly` as non-sensitive, `analytics.readonly` and the three `youtube.*` as sensitive, and **none as restricted** — so this needs a brand review, not a CASA third-party security assessment. Remaining: press **Publish app** on the Audience page (that is what starts the review), then answer the per-scope justification and supply a demo video. | us to press Publish, then Google | anyone outside the test-user list |
 | B7 | Google Business Profile API access request — the three APIs ship with **quota 0** even when enabled. Confirmed 2026-09-17 on `mybusinessbusinessinformation`: *Requests per minute* = **0**, while Create/Update/Search Location per-day quotas are non-zero. Google's own console note points at <https://developers.google.com/my-business/content/prereqs#request-access>. | Google | Business Profile entirely |
 | B8 | DMCA designated agent not registered with the U.S. Copyright Office | us | §512(c) safe harbour (not a provider gate) |
-| B9 | **Meta access verification** — Tech Provider was accepted 2026-09-16 (irreversible, and the right answer: RocketEase touches other businesses' assets). Business verification already reads *Verified* for WizeWork LLC. **Submitted 2026-09-16 7:54 PM by Brandon Korous; still *In review* on 2026-09-17.** The console now states the deadline as **11/16/2026** or 2 apps get restricted. Meta answers within 5 business days | Meta | Facebook and Instagram entirely |
+| ~~B9~~ | ~~Meta access verification~~ — **CLEARED 2026-09-18.** Submitted 09-16 7:54 PM, and the console now reads *"Your business was verified as a Tech Provider."* Two days, not five. | — | — |
 
 ## When an approval lands — resume here
 
@@ -277,9 +287,11 @@ B1 is cleared and the endpoint answers. Then configure webhooks and submit for r
   until those are granted separately; check `capsFor()` degrades rather than throwing.
 - **LinkedIn `r_member_social` is closed** — LinkedIn is not accepting requests. Not in
   `DEFAULT_SCOPES`, so nothing to change; do not add it.
-- **Threads** scopes the adapter asks for: `threads_basic`, `threads_content_publish`, `threads_read_replies`,
-  `threads_manage_replies`, `threads_manage_insights`. Enable each under the Threads use case before the first
-  connect; webhooks (`replies`, `mentions`) additionally need Advanced Access and a verified business.
+- ~~**Threads** scopes~~ — **closed 2026-09-18.** The use case now carries exactly the six in `DEFAULT_SCOPES`
+  (`threads_basic`, `threads_content_publish`, `threads_read_replies`, `threads_manage_replies`,
+  `threads_manage_insights`, `threads_keyword_search`). `threads_manage_mentions` was added by mistake and
+  removed again: the adapter declares `mentions: false`, and asking for a permission the code never uses is a
+  documented rejection reason. Webhooks (`replies`, `mentions`) still need Advanced Access.
 
 ## Console gotchas worth remembering
 

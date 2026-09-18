@@ -16,7 +16,7 @@ import { metaInboxItemsFromWebhook, parseMetaWebhook, verifyMetaWebhook } from "
 import { parseMetaSignedRequest } from "./signed-request";
 import { fetchPaidInsights, fetchPaidObjects, findPromotion, listAdAccounts, promote, setPaidObjectStatus } from "./ads";
 
-const SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "pages_manage_metadata", "pages_read_user_content", "pages_manage_engagement", "pages_messaging", "instagram_basic", "instagram_content_publish", "instagram_manage_comments", "instagram_manage_insights", "instagram_manage_messages", "business_management", "read_insights", "ads_read"];
+const SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "pages_manage_metadata", "pages_read_user_content", "pages_manage_engagement", "pages_messaging", "instagram_basic", "instagram_content_publish", "instagram_manage_comments", "instagram_manage_insights", "instagram_manage_messages", "business_management", "read_insights", "ads_read", "ads_management"];
 
 type TokenRes = { access_token?: string; expires_in?: number } & GraphError;
 type PageNode = { id: string; name: string; access_token: string; picture?: { data?: { url?: string } }; instagram_business_account?: { id: string; username?: string; profile_picture_url?: string; name?: string } };

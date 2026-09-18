@@ -142,6 +142,64 @@ goes anywhere near a submission.
   each on production and `localhost:5001`.
 - Sign-in client `rocketease-web` is separate and unchanged.
 
+#### Verification submission (started 2026-09-17)
+
+Data Access now carries all six scopes the adapters send. Google classifies them as **4 sensitive**
+(`analytics.readonly`, `youtube.readonly`, `youtube.force-ssl`, `youtube.upload`) and **0 restricted**,
+so this is a brand review, not a CASA security assessment.
+
+**The form saves all-or-nothing, exactly like TikTok's.** The justification below is typed into
+*How will the scopes be used?* but **Save is refused** — "Please review and update the invalid fields"
+— because *YouTube link* is required. Do not reload that tab expecting the text to still be there.
+
+Justification, 980 / 1000 characters:
+
+> RocketEase is a social marketing platform. A business connects its own YouTube channel and its own
+> GA4 property; only the workspace that connected an account can see its data.
+>
+> youtube.readonly - list the channels the signed-in person owns so they can choose which one to
+> connect, then read video metadata afterwards to reconcile what we published.
+>
+> youtube.upload - videos.insert is the only way to publish a scheduled video or Short. Google
+> publishes no narrower upload scope.
+>
+> youtube.force-ssl - commentThreads.list and comments.insert both require it. We show comments in one
+> inbox and send the reply the person types. youtube.readonly cannot write a reply, and there is no
+> comments-only scope.
+>
+> analytics.readonly - read-only GA4 reports, used to attribute website conversions back to the posts
+> that drove them. We request no GA4 write scope.
+>
+> We do not sell this data, use it for advertising or profiling, license it to data brokers, or train
+> machine-learning models on it.
+
+The last paragraph is quoted from our own published policy
+(`apps/web/content/legal/privacy/data.ts:45`), not asserted.
+
+#### Demo video — the shot list
+
+Google's note says the video "must include **all** OAuth clients that you assigned to this project".
+The Clients page lists exactly two, so **both** have to appear: `rocketease-web` (Better Auth sign-in)
+and `rocketease-providers` (every provider connection). Record as `brandon@wize.works`, the only test
+user. An unlisted upload is fine.
+
+**Show the "Google hasn't verified this app" screen. Do not click past it off camera** — Google's own
+note says it is expected and must be in the video.
+
+1. Address bar on `https://app.rocketease.com`, so the domain matches the authorized domain.
+2. **`rocketease-web`** — sign out, then sign in with Google. Consent screen, then the app.
+3. **`rocketease-providers` / YouTube** — Connected accounts → Connect YouTube. Let the consent
+   screen list the scopes on camera, accept, then show the channel picker (`youtube.readonly`).
+4. `youtube.upload` — Create a post with a video and publish it to that channel.
+5. `youtube.force-ssl` — Inbox → a comment on that video → type a reply and send it.
+6. `yt-analytics.readonly` — the channel's Analytics screen.
+7. **Google Business Profile** — Connected accounts → connect → pick a location (`business.manage`).
+8. **GA4** — Settings → Tracking → connect → pick a property, then a report that reads GA4
+   (`analytics.readonly`).
+
+**This cannot be recorded until production is deployed**, and it needs a real YouTube channel, a real
+Business Profile location and a real GA4 property on the test account.
+
 ## Blockers, and who can clear them
 
 | # | Blocker | Owner | Blocks |

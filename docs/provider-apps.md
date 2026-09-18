@@ -61,7 +61,7 @@ only — **LinkedIn Community Management came back granted**.
 | **LinkedIn** | RocketEase Community Management — client `86jcpr1hj2u7hi` (app `263545132`) | ✅ `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` (local `.env` updated 2026-09-16; **Key Vault still points at the old app**) | **Development Tier GRANTED** (2026-09-16). Twelve organization scopes on the Auth tab; redirect URLs added for production and `localhost:5001`. This is the real LinkedIn app — not a throwaway. Standard Tier needs a screencast. |
 | TikTok | RocketEase — app `7679511401195653138`, client key `aw0hmw00gt9blqwz` | ✅ `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET` | **Production draft is EMPTY** — see the TikTok gotcha below. Domain `rocketease.com` verified. Sandbox `rocketease-dev` (id `7686179673482758151`) created and fully configured 2026-09-16. |
 | YouTube / Google Business / GA4 | Google Cloud project `rocketease` (`920126186446`), OAuth client `rocketease-providers` | ✅ `YOUTUBE_*`, `GOOGLE_BUSINESS_*`, `GA4_*` (one client serves all three) | APIs enabled. Consent screen in **Testing**. |
-| Pinterest | WizeWorks RocketEase — App id `1606292` | ❌ none until approved | **Trial access pending** (checked 2026-09-16). |
+| Pinterest | WizeWorks RocketEase — App id `1606292` | ❌ none until approved | **Trial access pending**, re-checked 2026-09-17. Redirect URI `https://app.rocketease.com/api/connect/pinterest/callback` is saved and verified; the app secret still reads "Unavailable while trial access pending". |
 | X | — | ❌ | **Deferred**: `tweet.write` needs a paid tier (~$100/mo). Not worth it before traction. |
 | Bluesky | — | `PROVIDERS_ENABLE_BLUESKY=1` (no secret) | **Adapter built 2026-09-05** (`packages/providers/src/bluesky`). No developer console: a person signs in with an app password from bsky.app → Settings → Privacy and security → App passwords. OAuth (hosted `client_metadata.json`, DPoP) deferred. |
 | Shopify (tracking) | — | ❌ `SHOPIFY_CLIENT_ID/SECRET` | Not started. |
@@ -151,10 +151,10 @@ goes anywhere near a submission.
 | B3 | TikTok "explain each product and scope" write-up (1000 chars) | us — an 892-char draft is kept below, unreviewed | TikTok app review |
 | ~~B4~~ | ~~LinkedIn Community Management review~~ — **granted at Development Tier**, seen 2026-09-16 | — | — |
 | B5 | Pinterest access review | Pinterest | Pinterest entirely |
-| B6 | Google app verification (every scope used is *sensitive*) | Google | anyone outside the test-user list |
-| B7 | Google Business Profile API access request — the three APIs ship with **quota 0** even when enabled | Google | Business Profile entirely |
+| B6 | Google app verification (every scope used is *sensitive*) — checked 2026-09-17: publishing status **Testing**, user type **External**, **1 of 100** test users (`brandon@wize.works`). Nothing has been submitted for verification yet, so this is ours to start, not Google's to answer. | us to submit, then Google | anyone outside the test-user list |
+| B7 | Google Business Profile API access request — the three APIs ship with **quota 0** even when enabled. Confirmed 2026-09-17 on `mybusinessbusinessinformation`: *Requests per minute* = **0**, while Create/Update/Search Location per-day quotas are non-zero. Google's own console note points at <https://developers.google.com/my-business/content/prereqs#request-access>. | Google | Business Profile entirely |
 | B8 | DMCA designated agent not registered with the U.S. Copyright Office | us | §512(c) safe harbour (not a provider gate) |
-| B9 | **Meta access verification** — Tech Provider was accepted 2026-09-16 (irreversible, and the right answer: RocketEase touches other businesses' assets). Business verification already reads *Verified* for WizeWork LLC. The access-verification form is **filled and saved as a draft, not submitted**. **Hard deadline 11/15/2026 or 2 apps get restricted.** Meta answers within 5 days | us to submit, then Meta | Facebook and Instagram entirely |
+| B9 | **Meta access verification** — Tech Provider was accepted 2026-09-16 (irreversible, and the right answer: RocketEase touches other businesses' assets). Business verification already reads *Verified* for WizeWork LLC. **Submitted 2026-09-16 7:54 PM by Brandon Korous; still *In review* on 2026-09-17.** The console now states the deadline as **11/16/2026** or 2 apps get restricted. Meta answers within 5 business days | Meta | Facebook and Instagram entirely |
 
 ## When an approval lands — resume here
 

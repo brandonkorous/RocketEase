@@ -31,8 +31,11 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
+  # quay.io, not Docker Hub: `minio/minio` there started answering "pull access denied"
+  # on 2026-09-18 and broke CI with no commit behind it. Pinned, because :latest is what
+  # let an outside change reach us at all.
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: rke-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -56,7 +59,7 @@ services:
   # dev stack starts no one-shot container that could leave a name behind, and
   # waits on no healthcheck implemented inside a third-party image.
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
     profiles: ["init"]
     depends_on:
       minio:

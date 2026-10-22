@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@rocketease/ui": "workspace:*",
-    "@wizeworks/lens-node": "0.3.0-alpha.9",
-    "@wizeworks/lens-react": "0.3.0-alpha.9",
+    "@wizeworks/lens-node": "0.3.0-alpha.10",
+    "@wizeworks/lens-react": "0.3.0-alpha.10",
     "@wizeworks/silicaui": "^0.55.0",
     "@wizeworks/silicaui-react": "^0.55.0",
     "next": "^15.3.0",

@@ -19,10 +19,15 @@ export async function register() {
   await startOtel("rke-platform");
   if (!WIZELENS) return;
   try {
-    const { registerWizeLens, nextIgnore } = await import("@wizeworks/lens-node/next");
+    const [{ registerWizeLens, nextIgnore }, { instrumentDrizzle }] = await Promise.all([
+      import("@wizeworks/lens-node/next"),
+      import("@wizeworks/lens-node"),
+    ]);
     // Probes hit /api/health/* every few seconds; they are not traffic.
     const ignore = (path: string) => nextIgnore(path) || path.startsWith("/api/health");
-    registerWizeLens({ serviceName: "rocketease-platform", enabled: true, ignore });
+    const lens = registerWizeLens({ serviceName: "rocketease-platform", enabled: true, ignore });
+    // db/index.ts calls this when it builds its postgres.js client (Drizzle on top).
+    (globalThis as { __wizelensDb?: (db: unknown) => void }).__wizelensDb = (db) => instrumentDrizzle(lens, db);
   } catch (err) {
     console.warn("[wizelens] tracing did not start", err);
   }

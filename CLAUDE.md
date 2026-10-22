@@ -158,7 +158,7 @@ Tests: `pnpm exec vitest run` in `apps/platform` and `packages/providers`; Playw
 - **Tracing (WizeLens)**: `instrumentation.ts` in both apps, and `worker/wizelens.ts` (one trace per pg-boss
   job; pg-boss has no WizeLens adapter). On in development: dashboards at :5000 and :5001 `/_wizelens`, worker
   :5011 (media :5012). Production is send-only with `WIZELENS_ENABLED=true` and one ingest key per Deployment
-  (deploy/README.md). postgres.js queries are not traced yet; `WIZELENS_ENABLED=false` turns it off anywhere.
+  (deploy/README.md). Queries are traced through a hook in `db/index.ts`; `WIZELENS_ENABLED=false` turns it off anywhere.
 - Local URLs: web :5000, platform :5001, Postgres :5050, Mailpit UI :5026, MinIO :5090/:5091. `pnpm dev` starts all of it including the worker.
 - Silica gotchas beyond the web ones: `DropdownMenuLabel` must be inside `DropdownMenuGroup` (Base UI 1.7); portaled popups need `data-theme` + the `[data-base-ui-portal]` z-index rule in `globals.css` to render above the dark sidebar.
 - **Brand hub** (M10 + M14.4, `docs/plans/m14.4-brand-leftovers.md`): the kit lives on

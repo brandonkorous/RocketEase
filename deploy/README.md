@@ -105,9 +105,10 @@ to `WIZELENS_HUB_TOKEN`:
     az keyvault secret set --vault-name kv-rocketease-prod-cus --name wizelens-key-media-worker --value '<wl_ik_…>'
     az keyvault secret set --vault-name kv-rocketease-prod-cus --name wizelens-key-web --value '<wl_ik_…>'
 
-The keys are optional: a missing one leaves that app running and untraced. The
-app's own queries run on postgres.js, which WizeLens does not trace yet; jobs
-show as one trace each, with their outgoing HTTP calls and log lines.
+The keys are optional: a missing one leaves that app running and untraced. A
+request or a job shows its Drizzle queries (postgres.js), outgoing HTTP calls and
+log lines; each job is one trace. Queries outside a request or job (pg-boss
+polling, boot) are not traced.
 
 ### TOKEN-MASTER-KEY is set once, by hand, and never by Terraform
 

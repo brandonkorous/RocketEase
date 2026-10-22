@@ -1,8 +1,7 @@
 /*
- * WizeLens in the worker: one trace per pg-boss job, with the job's outgoing
- * HTTP calls (networks, AI vendors, storage) and log lines inside it. pg-boss
- * has no WizeLens adapter, so the job span is made here; app queries run on
- * postgres.js, which WizeLens does not trace yet.
+ * WizeLens in the worker: one trace per pg-boss job, with the job's queries
+ * (Drizzle on postgres.js), outgoing HTTP calls (networks, AI vendors, storage)
+ * and log lines inside it. pg-boss has no WizeLens adapter, so the job span is made here.
  *
  * On in development, dashboard at http://localhost:5011/_wizelens (media role
  * :5012, or WIZELENS_PORT). In production only with WIZELENS_ENABLED=true, then
@@ -32,6 +31,9 @@ export async function startWizeLens(role: WorkerRole): Promise<void> {
     const storagePath = join(process.cwd(), ".wizelens", `${name}.db`);
     lens = mod.createWizeLens({ serviceName: `rocketease-${name}`, enabled: true, storagePath });
     category = mod.CATEGORY_ATTR;
+    // The handlers already imported the client; patching it now covers every later query.
+    const { db } = await import("@/db");
+    mod.instrumentDrizzle(lens, db);
     if (DEVELOPMENT) serveDashboard(lens, Number(process.env.WIZELENS_PORT ?? (role === "media" ? 5012 : 5011)));
   } catch (err) {
     log.warn("wizelens did not start", { err });

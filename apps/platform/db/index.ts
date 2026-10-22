@@ -47,3 +47,9 @@ if (process.env.NODE_ENV !== "production") globalForDb.__misSql = sql;
 
 export const db = drizzle(sql, { schema });
 export type Db = typeof db;
+
+// WizeLens traces every query when the process runs it: instrumentation.ts sets
+// this hook before any route loads. Tracing is optional, so a failure is ignored.
+try {
+  (globalThis as { __wizelensDb?: (db: Db) => void }).__wizelensDb?.(db);
+} catch {}

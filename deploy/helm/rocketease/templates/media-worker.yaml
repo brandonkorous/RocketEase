@@ -27,6 +27,7 @@ spec:
           env:
             - { name: WORKER_ROLE, value: media }
             - { name: MEDIA_SCRATCH_DIR, value: /scratch }
+            {{- include "rocketease.wizelensEnv" (dict "root" . "key" .Values.wizelens.tokenKeys.mediaWorker) | trim | nindent 12 }}
           {{- include "rocketease.envFrom" . | nindent 10 }}
           resources:
             {{- toYaml .Values.mediaWorker.resources | nindent 12 }}

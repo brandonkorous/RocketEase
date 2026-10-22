@@ -20,6 +20,7 @@ spec:
           image: {{ include "rocketease.image.web" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports: [{ containerPort: 3000 }]
+          {{- include "rocketease.wizelensEnvBlock" (dict "root" . "key" .Values.wizelens.tokenKeys.web) | trim | nindent 10 }}
           readinessProbe: { httpGet: { path: /, port: 3000 }, initialDelaySeconds: 5 }
           livenessProbe: { httpGet: { path: /, port: 3000 }, periodSeconds: 20 }
           resources:

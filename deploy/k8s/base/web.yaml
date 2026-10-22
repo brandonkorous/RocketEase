@@ -12,6 +12,19 @@ spec:
         - name: web
           image: rocketease/web:latest
           ports: [{ containerPort: 3000 }]
+          env:
+            # WizeLens: send-only tracing to WizeLens Cloud (project `rocketease`). The
+            # key is per app (vault `wizelens-key-web`); optional, so a missing key
+            # leaves the app running and untraced rather than failing the pod.
+            - name: WIZELENS_ENABLED
+              value: 'true'
+            - name: WIZELENS_HUB
+              value: https://app.wizelens.com
+            - name: WIZELENS_SAMPLE_RATE
+              value: '0.25'
+            - name: WIZELENS_HUB_TOKEN
+              valueFrom:
+                secretKeyRef: { name: platform-env, key: WIZELENS_KEY_WEB, optional: true }
           readinessProbe: { httpGet: { path: /, port: 3000 }, initialDelaySeconds: 5 }
           livenessProbe: { httpGet: { path: /, port: 3000 }, periodSeconds: 20 }
           resources:

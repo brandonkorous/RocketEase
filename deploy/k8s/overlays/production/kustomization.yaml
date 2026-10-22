@@ -174,8 +174,13 @@ configMapGenerator:
 #
 # The deploy job rewrites the placeholder with a hash of the secret's contents,
 # so the pod template changes when — and only when — that content changes.
-# `web` is absent deliberately: it mounts no secret.
+# `web` reads one key from it (its WizeLens ingest key), so it rolls too.
 patches:
+  - target: { kind: Deployment, name: web }
+    patch: |-
+      - op: add
+        path: /spec/template/metadata/annotations
+        value: { rocketease.works/env-hash: "__ENV_HASH__" }
   - target: { kind: Deployment, name: platform }
     patch: |-
       - op: add

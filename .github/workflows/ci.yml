@@ -81,6 +81,8 @@ jobs:
       STORAGE_ACCESS_KEY: rke
       STORAGE_SECRET_KEY: rke-minio-secret
       STORAGE_FORCE_PATH_STYLE: 1
+      # The worker runs with NODE_ENV unset, which WizeLens reads as development.
+      WIZELENS_ENABLED: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -314,6 +316,11 @@ jobs:
             BILLING_INCLUDED_AI_CREDITS BILLING_TRIAL_DAYS
             CLAMAV_URL REPORT_CHROMIUM_PATH
             OTEL_EXPORTER_OTLP_ENDPOINT OTEL_SERVICE_NAME
+            # WizeLens ingest keys, one per Deployment (vault wizelens-key-<app>).
+            # Each Deployment maps only its own to WIZELENS_HUB_TOKEN. Missing =
+            # that app runs untraced; nothing else changes.
+            WIZELENS_KEY_WEB WIZELENS_KEY_PLATFORM
+            WIZELENS_KEY_WORKER WIZELENS_KEY_MEDIA_WORKER
           )
 
           missing=()

@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-/** Node-only telemetry packages: never bundled, and stubbed out of the edge compile (middleware) entirely. */
+/** Node-only telemetry packages (OpenTelemetry, WizeLens): never bundled, and stubbed out of the edge compile (middleware) entirely. */
 const NODE_ONLY = [
   "@opentelemetry/sdk-node",
   "@opentelemetry/sdk-trace-node",
@@ -10,6 +10,7 @@ const NODE_ONLY = [
   "@opentelemetry/instrumentation",
   "@opentelemetry/resources",
   "@grpc/grpc-js",
+  "@wizeworks/lens-node",
 ];
 
 /*

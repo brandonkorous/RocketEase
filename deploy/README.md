@@ -90,6 +90,25 @@ bad one deploys green and only fails when a real person asks for a password rese
 Google rejects the relay from most residential IPs with `421 ... (EHLO)`, so testing
 from a laptop proves nothing either way.
 
+### WizeLens ingest keys
+
+All four Deployments send traces to WizeLens Cloud (`app.wizelens.com`, project
+`rocketease`), send-only: with `NODE_ENV=production` the add-on serves no
+dashboard or read API, and keeps 25% of traces (`WIZELENS_SAMPLE_RATE`). Each
+Deployment has its own ingest key (`wl_ik_…`), so one can be revoked without the
+others. The vault name is `wizelens-key-<app>`; the release reads it as
+`WIZELENS_KEY_<APP>` into `platform-env`, and each Deployment maps only its own
+to `WIZELENS_HUB_TOKEN`:
+
+    az keyvault secret set --vault-name kv-rocketease-prod-cus --name wizelens-key-platform --value '<wl_ik_…>'
+    az keyvault secret set --vault-name kv-rocketease-prod-cus --name wizelens-key-worker --value '<wl_ik_…>'
+    az keyvault secret set --vault-name kv-rocketease-prod-cus --name wizelens-key-media-worker --value '<wl_ik_…>'
+    az keyvault secret set --vault-name kv-rocketease-prod-cus --name wizelens-key-web --value '<wl_ik_…>'
+
+The keys are optional: a missing one leaves that app running and untraced. The
+app's own queries run on postgres.js, which WizeLens does not trace yet; jobs
+show as one trace each, with their outgoing HTTP calls and log lines.
+
 ### TOKEN-MASTER-KEY is set once, by hand, and never by Terraform
 
 It is the AES-256-GCM key wrapping every stored provider token (`lib/crypto.ts`).

@@ -33,6 +33,9 @@ kubeconfig
 # Logs
 *.log
 
+# WizeLens local traces (development)
+.wizelens
+
 # OS / editor
 .DS_Store
 Thumbs.db

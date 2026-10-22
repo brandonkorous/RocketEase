@@ -48,3 +48,23 @@ tolerations:
 {{ toYaml . | indent 2 }}
 {{- end }}
 {{- end -}}
+
+{{/* WizeLens env items for one Deployment: (dict "root" $ "key" <key in the Secret>). Empty when off. */}}
+{{- define "rocketease.wizelensEnv" -}}
+{{- if .root.Values.wizelens.enabled }}
+- { name: WIZELENS_ENABLED, value: "true" }
+- { name: WIZELENS_HUB, value: {{ .root.Values.wizelens.hub | quote }} }
+- { name: WIZELENS_SAMPLE_RATE, value: {{ .root.Values.wizelens.sampleRate | quote }} }
+- name: WIZELENS_HUB_TOKEN
+  valueFrom:
+    secretKeyRef: { name: {{ .root.Values.secrets.existingSecret | quote }}, key: {{ .key | quote }}, optional: true }
+{{- end }}
+{{- end -}}
+
+{{/* The same, as a whole `env:` block, for containers that set no other env. */}}
+{{- define "rocketease.wizelensEnvBlock" -}}
+{{- with include "rocketease.wizelensEnv" . | trim }}
+env:
+{{ . }}
+{{- end }}
+{{- end -}}

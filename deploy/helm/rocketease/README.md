@@ -90,6 +90,18 @@ allowance, included features and the key id. When it expires, publishing keeps
 working for 30 days with a notice; after that new scheduling and new workspaces
 pause until a new key is set. Nothing you have is ever locked away.
 
+## Tracing (WizeLens)
+
+Off by default: the install sends nothing anywhere. To send sampled traces to
+WizeLens, put one ingest key per Deployment in your Secret
+(`WIZELENS_KEY_PLATFORM`, `WIZELENS_KEY_WORKER`, `WIZELENS_KEY_MEDIA_WORKER`,
+`WIZELENS_KEY_WEB`; names set by `wizelens.tokenKeys`) and set:
+
+    helm upgrade rocketease deploy/helm/rocketease -n rocketease -f values.yaml --set wizelens.enabled=true
+
+`wizelens.hub` points at another hub, for example your own. A missing key leaves
+that pod running and untraced.
+
 ## Migrations and database roles
 
 `drizzle-kit migrate` runs as a Helm hook from the worker image. It uses the

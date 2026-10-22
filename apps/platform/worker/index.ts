@@ -18,6 +18,7 @@ import { withSpan } from "@/lib/otel";
 import { queuesForRole, type JobName, type JobPayloads, type WorkerRole } from "@/lib/jobs/queues";
 import { handlers } from "./handlers";
 import { startGeneralSchedules } from "./schedules";
+import { startWizeLens, traceJob } from "./wizelens";
 
 function workerRole(): WorkerRole {
   return process.env.WORKER_ROLE === "media" ? "media" : "general";
@@ -26,6 +27,7 @@ function workerRole(): WorkerRole {
 async function main() {
   const role = workerRole();
   const owned = new Set<JobName>(queuesForRole(role));
+  await startWizeLens(role);
 
   // Local dev only (STORAGE_AUTO_CREATE_BUCKET): make sure the media bucket is
   // there before any asset job runs. It lives here rather than in the Next
@@ -46,7 +48,8 @@ async function main() {
         try {
           const d = job.data as { workspaceId?: string; organizationId?: string };
           const attrs = { "job.name": name, "job.id": job.id, "tenant.workspace_id": d?.workspaceId ?? "", "tenant.organization_id": d?.organizationId ?? "" };
-          await withSpan(`job ${name}`, attrs, () => handler(job.data as never, { log: l, signal: job.signal }));
+          const run = () => handler(job.data as never, { log: l, signal: job.signal });
+          await withSpan(`job ${name}`, attrs, () => traceJob(name, job.id, attrs, run));
           l.info("job done", { ms: Date.now() - started });
         } catch (err) {
           l.error("job failed", { ms: Date.now() - started, err });

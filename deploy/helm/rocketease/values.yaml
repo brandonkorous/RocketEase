@@ -99,6 +99,22 @@ securityContext:
   runAsGroup: 1001
   allowPrivilegeEscalation: false
 
+# WizeLens tracing (https://wizelens.com). OFF by default: an install sends
+# nothing anywhere unless you turn it on. On, each pod sends sampled traces to
+# `hub` (send-only: no dashboard is served) with its own ingest key.
+wizelens:
+  enabled: false
+  hub: https://app.wizelens.com
+  # Share of traces kept, 0 to 1.
+  sampleRate: "0.25"
+  # Keys in `secrets.existingSecret`, one ingest key per Deployment. A missing
+  # key leaves that pod running and untraced.
+  tokenKeys:
+    platform: WIZELENS_KEY_PLATFORM
+    worker: WIZELENS_KEY_WORKER
+    mediaWorker: WIZELENS_KEY_MEDIA_WORKER
+    web: WIZELENS_KEY_WEB
+
 podAnnotations: {}
 nodeSelector: {}
 tolerations: []

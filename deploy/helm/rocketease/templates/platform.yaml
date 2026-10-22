@@ -21,6 +21,7 @@ spec:
           image: {{ include "rocketease.image.platform" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports: [{ containerPort: 3000 }]
+          {{- include "rocketease.wizelensEnvBlock" (dict "root" . "key" .Values.wizelens.tokenKeys.platform) | trim | nindent 10 }}
           {{- include "rocketease.envFrom" . | nindent 10 }}
           # Liveness never touches the database: a probe that restarts a pod because
           # Postgres is busy hits every replica at once. Readiness does query.

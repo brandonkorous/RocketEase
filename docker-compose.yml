@@ -31,11 +31,13 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
-  # quay.io, not Docker Hub: `minio/minio` there started answering "pull access denied"
-  # on 2026-09-18 and broke CI with no commit behind it. Pinned, because :latest is what
-  # let an outside change reach us at all.
+  # Chainguard's build, pinned by digest: MinIO's own images stopped pulling, Docker Hub
+  # on 2026-09-18 and quay.io on 2026-10-22 ("unauthorized"), each breaking CI with no
+  # commit behind it. It ships `mc` for the healthcheck. Root, because its default user
+  # cannot open the data folder ("file access denied"); dev and CI only.
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: cgr.dev/chainguard/minio@sha256:ad134b2dd572ae0d989d6807c3e45516cc75a34883a8021db2ff04be5d1d496a
+    user: "0:0"
     container_name: rke-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -59,7 +61,8 @@ services:
   # dev stack starts no one-shot container that could leave a name behind, and
   # waits on no healthcheck implemented inside a third-party image.
   minio-init:
-    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    # The same image: it carries `mc` and a shell.
+    image: cgr.dev/chainguard/minio@sha256:ad134b2dd572ae0d989d6807c3e45516cc75a34883a8021db2ff04be5d1d496a
     profiles: ["init"]
     depends_on:
       minio:

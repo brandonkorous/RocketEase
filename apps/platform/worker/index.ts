@@ -16,9 +16,27 @@ import { log } from "@/lib/log";
 import { ensureStorage } from "@/lib/storage";
 import { withSpan } from "@/lib/otel";
 import { queuesForRole, type JobName, type JobPayloads, type WorkerRole } from "@/lib/jobs/queues";
-import { handlers } from "./handlers";
+import { handlers, type HandlerContext } from "./handlers";
 import { startGeneralSchedules } from "./schedules";
 import { startWizeLens, traceJob } from "./wizelens";
+import { runBatch } from "./batch";
+
+type AnyHandler = (data: never, ctx: HandlerContext) => Promise<unknown>;
+
+async function runJob(name: JobName, handler: AnyHandler, job: { id: string; data: unknown; signal: AbortSignal }) {
+  const l = log.child({ jobId: job.id, job: name });
+  const started = Date.now();
+  try {
+    const d = job.data as { workspaceId?: string; organizationId?: string };
+    const attrs = { "job.name": name, "job.id": job.id, "tenant.workspace_id": d?.workspaceId ?? "", "tenant.organization_id": d?.organizationId ?? "" };
+    const run = () => handler(job.data as never, { log: l, signal: job.signal });
+    await withSpan(`job ${name}`, attrs, () => traceJob(name, job.id, attrs, run));
+    l.info("job done", { ms: Date.now() - started });
+  } catch (err) {
+    l.error("job failed", { ms: Date.now() - started, err });
+    throw err; // runBatch fails this job alone; pg-boss applies the queue's retry policy
+  }
+}
 
 function workerRole(): WorkerRole {
   return process.env.WORKER_ROLE === "media" ? "media" : "general";
@@ -41,22 +59,9 @@ async function main() {
   type HandlerName = keyof typeof handlers;
   for (const [name, handler] of Object.entries(handlers) as [HandlerName, (typeof handlers)[HandlerName]][]) {
     if (!owned.has(name)) continue;
-    await boss.work<JobPayloads[HandlerName]>(name, { batchSize: 5, pollingIntervalSeconds: 2 }, async (jobs) => {
-      for (const job of jobs) {
-        const l = log.child({ jobId: job.id, job: name });
-        const started = Date.now();
-        try {
-          const d = job.data as { workspaceId?: string; organizationId?: string };
-          const attrs = { "job.name": name, "job.id": job.id, "tenant.workspace_id": d?.workspaceId ?? "", "tenant.organization_id": d?.organizationId ?? "" };
-          const run = () => handler(job.data as never, { log: l, signal: job.signal });
-          await withSpan(`job ${name}`, attrs, () => traceJob(name, job.id, attrs, run));
-          l.info("job done", { ms: Date.now() - started });
-        } catch (err) {
-          l.error("job failed", { ms: Date.now() - started, err });
-          throw err; // let pg-boss apply the queue's retry policy
-        }
-      }
-    });
+    await boss.work<JobPayloads[HandlerName]>(name, { batchSize: 5, pollingIntervalSeconds: 2 }, (jobs) =>
+      runBatch(jobs, (job) => runJob(name, handler, job), (job, err) => boss.fail(name, job.id, { message: String(err) })),
+    );
   }
 
   log.info("worker ready", { role, queues: [...owned] });

@@ -19,7 +19,7 @@ export type JobPayloads = {
   /** Renditions, checksum, scan after an upload completes. */
   "asset.process": { assetId: string };
   /** Poll a channel for new inbox items (comments/mentions/DMs). */
-  "inbox.sync": { channelId: string; reason: "initial" | "scheduled" | "manual" | "webhook" };
+  "inbox.sync": { channelId: string; workspaceId?: string; organizationId?: string; reason: "initial" | "scheduled" | "manual" | "webhook" };
   /** Deliver one outbound message; reconciles ambiguous sends before retrying. */
   "inbox.reply": { messageId: string };
   /** Hide a comment at the network, or show it again (lib/engagement/moderation). */

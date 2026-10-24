@@ -35,25 +35,38 @@ async function fetchConversations(cfg: ProviderConfig, t: string, ch: ChannelDes
   return (res.data ?? []).filter((c) => !since || c.updated_time > since).flatMap((c) => messagesToItems(ch, c, since));
 }
 
-async function fetchComments(cfg: ProviderConfig, t: string, ch: ChannelDescriptor, since?: string): Promise<InboxItem[]> {
-  const ig = ch.kind === "instagram_business";
-  const posts = await graph<{ data?: { id: string; permalink_url?: string; permalink?: string }[] }>(ig ? `/${ch.remoteId}/media` : `/${ch.remoteId}/posts`, cfg, t, { params: { fields: ig ? "id,permalink" : "id,permalink_url", limit: "10" } });
+type Replies = { data?: Comment[] };
+type CommentNode = Comment & { replies?: Replies; comments?: Replies };
+type PostNode = { id: string; permalink_url?: string; permalink?: string; updated_time?: string; comments?: { data?: CommentNode[] }; replies?: never };
+
+const FB_REPLY = "id,message,created_time,from,parent";
+const IG_REPLY = "id,text,timestamp,username,from";
+
+/** One call returns the recent posts with their comments and replies nested. */
+function postsPath(ig: boolean) {
+  if (ig) return { path: "media", fields: `id,permalink,timestamp,comments.limit(50){${IG_REPLY},replies{${IG_REPLY}}}` };
+  return { path: "posts", fields: `id,permalink_url,updated_time,comments.limit(50).order(reverse_chronological){${FB_REPLY},comments{${FB_REPLY}}}` };
+}
+
+function commentItems(ch: ChannelDescriptor, p: PostNode, since?: string): InboxItem[] {
   const out: InboxItem[] = [];
-  for (const p of posts.data ?? []) {
-    const fields = ig ? "id,text,timestamp,username,from,replies{id,text,timestamp,username,from}" : "id,message,created_time,from,parent,comments{id,message,created_time,from,parent}";
-    const res = await graph<{ data?: (Comment & { replies?: { data?: Comment[] }; comments?: { data?: Comment[] } })[] }>(`/${p.id}/comments`, cfg, t, { params: { fields, limit: "50", order: "reverse_chronological" } });
-    for (const c of res.data ?? []) {
-      const all = [c, ...(c.replies?.data ?? c.comments?.data ?? []).map((r) => ({ ...r, parent: { id: c.id } }))];
-      for (const x of all) {
-        const at = x.created_time ?? x.timestamp ?? now();
-        if (since && at <= since) continue;
-        const from = x.from ?? (x.username ? { id: x.username, username: x.username } : undefined);
-        const mine = from?.id === ch.remoteId;
-        out.push({ remoteId: x.id, threadRemoteId: c.id, kind: "comment", direction: mine ? "outbound" : "inbound", author: mine ? { remoteId: ch.remoteId, name: ch.name } : author(from, x.id), text: x.message ?? x.text ?? "", occurredAt: at, inReplyToRemoteId: x.parent?.id, postRemoteId: p.id, postUrl: p.permalink_url ?? p.permalink });
-      }
+  for (const c of p.comments?.data ?? []) {
+    const all = [c, ...(c.replies?.data ?? c.comments?.data ?? []).map((r) => ({ ...r, parent: { id: c.id } }))];
+    for (const x of all) {
+      const at = x.created_time ?? x.timestamp ?? now();
+      if (since && at <= since) continue;
+      const from = x.from ?? (x.username ? { id: x.username, username: x.username } : undefined);
+      const mine = from?.id === ch.remoteId;
+      out.push({ remoteId: x.id, threadRemoteId: c.id, kind: "comment", direction: mine ? "outbound" : "inbound", author: mine ? { remoteId: ch.remoteId, name: ch.name } : author(from, x.id), text: x.message ?? x.text ?? "", occurredAt: at, inReplyToRemoteId: x.parent?.id, postRemoteId: p.id, postUrl: p.permalink_url ?? p.permalink });
     }
   }
   return out;
+}
+
+async function fetchComments(cfg: ProviderConfig, t: string, ch: ChannelDescriptor, since?: string): Promise<InboxItem[]> {
+  const { path, fields } = postsPath(ch.kind === "instagram_business");
+  const posts = await graph<{ data?: PostNode[] }>(`/${ch.remoteId}/${path}`, cfg, t, { params: { fields, limit: "10" } });
+  return (posts.data ?? []).filter((p) => !since || !p.updated_time || p.updated_time > since).flatMap((p) => commentItems(ch, p, since));
 }
 
 export async function fetchInbox(cfg: ProviderConfig, cred: Credential, ch: ChannelDescriptor, opts: { since?: string }): Promise<InboxPage> {

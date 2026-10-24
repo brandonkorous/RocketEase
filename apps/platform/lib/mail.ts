@@ -21,6 +21,11 @@ export function renderMail<T extends MailTemplate>(template: T, data: Parameters
 }
 
 let transport: Mail | null | undefined;
+
+/** Test seam: swap the SMTP transport (null = log only). */
+export function setMailTransport(t: Mail | null | undefined) {
+  transport = t;
+}
 function getTransport() {
   if (transport !== undefined) return transport;
   const url = process.env.SMTP_URL;

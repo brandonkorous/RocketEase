@@ -8,7 +8,7 @@
  * the outbox/worker when a DB tx is available; `deliverMail` does the actual
  * SMTP call and is what the worker runs.
  */
-import nodemailer from "nodemailer";
+import nodemailer, { type Mail } from "nodemailer";
 import { log } from "./log";
 import { TEMPLATES, type MailTemplate, type Rendered } from "./mail/templates";
 
@@ -20,7 +20,7 @@ export function renderMail<T extends MailTemplate>(template: T, data: Parameters
   return (TEMPLATES[template] as (d: unknown) => Rendered)(data);
 }
 
-let transport: nodemailer.Transporter | null | undefined;
+let transport: Mail | null | undefined;
 function getTransport() {
   if (transport !== undefined) return transport;
   const url = process.env.SMTP_URL;

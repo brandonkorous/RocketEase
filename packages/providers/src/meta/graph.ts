@@ -26,12 +26,14 @@ type Init = { method?: "GET" | "POST" | "DELETE"; params?: Record<string, string
 
 /** Graph call with appsecret_proof; mutating 5xx responses are flagged ambiguous. */
 export async function graph<T>(path: string, cfg: ProviderConfig, token: string, init: Init = {}): Promise<T> {
-  const params = { ...(init.params ?? {}), access_token: token, appsecret_proof: createHmac("sha256", cfg.clientSecret).update(token).digest("hex") };
+  const proof = createHmac("sha256", cfg.clientSecret).update(token).digest("hex");
+  const params = { ...(init.params ?? {}), appsecret_proof: proof };
   const method = init.method ?? "GET";
   const url = method === "GET" ? `${API}${path}?${form(params)}` : `${API}${path}`;
+  const auth = { Authorization: `Bearer ${token}` };
   const res = await httpJson<T & GraphError>(url, {
     method,
-    headers: method === "GET" ? undefined : { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: method === "GET" ? auth : { ...auth, "Content-Type": "application/x-www-form-urlencoded" },
     body: method === "GET" ? undefined : form(params),
     timeoutMs: method === "GET" ? 20_000 : 60_000,
   });

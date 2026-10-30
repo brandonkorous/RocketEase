@@ -4,7 +4,7 @@
  * Foundry speaks the SAME Messages API and accepts the x-api-key header this
  * SDK already sends, so the base URL is the only difference between them. Not
  * currently the configured transport - see the Foundry section of
- * terraform/envs/azure/rocketease.tf in sparx.works for why - but kept whole,
+ * terraform/envs/azure/rocketease.tf in wize-infrastructure for why - but kept whole,
  * because that is the point of having a seam.
  */
 import Anthropic from "@anthropic-ai/sdk";

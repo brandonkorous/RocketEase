@@ -5,8 +5,10 @@
 # THERE IS NO INGRESS RESOURCE HERE, and that is not an omission. This cluster
 # runs no nginx-ingress and no cert-manager: the shared Caddy in the `sparx-prod`
 # namespace terminates TLS and reverse-proxies to these Services cross-namespace
-# by ClusterIP. RocketEase's host blocks live in sparx.works/k8s/ingress/Caddyfile,
-# and every hostname must also be allow-listed for on-demand TLS (see deploy/README).
+# by ClusterIP. RocketEase's host blocks live in wize-infrastructure's
+# k8s/ingress/Caddyfile (wizeworksllc/wize-infrastructure, applied by that repo's
+# release), and every hostname must also be allow-listed for on-demand TLS (see
+# deploy/README).
 # An Ingress object applied here would be silently inert — nothing watches it.
 #
 # The migrate and db-role Jobs are likewise absent: they are applied by

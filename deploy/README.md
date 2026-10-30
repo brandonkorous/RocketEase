@@ -250,12 +250,12 @@ rollout timeout; it is not a misconfiguration.
 
 GHCR, tagged `sha-<commit>` and `latest`:
 
-    ghcr.io/brandonkorous/rocketease-web
-    ghcr.io/brandonkorous/rocketease-platform
-    ghcr.io/brandonkorous/rocketease-worker
+    ghcr.io/wizeworksllc/rocketease-web
+    ghcr.io/wizeworksllc/rocketease-platform
+    ghcr.io/wizeworksllc/rocketease-worker
 
 **Lowercase and hyphenated, and both halves matter.** A Docker reference may not
-contain uppercase, and this repository is `brandonkorous/RocketEase`; a slash
+contain uppercase, and this repository is `wizeworksllc/RocketEase`; a slash
 would address a nested package that does not exist. Either mistake fails the pull
 with a 401 that reads like a missing tag.
 

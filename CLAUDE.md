@@ -15,7 +15,7 @@ Guidance for Claude Code when working in this repository.
 
 ## Repo layout
 
-pnpm workspace monorepo (`pnpm-workspace.yaml`: `apps/*`, `packages/*`). Git remote: `brandonkorous/RocketEase`.
+pnpm workspace monorepo (`pnpm-workspace.yaml`: `apps/*`, `packages/*`). Git remote: `wizeworksllc/RocketEase`.
 
 - `apps/web/` — `@rocketease/web`: the marketing site (landing page) — Next.js 15 App Router, React 19, Tailwind v4, **Silica UI** (`@wizeworks/silicaui` + `@wizeworks/silicaui-react`). Built from `docs/originals/landing.md`.
 - `apps/platform/` — `@rocketease/platform`: the authenticated product at `/app/:workspaceId/...`. Next.js 15 + Silica UI + **Better Auth** (email/password + organization plugin) + **Drizzle** on **self-hosted Postgres** (Docker locally, Azure in prod via the wize-infrastructure Terraform → sparx AKS cluster). Phase 0 done: tenancy (Organization → Workspace → 8 workspace role presets), audit log, onboarding, black-sidebar shell, every route from navigation.md as a designed empty state, agency overview. No provider integrations yet.

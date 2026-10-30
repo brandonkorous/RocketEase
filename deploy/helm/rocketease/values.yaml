@@ -3,7 +3,7 @@
 # renders a secret value, so a values file can be committed.
 
 image:
-  registry: ghcr.io/brandonkorous
+  registry: ghcr.io/wizeworksllc
   platform: rocketease-platform
   worker: rocketease-worker
   web: rocketease-web

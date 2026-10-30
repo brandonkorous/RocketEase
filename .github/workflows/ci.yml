@@ -128,7 +128,7 @@ jobs:
   # Build & push the three cluster images to GHCR.
   #
   # NAMES ARE LOWERCASE AND HYPHENATED. A Docker reference may not contain
-  # uppercase, and this repository is `brandonkorous/RocketEase` — so the usual
+  # uppercase, and this repository is `wizeworksllc/RocketEase` — so the usual
   # `ghcr.io/<repository>/web` form is invalid twice: the case, and a slash
   # addressing a nested package that does not exist. Both fail the pull later
   # with a 401 that reads like a missing tag.
@@ -169,7 +169,7 @@ jobs:
       - name: Choose image tags
         id: tags
         run: |
-          IMAGE="ghcr.io/brandonkorous/rocketease-${{ matrix.name }}"
+          IMAGE="ghcr.io/wizeworksllc/rocketease-${{ matrix.name }}"
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             VERSION="$GITHUB_REF_NAME"; CHANNEL=stable
           else
@@ -208,7 +208,7 @@ jobs:
   # already true when the next one needs it.
   #
   # Auth is workload identity federation: Azure trusts a GitHub OIDC token whose
-  # subject is `repo:brandonkorous/RocketEase:ref:refs/heads/main`. The AZURE_*
+  # subject is `repo:wizeworksllc@350084568/RocketEase@1350407459:ref:refs/heads/main`. The AZURE_*
   # values are repository VARIABLES — public identifiers, not secrets.
   # ---------------------------------------------------------------------------
   deploy:
@@ -221,7 +221,7 @@ jobs:
       RESOURCE_GROUP: rg-sparx-prod-cus
       CLUSTER: aks-sparx-prod-cus
       NAMESPACE: rocketease
-      REGISTRY: ghcr.io/brandonkorous
+      REGISTRY: ghcr.io/wizeworksllc
     steps:
       - uses: actions/checkout@v4
 

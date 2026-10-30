@@ -8,7 +8,7 @@ resources:
 #
 # A Docker reference may not contain uppercase, so the obvious
 # `ghcr.io/${{ github.repository }}/web` is invalid here twice over: the repo is
-# `brandonkorous/RocketEase`, and a slash would address a nested package that
+# `wizeworksllc/RocketEase`, and a slash would address a nested package that
 # does not exist. Either mistake fails the pull with a 401 that reads like a
 # missing tag while the images sit untouched beside it.
 #
@@ -17,13 +17,13 @@ resources:
 # default; see deploy/README.md.
 images:
   - name: rocketease/web
-    newName: ghcr.io/brandonkorous/rocketease-web
+    newName: ghcr.io/wizeworksllc/rocketease-web
     newTag: latest
   - name: rocketease/platform
-    newName: ghcr.io/brandonkorous/rocketease-platform
+    newName: ghcr.io/wizeworksllc/rocketease-platform
     newTag: latest
   - name: rocketease/worker
-    newName: ghcr.io/brandonkorous/rocketease-worker
+    newName: ghcr.io/wizeworksllc/rocketease-worker
     newTag: latest
 
 # Non-secret runtime config.

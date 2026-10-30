@@ -14,7 +14,7 @@ that run RocketEase's cloud (`deploy/k8s`). Design and rules:
 | SMTP | Sign-up verification, invitations, reports and notifications go out by mail. |
 | A licence key | From RocketEase. Without one the install runs as an evaluation (one workspace, scheduling for the trial period). |
 
-Images are public on GHCR: `ghcr.io/brandonkorous/rocketease-{platform,worker,web}`.
+Images are public on GHCR: `ghcr.io/wizeworksllc/rocketease-{platform,worker,web}`.
 
 ## Install
 

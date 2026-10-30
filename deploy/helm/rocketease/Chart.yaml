@@ -9,4 +9,4 @@ appVersion: "stable"
 kubeVersion: ">=1.27.0-0"
 home: https://rocketease.com
 sources:
-  - https://github.com/brandonkorous/RocketEase
+  - https://github.com/wizeworksllc/RocketEase

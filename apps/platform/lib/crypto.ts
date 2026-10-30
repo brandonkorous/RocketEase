@@ -4,7 +4,7 @@
  * AES-256-GCM with a master key from TOKEN_MASTER_KEY (base64, 32 bytes).
  * Envelopes carry a keyId so the master key can rotate: new writes use the
  * current key, reads pick the key by id. In production the master key comes
- * from Key Vault via the sparx Terraform; swapping to KMS-wrapped data keys
+ * from Key Vault (set once by hand, in the vault wize-infrastructure provisions); swapping to KMS-wrapped data keys
  * only changes this file.
  */
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";

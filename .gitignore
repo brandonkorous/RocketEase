@@ -20,7 +20,7 @@ e2e/.state
 .env*
 !.env.example
 
-# Infrastructure state. Terraform for this product lives in sparx.works, but a
+# Infrastructure state. Terraform for this product lives in wize-infrastructure, but a
 # stray plan/state file here would carry credentials in the clear.
 .terraform
 *.tfstate

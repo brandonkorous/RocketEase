@@ -8,12 +8,19 @@ with its **own** Postgres server, Key Vault and storage account. Manifests are i
 
 | Piece | Where it lives |
 | --- | --- |
-| Postgres 18 flexible server, Key Vault, storage account | `sparx.works/terraform/envs/azure/rocketease.tf` |
-| CI identity (app registration, federated credentials, roles) | `sparx.works/terraform/bootstrap-azure/rocketease.tf` |
-| TLS + routing | `sparx.works/k8s/ingress/Caddyfile` |
-| Public DNS | `sparx.works/terraform/modules/dns` (Cloudflare) |
+| Postgres 18 flexible server, Key Vault, storage account | `wize-infrastructure/terraform/envs/azure/rocketease.tf` |
+| CI identity (app registration, federated credentials, roles) | `wize-infrastructure/terraform/bootstrap-azure/rocketease.tf` |
+| TLS + routing | `wize-infrastructure/k8s/ingress/Caddyfile` |
+| Public DNS | `wize-infrastructure/terraform/modules/dns` (Cloudflare) |
 | Workloads | this repo, `deploy/k8s` |
 | Self-hosted installs (customers' clusters) | this repo, `deploy/helm/rocketease` — a Helm chart derived from `deploy/k8s`; see its README and `docs/plans/m14.12-self-hosted.md` |
+
+`wize-infrastructure` is `wizeworksllc/wize-infrastructure` (local checkout
+`G:/code/@wizeworks/wize-infrastructure`). It holds the shared Azure and ingress
+setup for every WizeWorks product and has its own release, which applies the
+Terraform and the Caddyfile without building any app images. A change to a row
+above is a PR there, released before the RocketEase change that relies on it.
+None of it lives in sparx.works any more.
 
 ## There is no Ingress object
 
@@ -26,7 +33,7 @@ Two consequences worth knowing before debugging a "routing" problem:
 
 - Caddy uses **on-demand TLS**, so every RocketEase hostname must also be
   allow-listed in `PLATFORM_HOSTNAMES`
-  (`sparx.works/wizeworks/services/api-rest/src/routes/internal/domain-check.ts`).
+  (`sparx.works/wizeworks/services/api-rest/src/routes/internal/domain-check.ts`, still in sparx).
   A name missing there gets a 403 from the ask endpoint, never receives a
   certificate, and Cloudflare answers **525 for that hostname alone** — which
   reads like a routing bug and is a TLS bootstrap failure.

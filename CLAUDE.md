@@ -18,7 +18,7 @@ Guidance for Claude Code when working in this repository.
 pnpm workspace monorepo (`pnpm-workspace.yaml`: `apps/*`, `packages/*`). Git remote: `brandonkorous/RocketEase`.
 
 - `apps/web/` — `@rocketease/web`: the marketing site (landing page) — Next.js 15 App Router, React 19, Tailwind v4, **Silica UI** (`@wizeworks/silicaui` + `@wizeworks/silicaui-react`). Built from `docs/originals/landing.md`.
-- `apps/platform/` — `@rocketease/platform`: the authenticated product at `/app/:workspaceId/...`. Next.js 15 + Silica UI + **Better Auth** (email/password + organization plugin) + **Drizzle** on **self-hosted Postgres** (Docker locally, Azure in prod via the sparx.works Terraform → sparx AKS cluster). Phase 0 done: tenancy (Organization → Workspace → 8 workspace role presets), audit log, onboarding, black-sidebar shell, every route from navigation.md as a designed empty state, agency overview. No provider integrations yet.
+- `apps/platform/` — `@rocketease/platform`: the authenticated product at `/app/:workspaceId/...`. Next.js 15 + Silica UI + **Better Auth** (email/password + organization plugin) + **Drizzle** on **self-hosted Postgres** (Docker locally, Azure in prod via the wize-infrastructure Terraform → sparx AKS cluster). Phase 0 done: tenancy (Organization → Workspace → 8 workspace role presets), audit log, onboarding, black-sidebar shell, every route from navigation.md as a designed empty state, agency overview. No provider integrations yet.
 - `packages/ui/` — `@rocketease/ui`: shared source-only package (icons: `Mark`, `PlatformIcon`). Import as `@rocketease/ui/icons`; both apps list it in `transpilePackages`.
 - Both apps build as standalone containers (`Dockerfile` per app, build context = repo root). Never add Vercel/SWA configs.
 - `docs/IMPLEMENTATION_PLAN.md` — **the build order.** Milestones 0–7 with feature tables, requirement IDs, dependencies, gates, and pending decisions. Check it before starting work; update it when scope/order changes.
@@ -280,8 +280,9 @@ that cost a release, in short:
 
 - **No Ingress, no cert-manager.** A shared Caddy in `sparx-prod` terminates TLS and
   proxies to the Services. An `Ingress` object here is silently inert. Host blocks live
-  in `sparx.works/k8s/ingress/Caddyfile`, and every hostname must ALSO be allow-listed in
-  api-rest's `PLATFORM_HOSTNAMES` or Cloudflare answers 525 for that name alone.
+  in `wize-infrastructure/k8s/ingress/Caddyfile` (applied by that repo's own release), and
+  every hostname must ALSO be allow-listed in sparx's api-rest `PLATFORM_HOSTNAMES` or
+  Cloudflare answers 525 for that name alone.
 - **`NEXT_PUBLIC_*` is baked at build time**, so it is a Docker build arg, never a
   ConfigMap value. A missing one does not error — the browser gets `undefined` and the
   feature quietly never renders.
@@ -293,9 +294,12 @@ that cost a release, in short:
   Terraform-managed: regenerating it makes every stored provider token undecryptable, and
   no re-run recovers them.
 
-Azure resources and DNS live in the **sparx.works** repo
-(`terraform/envs/azure/rocketease.tf`, `terraform/bootstrap-azure/rocketease.tf`,
-`terraform/modules/dns`), not here.
+Azure resources and DNS live in the **wize-infrastructure** repo
+(`wizeworksllc/wize-infrastructure`, local `G:/code/@wizeworks/wize-infrastructure`):
+`terraform/envs/azure/rocketease.tf`, `terraform/bootstrap-azure/rocketease.tf`,
+`terraform/modules/dns`. Not here, and no longer in sparx.works. That repo's own release
+applies them, so a new route, DNS record or vault change is a PR there, released before
+the RocketEase change that needs it.
 
 ## Working with the docs
 
